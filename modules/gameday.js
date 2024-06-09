@@ -115,11 +115,11 @@ async function processAndPushPlay (bot, play) {
             .setColor('#E31937');
         let pngEventBuffer, attachment;
         if (play.event && fs.existsSync(path.join(__dirname, '../images/' + play.event + '.svg'))) {
-            pngEventBuffer = await sharp(path.join(__dirname, '../images/' + play.event + '.svg'))
-                .png()
-                .toBuffer();
-            attachment = new AttachmentBuilder(pngEventBuffer, { name: play.event.replaceAll(' ', '-') + '.png' });
-            embed.setThumbnail('attachment://' + play.event.replaceAll(' ', '-') + '.png');
+            // pngEventBuffer = await sharp(path.join(__dirname, '../images/' + play.event + '.svg'))
+            //     .png()
+            //     .toBuffer();
+            // attachment = new AttachmentBuilder(pngEventBuffer, { name: play.event.replaceAll(' ', '-') + '.png' });
+            // embed.setThumbnail('attachment://' + play.event.replaceAll(' ', '-') + '.png');
         }
         globalCache.values.subscribedChannels.forEach((channel) => {
             bot.channels.fetch(channel).then((returnedChannel) => {
