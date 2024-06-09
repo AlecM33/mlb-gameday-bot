@@ -131,13 +131,23 @@ module.exports = {
             });
             return;
         }
-        await queries.addToSubscribedChannels(interaction.guild.id, interaction.channel.id).catch(async (e) => {
-            if (e.message.includes('duplicate key')) {
-                await interaction.reply({ content: 'This channel is already subscribed to the gameday feed.', ephemeral: false });
-            } else {
-                await interaction.reply({ content: 'Error subscribing to the gameday feed: ' + e.message, ephemeral: true });
-            }
-        });
+        if (interaction.channel) {
+            await queries.addToSubscribedChannels(interaction.guild.id, interaction.channel.id).catch(async (e) => {
+                if (e.message.includes('duplicate key')) {
+                    await interaction.reply({
+                        content: 'This channel is already subscribed to the gameday feed.',
+                        ephemeral: false
+                    });
+                } else {
+                    await interaction.reply({
+                        content: 'Error subscribing to the gameday feed: ' + e.message,
+                        ephemeral: true
+                    });
+                }
+            });
+        } else {
+            throw new Error("Could not subscribe to the gameday feed.")
+        }
 
         if (!interaction.replied) {
             await interaction.reply({

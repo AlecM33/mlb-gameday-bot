@@ -21,7 +21,7 @@ module.exports = {
                     reply += '## ' + globalCache.values.currentLiveFeed.gameData.teams.home.abbreviation +
                         ' now leads ' + currentPlayJSON.result.homeScore + '-' + currentPlayJSON.result.awayScore + '\n';
                 } else if (currentPlayJSON.result.homeScore === currentPlayJSON.result.awayScore) {
-                    reply += '### The game is now tied at ' + currentPlayJSON.result.homeScore + '-' + currentPlayJSON.result.awayScore + '\n';
+                    reply += '## The game is now tied at ' + currentPlayJSON.result.homeScore + '-' + currentPlayJSON.result.awayScore + '\n';
                 } else {
                     reply += '## ' + globalCache.values.currentLiveFeed.gameData.teams.away.abbreviation +
                         ' now leads ' + currentPlayJSON.result.awayScore + '-' + currentPlayJSON.result.homeScore + '\n';

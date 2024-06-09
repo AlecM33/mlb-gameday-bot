@@ -11,9 +11,15 @@ module.exports = {
         } catch (e) {
             console.error(e);
             if (interaction.deferred && !interaction.replied) {
-                await interaction.followUp('There was an error processing this command. If it persists, please reach out to the developer.');
+                await interaction.followUp({
+                    content: 'There was an error processing this command. If it persists, please reach out to the developer.',
+                    ephemeral: true
+                });
             } else if (!interaction.replied) {
-                await interaction.reply('There was an error processing this command. If it persists, please reach out to the developer.');
+                await interaction.reply({
+                    content: 'There was an error processing this command. If it persists, please reach out to the developer.',
+                    ephemeral: true
+                });
             }
         }
     }
