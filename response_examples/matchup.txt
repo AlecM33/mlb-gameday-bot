@@ -1,0 +1,215 @@
+{
+  "probables": {
+    "gameType": "R",
+    "season": "2024",
+    "homeSport": 1,
+    "homeLeague": 104,
+    "awayLeague": 103,
+    "gameDate": "2024-05-28",
+    "homeId": 115,
+    "awayId": 114,
+    "homeAbbreviation": "COL",
+    "awayAbbreviation": "CLE",
+    "homeProbable": 663372,
+    "awayProbable": 663474,
+    "homeProbableLastName": "Feltner",
+    "awayProbableLastName": "McKenzie"
+  },
+  "home": [
+    {
+      "id": 453568,
+      "boxscoreName": "Blackmon",
+      "primaryPosition": "RF",
+      "stats": {
+        "homeRuns": 0,
+        "avg": ".667",
+        "atBats": 3,
+        "ops": "1.667",
+        "rbi": 0
+      }
+    },
+    {
+      "id": 656248,
+      "boxscoreName": "Bouchard",
+      "primaryPosition": "RF"
+    },
+    {
+      "id": 592178,
+      "boxscoreName": "Bryant",
+      "primaryPosition": "1B"
+    },
+    {
+      "id": 595909,
+      "boxscoreName": "Cave",
+      "primaryPosition": "RF",
+      "stats": {
+        "homeRuns": 1,
+        "avg": ".167",
+        "atBats": 6,
+        "ops": ".834",
+        "rbi": 2
+      }
+    },
+    {
+      "id": 686668,
+      "boxscoreName": "Doyle, B",
+      "primaryPosition": "CF"
+    },
+    {
+      "id": 553869,
+      "boxscoreName": "Díaz, E",
+      "primaryPosition": "C"
+    },
+    {
+      "id": 696100,
+      "boxscoreName": "Goodman",
+      "primaryPosition": "RF"
+    },
+    {
+      "id": 641857,
+      "boxscoreName": "McMahon",
+      "primaryPosition": "3B",
+      "stats": {
+        "homeRuns": 0,
+        "avg": ".000",
+        "atBats": 3,
+        "ops": ".000",
+        "rbi": 0
+      }
+    },
+    {
+      "id": 660707,
+      "boxscoreName": "Montero, E",
+      "primaryPosition": "1B"
+    },
+    {
+      "id": 663898,
+      "boxscoreName": "Rodgers",
+      "primaryPosition": "2B",
+      "stats": {
+        "homeRuns": 0,
+        "avg": ".000",
+        "atBats": 3,
+        "ops": ".000",
+        "rbi": 0
+      }
+    },
+    {
+      "id": 607732,
+      "boxscoreName": "Stallings",
+      "primaryPosition": "C",
+      "stats": {
+        "homeRuns": 0,
+        "avg": ".000",
+        "atBats": 1,
+        "ops": ".000",
+        "rbi": 0
+      }
+    },
+    {
+      "id": 678662,
+      "boxscoreName": "Tovar",
+      "primaryPosition": "SS"
+    },
+    {
+      "id": 676701,
+      "boxscoreName": "Trejo",
+      "primaryPosition": "2B"
+    }
+  ],
+  "away": [
+    {
+      "id": 672356,
+      "boxscoreName": "Arias, G",
+      "primaryPosition": "3B"
+    },
+    {
+      "id": 686823,
+      "boxscoreName": "Brennan",
+      "primaryPosition": "RF",
+      "stats": {
+        "homeRuns": 0,
+        "avg": ".000",
+        "atBats": 2,
+        "ops": ".000",
+        "rbi": 0
+      }
+    },
+    {
+      "id": 664314,
+      "boxscoreName": "Florial",
+      "primaryPosition": "LF"
+    },
+    {
+      "id": 671289,
+      "boxscoreName": "Freeman, T",
+      "primaryPosition": "CF"
+    },
+    {
+      "id": 681807,
+      "boxscoreName": "Fry",
+      "primaryPosition": "LF"
+    },
+    {
+      "id": 665926,
+      "boxscoreName": "Gimenez",
+      "primaryPosition": "2B",
+      "stats": {
+        "homeRuns": 0,
+        "avg": ".000",
+        "atBats": 2,
+        "ops": ".000",
+        "rbi": 0
+      }
+    },
+    {
+      "id": 595978,
+      "boxscoreName": "Hedges",
+      "primaryPosition": "C"
+    },
+    {
+      "id": 700932,
+      "boxscoreName": "Manzardo",
+      "primaryPosition": "1B"
+    },
+    {
+      "id": 666310,
+      "boxscoreName": "Naylor, B",
+      "primaryPosition": "C"
+    },
+    {
+      "id": 647304,
+      "boxscoreName": "Naylor, J",
+      "primaryPosition": "1B",
+      "stats": {
+        "homeRuns": 0,
+        "avg": ".000",
+        "atBats": 3,
+        "ops": ".000",
+        "rbi": 0
+      }
+    },
+    {
+      "id": 608070,
+      "boxscoreName": "Ramírez, Jo",
+      "primaryPosition": "3B",
+      "stats": {
+        "homeRuns": 0,
+        "avg": ".333",
+        "atBats": 3,
+        "ops": "1.000",
+        "rbi": 0
+      }
+    },
+    {
+      "id": 677587,
+      "boxscoreName": "Rocchio",
+      "primaryPosition": "SS"
+    },
+    {
+      "id": 671286,
+      "boxscoreName": "Rodriguez, Jo",
+      "primaryPosition": "RF"
+    }
+  ]
+}

@@ -1,3 +1,5 @@
+database/certs/*
+
 # Logs
 logs
 *.log
