@@ -104,7 +104,7 @@ async function reportPlay (bot) {
 }
 
 async function processAndPushPlay (bot, play) {
-    if (play.reply && play.reply.length > 0 && play.description !== globalCache.values.lastReportedPlayDescription) {
+    if (play.reply && play.reply.length > 0 && play.description !== globalCache.values.lastReportedPlayDescription && play.isScoringPlay) {
         globalCache.values.lastReportedPlayDescription = play.description;
         const embed = new EmbedBuilder()
             .setTitle(deriveHalfInning(globalCache.values.currentLiveFeed.liveData.plays.currentPlay.about.halfInning) + ' ' +

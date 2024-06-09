@@ -49,7 +49,7 @@ module.exports = {
                 }
             }
         }
-        return { reply, description: currentPlayJSON.result?.description, event: currentPlayJSON.result?.event };
+        return { reply, description: currentPlayJSON.result?.description, event: currentPlayJSON.result?.event, isScoringPlay: currentPlayJSON.about?.isScoringPlay };
     }
 };
 
