@@ -1,12 +1,21 @@
 const values = {
     nearestGames: null,
     subscribedChannels: [],
-    gamedayPoll: null,
-    currentLiveFeed: null,
-    isDoubleHeader: null,
-    lastCompleteAtBatIndex: null,
-    lastReportedPlayDescription: null,
-    startReported: false
+    game: {
+        currentLiveFeed: null,
+        isDoubleHeader: null,
+        lastCompleteAtBatIndex: null,
+        lastReportedPlayDescription: null,
+        startReported: false
+    }
 };
 
-module.exports = { values };
+function resetGameCache() {
+    values.game.currentLiveFeed = null;
+    values.game.isDoubleHeader = null;
+    values.game.lastCompleteAtBatIndex = null;
+    values.game.lastReportedPlayDescription = null;
+    values.game.startReported = false;
+}
+
+module.exports = { values, resetGameCache };

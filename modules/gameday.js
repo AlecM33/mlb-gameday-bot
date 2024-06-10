@@ -2,7 +2,7 @@ const mlbAPIUtil = require('./MLB-API-util');
 const globalCache = require('./global-cache');
 const diffPatch = require('./diff-patch');
 const currentPlayProcessor = require('./current-play-processor');
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
 const globals = require('../config/globals');
 const commandUtil = require('./command-util');
 const queries = require('../database/queries.js');
@@ -13,7 +13,7 @@ module.exports = {
             console.log("Today's game PKs: " + JSON.stringify(games
                 .map(game => { return { key: game.gamePk, date: game.officialDate }; }), null, 2));
             globalCache.values.nearestGames = games;
-            globalCache.values.isDoubleHeader = games.length > 1;
+            globalCache.values.game.isDoubleHeader = games.length > 1;
             globalCache.values.subscribedChannels = (await queries.getAllSubscribedChannels()).map(channel => channel.channel_id);
             await statusPoll(BOT, games);
         }).catch((e) => {
@@ -31,7 +31,8 @@ async function statusPoll (bot, games) {
         if (statusChecks.find(statusCheck => statusCheck.gameData.status.abstractGameState === 'Live')) {
             const liveGame = statusChecks.find(statusCheck => statusCheck.gameData.status.abstractGameState === 'Live');
             console.log('Gameday: polling stopped: a game is live.');
-            globalCache.values.currentLiveFeed = await mlbAPIUtil.liveFeed(liveGame.gamePk);
+            globalCache.resetGameCache();
+            globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(liveGame.gamePk);
             subscribe(bot, liveGame, games);
         } else if (statusChecks.every(statusCheck => statusCheck.gameData.status.abstractGameState === 'Final')) {
             console.log('Gameday: polling slowed: all games are final.');
@@ -51,15 +52,22 @@ function subscribe (bot, liveGame, games) {
         const eventJSON = JSON.parse(e.data);
         if (eventJSON.gameEvents.includes('game_finished') && !acknowledgedGameFinish) {
             acknowledgedGameFinish = true;
-            globalCache.values.startReported = false;
+            globalCache.values.game.startReported = false;
             console.log('NOTIFIED OF GAME CONCLUSION: CLOSING...');
             ws.close();
             const linescore = await mlbAPIUtil.linescore(liveGame.gamePk);
+            const linescoreAttachment = new AttachmentBuilder(
+                await commandUtil.buildLineScoreTable(liveGame, linescore)
+                , { name: 'line_score.png' });
             globalCache.values.subscribedChannels.forEach((channel) => {
                 bot.channels.fetch(channel).then((returnedChannel) => {
                     console.log('Sending!');
                     returnedChannel.send({
-                        content: commandUtil.buildLineScoreTable(globalCache.values.currentLiveFeed.gameData, linescore, 'Final')
+                        content:  commandUtil.constructGameDisplayString(liveGame) +
+                            ' - **' + (globalCache.values.game.currentLiveFeed.gameData.status.abstractGameState === 'Final'
+                                ? 'Final'
+                                : linescore.inningState + ' ' + linescore.currentInningOrdinal) + '**\n\n',
+                        files: [linescoreAttachment]
                     });
                 });
             });
@@ -70,7 +78,7 @@ function subscribe (bot, liveGame, games) {
         const update = await mlbAPIUtil.websocketQueryUpdateId(
             eventJSON.gamePk,
             eventJSON.updateId,
-            globalCache.values.currentLiveFeed.metaData.timeStamp
+            globalCache.values.game.currentLiveFeed.metaData.timeStamp
         );
         console.log('UPDATE LENGTH: ' + update.length);
         if (Array.isArray(update)) {
@@ -79,7 +87,7 @@ function subscribe (bot, liveGame, games) {
                 await reportPlay(bot);
             }
         } else {
-            globalCache.values.currentLiveFeed = update;
+            globalCache.values.game.currentLiveFeed = update;
             await reportPlay(bot);
         }
     });
@@ -88,26 +96,26 @@ function subscribe (bot, liveGame, games) {
 }
 
 async function reportPlay (bot) {
-    const lastCompleteAtBatIndex = globalCache.values.lastCompleteAtBatIndex;
-    const currentAtBatIndex = globalCache.values.currentLiveFeed.liveData.plays.currentPlay.about.atBatIndex;
+    const lastCompleteAtBatIndex = globalCache.values.game.lastCompleteAtBatIndex;
+    const currentAtBatIndex = globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.atBatIndex;
     if (lastCompleteAtBatIndex !== null && ((currentAtBatIndex - lastCompleteAtBatIndex) > 1)) { // updates we received skipped a result. Happens every so often.
-        const skippedPlay = globalCache.values.currentLiveFeed.liveData.plays.allPlays.find((play) => play.about.atBatIndex === (lastCompleteAtBatIndex + 1));
+        const skippedPlay = globalCache.values.game.currentLiveFeed.liveData.plays.allPlays.find((play) => play.about.atBatIndex === (lastCompleteAtBatIndex + 1));
         if (skippedPlay) {
             await processAndPushPlay(bot, (await currentPlayProcessor.process(skippedPlay)));
             return;
         }
     }
-    await processAndPushPlay(bot, (await currentPlayProcessor.process(globalCache.values.currentLiveFeed.liveData.plays.currentPlay)));
+    await processAndPushPlay(bot, (await currentPlayProcessor.process(globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay)));
 }
 
 async function processAndPushPlay (bot, play) {
-    if (play.reply && play.reply.length > 0 && play.description !== globalCache.values.lastReportedPlayDescription && play.isScoringPlay) {
-        globalCache.values.lastReportedPlayDescription = play.description;
+    if (play.reply && play.reply.length > 0 && play.description !== globalCache.values.game.lastReportedPlayDescription && play.isScoringPlay) {
+        globalCache.values.game.lastReportedPlayDescription = play.description;
         const embed = new EmbedBuilder()
-            .setTitle(deriveHalfInning(globalCache.values.currentLiveFeed.liveData.plays.currentPlay.about.halfInning) + ' ' +
-                globalCache.values.currentLiveFeed.liveData.plays.currentPlay.about.inning + ', ' +
-                globalCache.values.currentLiveFeed.gameData.teams.home.abbreviation + ' vs. ' +
-                globalCache.values.currentLiveFeed.gameData.teams.away.abbreviation)
+            .setTitle(deriveHalfInning(globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.halfInning) + ' ' +
+                globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.inning + ', ' +
+                globalCache.values.game.currentLiveFeed.gameData.teams.home.abbreviation + ' vs. ' +
+                globalCache.values.game.currentLiveFeed.gameData.teams.away.abbreviation)
             .setDescription(play.reply)
             .setColor('#E31937');
         globalCache.values.subscribedChannels.forEach((channel) => {

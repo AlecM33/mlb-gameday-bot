@@ -5,12 +5,12 @@ const mlbAPIUtil = require('../modules/MLB-API-util');
 module.exports = {
     process: async (currentPlayJSON) => {
         let reply = '';
-        if (!globalCache.values.startReported && currentPlayJSON.playEvents.find(event => event.details?.description === 'Status Change - In Progress')) {
-            globalCache.values.startReported = true;
+        if (!globalCache.values.game.startReported && currentPlayJSON.playEvents.find(event => event.details?.description === 'Status Change - In Progress')) {
+            globalCache.values.game.startReported = true;
             reply += 'A game is starting! Go Guards!';
         }
         if (currentPlayJSON.about.isComplete) {
-            globalCache.values.lastCompleteAtBatIndex = currentPlayJSON.about.atBatIndex;
+            globalCache.values.game.lastCompleteAtBatIndex = currentPlayJSON.about.atBatIndex;
             reply += getDescription(currentPlayJSON);
             if (currentPlayJSON.about?.hasOut) {
                 reply += ' **' + currentPlayJSON.count.outs + (currentPlayJSON.count.outs > 1 ? ' outs. **' : ' out. **');
@@ -18,12 +18,12 @@ module.exports = {
             if (currentPlayJSON.about?.isScoringPlay) {
                 reply += '\n';
                 if (currentPlayJSON.result.homeScore > currentPlayJSON.result.awayScore) {
-                    reply += '## ' + globalCache.values.currentLiveFeed.gameData.teams.home.abbreviation +
+                    reply += '## ' + globalCache.values.game.currentLiveFeed.gameData.teams.home.abbreviation +
                         ' now leads ' + currentPlayJSON.result.homeScore + '-' + currentPlayJSON.result.awayScore + '\n';
                 } else if (currentPlayJSON.result.homeScore === currentPlayJSON.result.awayScore) {
                     reply += '## The game is now tied at ' + currentPlayJSON.result.homeScore + '-' + currentPlayJSON.result.awayScore + '\n';
                 } else {
-                    reply += '## ' + globalCache.values.currentLiveFeed.gameData.teams.away.abbreviation +
+                    reply += '## ' + globalCache.values.game.currentLiveFeed.gameData.teams.away.abbreviation +
                         ' now leads ' + currentPlayJSON.result.awayScore + '-' + currentPlayJSON.result.homeScore + '\n';
                 }
             }
@@ -36,7 +36,7 @@ module.exports = {
                     reply += 'Launch Angle: ' + lastEvent.hitData.launchAngle + '° \n';
                     reply += 'Distance: ' + lastEvent.hitData.totalDistance + ' ft.\n';
                     if (lastEvent.hitData.totalDistance >= 300) {
-                        const hrPerPark = await mlbAPIUtil.xParks(globalCache.values.currentLiveFeed.gamePk, lastEvent.playId);
+                        const hrPerPark = await mlbAPIUtil.xParks(globalCache.values.game.currentLiveFeed.gamePk, lastEvent.playId);
                         if (hrPerPark.hr && hrPerPark.not) {
                             reply += 'HR/Park: ' + hrPerPark.hr.length + '/' + (hrPerPark.hr.length + hrPerPark.not.length);
                         }
@@ -63,8 +63,8 @@ function getDescription (currentPlayJSON) {
 }
 
 function guardiansBatting (currentPlayJSON) {
-    return (currentPlayJSON.about.halfInning === 'bottom' && globalCache.values.currentLiveFeed.gameData.teams.home.id === globals.GUARDIANS)
-        || (currentPlayJSON.about.halfInning === 'top' && globalCache.values.currentLiveFeed.gameData.teams.away.id === globals.GUARDIANS);
+    return (currentPlayJSON.about.halfInning === 'bottom' && globalCache.values.game.currentLiveFeed.gameData.teams.home.id === globals.GUARDIANS)
+        || (currentPlayJSON.about.halfInning === 'top' && globalCache.values.game.currentLiveFeed.gameData.teams.away.id === globals.GUARDIANS);
 }
 
 function getGuardiansHomeRunDescription (description) {

@@ -78,9 +78,9 @@ module.exports = {
         const now = globals.DATE || new Date();
         const twelveHoursFromNow = globals.DATE || new Date();
         const twelveHoursInThePast = globals.DATE || new Date();
-        twelveHoursFromNow.setHours(twelveHoursFromNow.getHours() + 12);
-        twelveHoursInThePast.setHours(twelveHoursInThePast.getHours() - 12);
-        // get games within a 24-hour window centered on now. The game(s) that have a start time closest to now will be treated as the "current" game(s).
+        twelveHoursFromNow.setHours(twelveHoursFromNow.getHours() + 24);
+        twelveHoursInThePast.setHours(twelveHoursInThePast.getHours() - 24);
+        // get games within a 48-hour window centered on now. The game(s) that have a start time closest to now will be treated as the "current" game(s).
         return fetch(endpoints.schedule(
             twelveHoursInThePast.toISOString().split('T')[0],
             twelveHoursFromNow.toISOString().split('T')[0],

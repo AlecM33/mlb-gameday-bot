@@ -10,12 +10,12 @@ module.exports = {
 
     startersHandler: async (interaction) => {
         console.info(`MATCHUP command invoked by guild: ${interaction.guildId}`);
-        if (!globalCache.values.isDoubleHeader) {
+        if (!globalCache.values.game.isDoubleHeader) {
             await interaction.deferReply();
         }
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = globalCache.values.isDoubleHeader
+            const game = globalCache.values.game.isDoubleHeader
                 ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId)) // the user's choice between the two games of the double-header.
                 : globalCache.values.nearestGames[0];
             const matchup = await mlbAPIUtil.matchup(game.gamePk);
@@ -148,12 +148,12 @@ module.exports = {
 
     linescoreHandler: async (interaction) => {
         console.info(`LINESCORE command invoked by guild: ${interaction.guildId}`);
-        if (!globalCache.values.isDoubleHeader) {
+        if (!globalCache.values.game.isDoubleHeader) {
             await interaction.deferReply();
         }
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = globalCache.values.isDoubleHeader
+            const game = globalCache.values.game.isDoubleHeader
                 ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId)) // the user's choice between the two games of the double-header.
                 : globalCache.values.nearestGames[0];
             const statusCheck = await mlbAPIUtil.statusCheck(game.gamePk);
@@ -166,22 +166,12 @@ module.exports = {
                 return;
             }
             const linescore = await mlbAPIUtil.linescore(game.gamePk);
-            const awayAbbreviation = game.teams.away.team?.abbreviation || game.teams.away.abbreviation;
-            const homeAbbreviation = game.teams.home.team?.abbreviation || game.teams.home.abbreviation;
             const linescoreAttachment = new AttachmentBuilder(
-                await commandUtil.buildLineScoreTable(game, linescore, statusCheck.gameData.status.abstractGameState)
+                await commandUtil.buildLineScoreTable(game, linescore)
                 , { name: 'line_score.png' });
             await commandUtil.giveFinalCommandResponse(toHandle, {
                 ephemeral: false,
-                content: homeAbbreviation + ' vs. ' + awayAbbreviation +
-                    ', ' + new Date(game.gameDate).toLocaleString('default', {
-                    month: 'short',
-                    day: 'numeric',
-                    timeZone: 'America/New_York',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    timeZoneName: 'short'
-                }) +
+                content: commandUtil.constructGameDisplayString(game) +
                     ' - **' + (statusCheck.gameData.status.abstractGameState === 'Final'
                     ? 'Final'
                     : linescore.inningState + ' ' + linescore.currentInningOrdinal) + '**\n\n',
@@ -193,12 +183,12 @@ module.exports = {
 
     boxScoreHandler: async (interaction) => {
         console.info(`BOXSCORE command invoked by guild: ${interaction.guildId}`);
-        if (!globalCache.values.isDoubleHeader) {
+        if (!globalCache.values.game.isDoubleHeader) {
             await interaction.deferReply();
         }
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = globalCache.values.isDoubleHeader
+            const game = globalCache.values.game.isDoubleHeader
                 ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId)) // the user's choice between the two games of the double-header.
                 : globalCache.values.nearestGames[0];
             const statusCheck = await mlbAPIUtil.statusCheck(game.gamePk);
@@ -238,12 +228,12 @@ module.exports = {
 
     lineupHandler: async (interaction) => {
         console.info(`LINEUP command invoked by guild: ${interaction.guildId}`);
-        if (!globalCache.values.isDoubleHeader) {
+        if (!globalCache.values.game.isDoubleHeader) {
             await interaction.deferReply();
         }
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = globalCache.values.isDoubleHeader
+            const game = globalCache.values.game.isDoubleHeader
                 ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId)) // the user's choice between the two games of the double-header.
                 : globalCache.values.nearestGames[0];
             const updatedLineup = (await mlbAPIUtil.lineup(game.gamePk))?.dates[0].games[0];
@@ -273,12 +263,12 @@ module.exports = {
 
     highlightsHandler: async (interaction) => {
         console.info(`HIGHLIGHTS command invoked by guild: ${interaction.guildId}`);
-        if (!globalCache.values.isDoubleHeader) {
+        if (!globalCache.values.game.isDoubleHeader) {
             await interaction.deferReply();
         }
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = globalCache.values.isDoubleHeader
+            const game = globalCache.values.game.isDoubleHeader
                 ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId)) // the user's choice between the two games of the double-header.
                 : globalCache.values.nearestGames[0];
             const content = await mlbAPIUtil.content(game.gamePk);

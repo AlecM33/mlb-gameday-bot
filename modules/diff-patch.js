@@ -7,7 +7,7 @@ module.exports = {
                 case 'add':
                 case 'replace':
                     setJSONValue(
-                        globalCache.values.currentLiveFeed,
+                        globalCache.values.game.currentLiveFeed,
                         difference.path
                             .replaceAll('/', '.')
                             .split('.')
@@ -18,7 +18,7 @@ module.exports = {
                     break;
                 case 'remove':
                     setJSONValue(
-                        globalCache.values.currentLiveFeed,
+                        globalCache.values.game.currentLiveFeed,
                         difference.path
                             .replaceAll('/', '.')
                             .split('.')
@@ -29,27 +29,27 @@ module.exports = {
                     break;
                 case 'copy':
                     setJSONValue(
-                        globalCache.values.currentLiveFeed,
+                        globalCache.values.game.currentLiveFeed,
                         difference.path
                             .replaceAll('/', '.')
                             .split('.')
                             .slice(1),
-                        eval('globalCache.values.currentLiveFeed' + toJsonPath(difference.from)),
+                        eval('globalCache.values.game.currentLiveFeed' + toJsonPath(difference.from)),
                         difference.op
                     );
                     break;
                 case 'move':
                     setJSONValue(
-                        globalCache.values.currentLiveFeed,
+                        globalCache.values.game.currentLiveFeed,
                         difference.path
                             .replaceAll('/', '.')
                             .split('.')
                             .slice(1),
-                        eval('globalCache.values.currentLiveFeed' + toJsonPath(difference.from)),
+                        eval('globalCache.values.game.currentLiveFeed' + toJsonPath(difference.from)),
                         'add'
                     );
                     setJSONValue(
-                        globalCache.values.currentLiveFeed,
+                        globalCache.values.game.currentLiveFeed,
                         difference.from
                             .replaceAll('/', '.')
                             .split('.')

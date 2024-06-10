@@ -56,7 +56,7 @@ module.exports = {
         };
     },
 
-    buildLineScoreTable: async (game, linescore, status) => {
+    buildLineScoreTable: async (game, linescore) => {
         const awayAbbreviation = game.teams.away.team?.abbreviation || game.teams.away.abbreviation;
         const homeAbbreviation = game.teams.home.team?.abbreviation || game.teams.home.abbreviation;
         let innings = linescore.innings;
@@ -165,7 +165,7 @@ module.exports = {
                 content: "There's no game today!",
                 ephemeral: false
             });
-        } else if (globalCache.values.isDoubleHeader) {
+        } else if (globalCache.values.game.isDoubleHeader) {
             return await resolveDoubleHeaderSelection(interaction);
         } else {
             return interaction;
@@ -173,7 +173,7 @@ module.exports = {
     },
 
     giveFinalCommandResponse: async (toHandle, options) => {
-        await (globalCache.values.isDoubleHeader
+        await (globalCache.values.game.isDoubleHeader
             ? toHandle.update(options)
             : toHandle.followUp(options));
     },
@@ -187,7 +187,7 @@ module.exports = {
             hour: 'numeric',
             minute: '2-digit',
             timeZoneName: 'short'
-        }) + '\n';
+        });
     }
 };
 
