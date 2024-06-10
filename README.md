@@ -1,4 +1,4 @@
-# guardians-bot
+# MLB Gameday Bot
 A bot that integrates with the MLB Stats API to track your team of choice. For me, it's the Cleveland Guardians.
 
 Upon startup, the bot looks for your team's games in a 48-hour window centered on the current date - 24 hours into the past, 24 hours into the future. Whichever game (or games, in the case of a doubleheader) is the closest to the current date is
@@ -24,3 +24,14 @@ Examples:
 ![gameday](https://github.com/AlecM33/gameday-bot/assets/24642328/53852830-c0f5-4051-8cba-0e7d92a72f77)
 
 ![starters](https://github.com/AlecM33/gameday-bot/assets/24642328/ced20a8b-9f7b-4d71-9b81-e5abf186fe14)
+
+# Tech Stack
+
+Written in JavaScript using [Discord.js](https://discord.js.org/).
+
+The bot uses a PostgreSQL database hosted for free on the [Aiven Platform](https://aiven.io/) to keep track of the Discord channels that have subscribed to the real-time gameday feature.
+
+I make use of several useful npm packages such as `sharp`, `ascii-table`, and `reconnecting-websocket`.
+
+I integrate with the MLB stats API for a dizzying amount of data. Its documentation is limited, but there is some. Shout out to Todd Roberts and his project for getting me acquainted with some of the subtleties: https://pypi.org/project/MLB-StatsAPI/. You can also
+view the spec for the MLB's "master game object", nicknamed GUMBO, here: https://bdata-research-blog-prod.s3.amazonaws.com/uploads/2019/03/GUMBOPDF3-29.pdf. I'm also happy to answer what I can about how to use the API.
