@@ -2,7 +2,6 @@ const { AttachmentBuilder, EmbedBuilder } = require('discord.js');
 const globalCache = require('./global-cache');
 const mlbAPIUtil = require('./MLB-API-util');
 const { joinImages } = require('join-images');
-const AsciiTable = require('ascii-table');
 const globals = require('../config/globals');
 const commandUtil = require('./command-util');
 const queries = require('../database/queries.js');
@@ -87,39 +86,9 @@ module.exports = {
         console.info(`STANDINGS command invoked by guild: ${interaction.guildId}`);
         const americanLeagueCentralStandings = (await mlbAPIUtil.standings())
             .records.find((record) => record.division.id === globals.AL_CENTRAL);
-        const centralMap = americanLeagueCentralStandings.teamRecords.map(teamRecord => {
-            return {
-                name: teamRecord.team.name,
-                wins: teamRecord.leagueRecord.wins,
-                losses: teamRecord.leagueRecord.losses,
-                pct: teamRecord.leagueRecord.pct,
-                gamesBack: teamRecord.gamesBack,
-                homeRecord: (() => {
-                    const home = teamRecord.records.splitRecords.find(record => record.type === 'home');
-                    return home.wins + '-' + home.losses;
-                })(),
-                awayRecord: (() => {
-                    const away = teamRecord.records.splitRecords.find(record => record.type === 'away');
-                    return away.wins + '-' + away.losses;
-                })(),
-                lastTen: (() => {
-                    const l10 = teamRecord.records.splitRecords.find(record => record.type === 'lastTen');
-                    return l10.wins + '-' + l10.losses;
-                })()
-            };
-        });
-        const table = new AsciiTable('American League Central Standings');
-        table.setHeading('Team', 'W-L', 'GB', 'L10');
-        centralMap.forEach((entry) => table.addRow(
-            entry.name,
-            entry.wins + '-' + entry.losses,
-            entry.gamesBack,
-            entry.lastTen
-        ));
-        table.removeBorder();
         await interaction.reply({
             ephemeral: false,
-            content: '```' + table.toString() + '```'
+            files: [new AttachmentBuilder((await commandUtil.buildStandingsTable(americanLeagueCentralStandings)), { name: 'standings.png' })]
         });
     },
 
@@ -146,7 +115,7 @@ module.exports = {
                 }
             });
         } else {
-            throw new Error("Could not subscribe to the gameday feed.")
+            throw new Error('Could not subscribe to the gameday feed.');
         }
 
         if (!interaction.replied) {
@@ -197,10 +166,27 @@ module.exports = {
                 return;
             }
             const linescore = await mlbAPIUtil.linescore(game.gamePk);
+            const awayAbbreviation = game.teams.away.team?.abbreviation || game.teams.away.abbreviation;
+            const homeAbbreviation = game.teams.home.team?.abbreviation || game.teams.home.abbreviation;
+            const linescoreAttachment = new AttachmentBuilder(
+                await commandUtil.buildLineScoreTable(game, linescore, statusCheck.gameData.status.abstractGameState)
+                , { name: 'line_score.png' });
             await commandUtil.giveFinalCommandResponse(toHandle, {
                 ephemeral: false,
-                content: commandUtil.buildLineScoreTable(game, linescore, statusCheck.gameData.status.abstractGameState),
-                components: []
+                content: homeAbbreviation + ' vs. ' + awayAbbreviation +
+                    ', ' + new Date(game.gameDate).toLocaleString('default', {
+                    month: 'short',
+                    day: 'numeric',
+                    timeZone: 'America/New_York',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    timeZoneName: 'short'
+                }) +
+                    ' - **' + (statusCheck.gameData.status.abstractGameState === 'Final'
+                    ? 'Final'
+                    : linescore.inningState + ' ' + linescore.currentInningOrdinal) + '**\n\n',
+                components: [],
+                files: [linescoreAttachment]
             });
         }
     },
@@ -228,10 +214,24 @@ module.exports = {
                 mlbAPIUtil.boxScore(game.gamePk),
                 mlbAPIUtil.liveFeedBoxScoreNamesOnly(game.gamePk)
             ]);
+            const boxscoreAttachment = new AttachmentBuilder(
+                await commandUtil.buildBoxScoreTable(game, boxScore, boxScoreNames, statusCheck.gameData.status.abstractGameState)
+                , { name: 'boxscore.png' });
+            const awayAbbreviation = game.teams.away.team?.abbreviation || game.teams.away.abbreviation;
+            const homeAbbreviation = game.teams.home.team?.abbreviation || game.teams.home.abbreviation;
             await commandUtil.giveFinalCommandResponse(toHandle, {
                 ephemeral: false,
-                content: commandUtil.buildBoxScoreTable(game, boxScore, boxScoreNames, statusCheck.gameData.status.abstractGameState),
-                components: []
+                content: homeAbbreviation + ' vs. ' + awayAbbreviation +
+                    ', ' + new Date(game.gameDate).toLocaleString('default', {
+                    month: 'short',
+                    day: 'numeric',
+                    timeZone: 'America/New_York',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    timeZoneName: 'short'
+                }),
+                components: [],
+                files: [boxscoreAttachment]
             });
         }
     },
@@ -264,8 +264,9 @@ module.exports = {
             }
             await commandUtil.giveFinalCommandResponse(toHandle, {
                 ephemeral: false,
-                content: commandUtil.constructGameDisplayString(game) + '\n```' + (await commandUtil.getLineupCardTable(updatedLineup)).toString() + '```',
-                components: []
+                content: commandUtil.constructGameDisplayString(game) + '\n',
+                components: [],
+                files: [new AttachmentBuilder(await commandUtil.getLineupCardTable(game), { name: 'lineup.png' })]
             });
         }
     },
@@ -282,7 +283,9 @@ module.exports = {
                 : globalCache.values.nearestGames[0];
             const content = await mlbAPIUtil.content(game.gamePk);
             const highlights = content.highlights?.highlights?.items
-                ?.filter(item => item.keywordsAll?.find(keyword => keyword.value === 'in-game-highlight')) || [];
+                ?.filter(item => item.keywordsAll?.find(keyword => keyword.value === 'in-game-highlight'))
+                ?.sort((a, b) => new Date(b.date) - new Date(a.date))
+                || [];
             // discord limits messages to 2,000 characters. We very well might need a couple messages to link everything.
             const messagesNeeded = Math.round(highlights.length / globals.HIGHLIGHTS_PER_MESSAGE);
             if (messagesNeeded > 1) {

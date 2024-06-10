@@ -17,6 +17,7 @@
     "jsdom": "^24.1.0",
     "partysocket": "^1.0.1",
     "pg": "^8.12.0",
+    "puppeteer": "^22.10.0",
     "reconnecting-websocket": "^4.4.0",
     "sharp": "^0.32.6",
     "sockette": "^2.0.6",

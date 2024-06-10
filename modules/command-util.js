@@ -4,6 +4,7 @@ const AsciiTable = require('ascii-table');
 const mlbAPIUtil = require('./MLB-API-util');
 const jsdom = require('jsdom');
 const globals = require('../config/globals');
+const puppeteer = require('puppeteer');
 
 module.exports = {
     getLineupCardTable: async (game) => {
@@ -12,13 +13,16 @@ module.exports = {
             ? game.lineups.homePlayers
             : game.lineups.awayPlayers;
         const people = (await mlbAPIUtil.people(lineup.map(lineupPlayer => lineupPlayer.id))).people;
-        table.setHeading(['', 'HR', 'RBI', 'AVG', 'OPS']);
+        table.setHeading(['', '', '', 'B', 'HR', 'RBI', 'AVG', 'OPS']);
         table.setHeadingAlign(AsciiTable.CENTER);
         table.setAlign(AsciiTable.LEFT);
         for (let i = 0; i < lineup.length; i ++) {
             const hittingStats = people[i]?.stats.find(stat => stat.group.displayName === 'hitting')?.splits[0]?.stat;
             table.addRow([
-                people[i]?.boxscoreName + ' ' + lineup[i]?.primaryPosition.abbreviation,
+                i + 1,
+                people[i]?.boxscoreName,
+                lineup[i]?.primaryPosition.abbreviation,
+                people[i].batSide.code,
                 hittingStats?.homeRuns,
                 hittingStats?.rbi,
                 hittingStats?.avg,
@@ -26,7 +30,7 @@ module.exports = {
             ]);
         }
         table.removeBorder();
-        return table;
+        return await getScreenshotOfHTMLTables([table]);
     },
     hydrateProbable: async (probable) => {
         const [spot, savant, people] = await Promise.all([
@@ -52,7 +56,7 @@ module.exports = {
         };
     },
 
-    buildLineScoreTable: (game, linescore, status) => {
+    buildLineScoreTable: async (game, linescore, status) => {
         const awayAbbreviation = game.teams.away.team?.abbreviation || game.teams.away.abbreviation;
         const homeAbbreviation = game.teams.home.team?.abbreviation || game.teams.home.abbreviation;
         let innings = linescore.innings;
@@ -61,35 +65,19 @@ module.exports = {
         }
         const linescoreTable = new AsciiTable();
         const headings = [''];
-        linescoreTable.setHeading(headings.concat(innings.map(inning => inning.num)));
+        linescoreTable.setHeading(headings.concat(innings.map(inning => inning.num)).concat(['', 'R', 'H', 'E', 'LOB']));
         linescoreTable.addRow([awayAbbreviation]
-            .concat(innings.map(inning => inning.away.runs)));
+            .concat(innings.map(inning => inning.away.runs)).concat(
+                ['', linescore.teams.away.runs, linescore.teams.away.hits, linescore.teams.away.errors, linescore.teams.away.leftOnBase]));
         linescoreTable.addRow([homeAbbreviation]
-            .concat(innings.map(inning => inning.home.runs)));
+            .concat(innings.map(inning => inning.home.runs))
+            .concat(['', linescore.teams.home.runs, linescore.teams.home.hits, linescore.teams.home.errors, linescore.teams.home.leftOnBase]));
         linescoreTable.removeBorder();
-        const totalsTable = new AsciiTable();
-        totalsTable.setHeading(['', 'R', 'H', 'E', 'LOB']);
-        totalsTable.addRow([awayAbbreviation]
-            .concat([linescore.teams.away.runs, linescore.teams.away.hits, linescore.teams.away.errors, linescore.teams.away.leftOnBase]));
-        totalsTable.addRow([homeAbbreviation]
-            .concat([linescore.teams.home.runs, linescore.teams.home.hits, linescore.teams.home.errors, linescore.teams.home.leftOnBase]));
-        totalsTable.removeBorder();
-        return homeAbbreviation + ' vs. ' + awayAbbreviation +
-            ', ' + new Date(game.gameDate).toLocaleString('default', {
-            month: 'short',
-            day: 'numeric',
-            timeZone: 'America/New_York',
-            hour: 'numeric',
-            minute: '2-digit',
-            timeZoneName: 'short'
-        }) +
-            ' - **' + (status === 'Final' ? 'Final' : linescore.inningState + ' ' + linescore.currentInningOrdinal) + '**\n' +
-            '\n```' + linescoreTable.toString() + '\n\n' + totalsTable.toString() + '```';
+        return (await getScreenshotOfHTMLTables([linescoreTable]));
     },
 
-    buildBoxScoreTable: (game, boxScore, boxScoreNames, status) => {
-        const awayAbbreviation = game.teams.away.team?.abbreviation || game.teams.away.abbreviation;
-        const homeAbbreviation = game.teams.home.team?.abbreviation || game.teams.home.abbreviation;
+    buildBoxScoreTable: async (game, boxScore, boxScoreNames, status) => {
+        const tables = [];
         const players = boxScore.teams.away.team.id === globals.TEAM_ID
             ? boxScore.teams.away.players
             : boxScore.teams.home.players;
@@ -121,28 +109,54 @@ module.exports = {
         const boxScoreTable = new AsciiTable('Batting\n');
         sortedBattingOrder.forEach((batter) => {
             boxScoreTable.addRow(
-                (batter.isSubstitute ? '- ' + batter.boxScoreName : batter.boxScoreName) +
-                    ' ' + batter.allPositions.reduce((acc, value) => acc + (batter.allPositions.indexOf(value) === batter.allPositions.length - 1
+                (batter.isSubstitute ? '- ' + batter.boxScoreName : batter.boxScoreName),
+                batter.allPositions.reduce((acc, value) => acc + (batter.allPositions.indexOf(value) === batter.allPositions.length - 1
                     ? value.abbreviation
                     : value.abbreviation + '-'), ''),
                 batter.summary
             );
         });
         boxScoreTable.removeBorder();
-
         const pitchingTable = new AsciiTable('Pitching\n');
-        inOrderPitchers.forEach(pitcher => pitchingTable.addRow(pitcher.boxScoreName + ' ' + (pitcher.note || '') + '\n\t' + pitcher.summary));
+        inOrderPitchers.forEach(pitcher => pitchingTable.addRow(pitcher.boxScoreName + ' ' + (pitcher.note || ''), pitcher.summary));
         pitchingTable.removeBorder();
-        return homeAbbreviation + ' vs. ' + awayAbbreviation +
-            ', ' + new Date(game.gameDate).toLocaleString('default', {
-            month: 'short',
-            day: 'numeric',
-            timeZone: 'America/New_York',
-            hour: 'numeric',
-            minute: '2-digit',
-            timeZoneName: 'short'
-        }) +
-            '\n```' + boxScoreTable.toString() + '\n\n' + pitchingTable.toString() + '```';
+        tables.push(boxScoreTable);
+        tables.push(pitchingTable);
+        return (await getScreenshotOfHTMLTables(tables));
+    },
+
+    buildStandingsTable: async (standings) => {
+        const centralMap = standings.teamRecords.map(teamRecord => {
+            return {
+                name: teamRecord.team.name,
+                wins: teamRecord.leagueRecord.wins,
+                losses: teamRecord.leagueRecord.losses,
+                pct: teamRecord.leagueRecord.pct,
+                gamesBack: teamRecord.gamesBack,
+                homeRecord: (() => {
+                    const home = teamRecord.records.splitRecords.find(record => record.type === 'home');
+                    return home.wins + '-' + home.losses;
+                })(),
+                awayRecord: (() => {
+                    const away = teamRecord.records.splitRecords.find(record => record.type === 'away');
+                    return away.wins + '-' + away.losses;
+                })(),
+                lastTen: (() => {
+                    const l10 = teamRecord.records.splitRecords.find(record => record.type === 'lastTen');
+                    return l10.wins + '-' + l10.losses;
+                })()
+            };
+        });
+        const table = new AsciiTable('AL Central Standings\n');
+        table.setHeading('Team', 'W-L', 'GB', 'L10');
+        centralMap.forEach((entry) => table.addRow(
+            entry.name,
+            entry.wins + '-' + entry.losses,
+            entry.gamesBack,
+            entry.lastTen
+        ));
+        table.removeBorder();
+        return (await getScreenshotOfHTMLTables([table]));
     },
 
     screenInteraction: async (interaction) => {
@@ -217,4 +231,28 @@ async function resolveDoubleHeaderSelection (interaction) {
 
 function parsePitchingStats (people) {
     return people.people[0]?.stats.find(stat => stat.group.displayName === 'pitching')?.splits[0]?.stat;
+}
+
+/* This is not the best solution, admittedly. We are building an HTML version of the table in a headless browser, styling
+it how we want, and taking a screenshot of that, attaching it to the reply as a .png. Why? Trying to simply reply with ASCII
+is subject to formatting issues on phone screens, which rudely break up the characters and make the tables look like gibberish.
+ */
+async function getScreenshotOfHTMLTables (tables) {
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    await page.setContent(`
+            <pre id="boxscore" style="background-color: #151820;
+                color: whitesmoke;
+                padding: 15px;
+                font-size: 20px;
+                width: fit-content;">` +
+            tables.reduce((acc, value) => acc + value.toString() + '\n\n', '') +
+            '</pre>');
+    const element = await page.waitForSelector('#boxscore');
+    const buffer = await element.screenshot({
+        type: 'png',
+        omitBackground: false
+    });
+    await browser.close();
+    return buffer;
 }

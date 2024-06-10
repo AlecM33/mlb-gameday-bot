@@ -2,11 +2,8 @@ const mlbAPIUtil = require('./MLB-API-util');
 const globalCache = require('./global-cache');
 const diffPatch = require('./diff-patch');
 const currentPlayProcessor = require('./current-play-processor');
-const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
+const { EmbedBuilder } = require('discord.js');
 const globals = require('../config/globals');
-const fs = require('fs');
-const path = require('path');
-const sharp = require('sharp');
 const commandUtil = require('./command-util');
 const queries = require('../database/queries.js');
 
@@ -113,20 +110,11 @@ async function processAndPushPlay (bot, play) {
                 globalCache.values.currentLiveFeed.gameData.teams.away.abbreviation)
             .setDescription(play.reply)
             .setColor('#E31937');
-        let pngEventBuffer, attachment;
-        if (play.event && fs.existsSync(path.join(__dirname, '../images/' + play.event + '.svg'))) {
-            // pngEventBuffer = await sharp(path.join(__dirname, '../images/' + play.event + '.svg'))
-            //     .png()
-            //     .toBuffer();
-            // attachment = new AttachmentBuilder(pngEventBuffer, { name: play.event.replaceAll(' ', '-') + '.png' });
-            // embed.setThumbnail('attachment://' + play.event.replaceAll(' ', '-') + '.png');
-        }
         globalCache.values.subscribedChannels.forEach((channel) => {
             bot.channels.fetch(channel).then((returnedChannel) => {
                 console.log('Sending!');
                 returnedChannel.send({
-                    embeds: [embed],
-                    files: (attachment ? [attachment] : null)
+                    embeds: [embed]
                 });
             });
         });
