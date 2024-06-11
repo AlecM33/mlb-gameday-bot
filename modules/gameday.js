@@ -16,7 +16,7 @@ module.exports = {
             globalCache.values.game.isDoubleHeader = games.length > 1;
             globalCache.values.subscribedChannels = (await queries.getAllSubscribedChannels()).map(channel => channel.channel_id);
             console.log('Subscribed channels: ' + JSON.stringify(globalCache.values.subscribedChannels, null, 2));
-            await pollForSavantData(745248, '0ff0ada6-9cab-4403-9816-b6ed4d62c9e0');
+            // await pollForSavantData(745248, '0ff0ada6-9cab-4403-9816-b6ed4d62c9e0');
             await statusPoll(BOT, games);
         }).catch((e) => {
             console.log(e);
