@@ -5,8 +5,7 @@
   "main": "main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "NODE_ENV=production && node main.js",
-    "heroku-postbuild": "mkdir ./.cache && mv /app/.cache/puppeteer ./.cache"
+    "start": "NODE_ENV=production && node main.js"
   },
   "author": "",
   "license": "ISC",
