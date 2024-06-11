@@ -1,6 +1,5 @@
 const globalCache = require('./global-cache');
 const globals = require('../config/globals');
-const mlbAPIUtil = require('../modules/MLB-API-util');
 
 module.exports = {
     process: async (currentPlayJSON) => {
@@ -10,7 +9,7 @@ module.exports = {
             globalCache.values.game.startReported = true;
             reply += 'A game is starting! Go Guards!';
         }
-        if (currentPlayJSON.about.isComplete || currentPlayJSON.result.eventType === "pitching_substitution") {
+        if (currentPlayJSON.about.isComplete || currentPlayJSON.result.eventType === 'pitching_substitution') {
             globalCache.values.game.lastCompleteAtBatIndex = currentPlayJSON.about.atBatIndex;
             reply += getDescription(currentPlayJSON);
             if (currentPlayJSON.about?.hasOut) {
@@ -36,7 +35,7 @@ module.exports = {
                         (lastEvent.hitData.launchSpeed > 95.0 ? ' \uD83D\uDD25\uD83D\uDD25' : '') + '\n';
                     reply += 'Launch Angle: ' + lastEvent.hitData.launchAngle + '° \n';
                     reply += 'Distance: ' + lastEvent.hitData.totalDistance + ' ft.\n';
-                    reply += '\n**Statcast:**\nPending...'
+                    reply += '\n**Statcast:**\nPending...';
                 } else {
                     reply += '\n\n';
                     reply += 'Exit Velocity: Unavailable\n';
@@ -46,7 +45,7 @@ module.exports = {
             }
         }
         return {
-            reply: reply,
+            reply,
             description: currentPlayJSON.result?.description,
             event: currentPlayJSON.result?.event,
             eventType: currentPlayJSON.result?.eventType,

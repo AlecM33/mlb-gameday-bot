@@ -10,7 +10,7 @@ const values = {
     }
 };
 
-function resetGameCache() {
+function resetGameCache () {
     values.game.currentLiveFeed = null;
     values.game.isDoubleHeader = null;
     values.game.lastCompleteAtBatIndex = null;

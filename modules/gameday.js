@@ -65,10 +65,10 @@ function subscribe (bot, liveGame, games) {
                 bot.channels.fetch(channel).then((returnedChannel) => {
                     console.log('Sending!');
                     returnedChannel.send({
-                        content:  commandUtil.constructGameDisplayString(liveGame) +
+                        content: commandUtil.constructGameDisplayString(liveGame) +
                             ' - **' + (globalCache.values.game.currentLiveFeed.gameData.status.abstractGameState === 'Final'
-                                ? 'Final'
-                                : linescore.inningState + ' ' + linescore.currentInningOrdinal) + '**\n\n',
+                            ? 'Final'
+                            : linescore.inningState + ' ' + linescore.currentInningOrdinal) + '**\n\n',
                         files: [linescoreAttachment]
                     });
                 });
@@ -114,7 +114,7 @@ async function processAndPushPlay (bot, play, gamePk) {
     if (play.reply
         && play.reply.length > 0
         && play.description !== globalCache.values.game.lastReportedPlayDescription
-        && (play.isScoringPlay || play.eventType === "pitching_substitution")) {
+        && (play.isScoringPlay || play.eventType === 'pitching_substitution')) {
         globalCache.values.game.lastReportedPlayDescription = play.description;
         const embed = new EmbedBuilder()
             .setTitle(deriveHalfInning(globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.halfInning) + ' ' +
@@ -139,7 +139,7 @@ async function processAndPushPlay (bot, play, gamePk) {
     }
 }
 
-async function pollForSavantData(gamePk, playId, message) {
+async function pollForSavantData (gamePk, playId, message) {
     let attempts = 1;
     const pollingFunction = async () => {
         console.log('Savant: polling for ' + playId + '...');
@@ -148,9 +148,9 @@ async function pollForSavantData(gamePk, playId, message) {
             || gameFeed.team_home.find(play => play.play_id === playId);
         if (matchingPlay) {
             if (matchingPlay.xba || matchingPlay.contextMetrics.homeRunBallParks) {
-                message.edit(message.content.replaceAll('Pending...', 'xBA: '
-                    + matchingPlay.xba + '\n' + 'HR/Park: '
-                    + matchingPlay.contextMetrics.homeRunBallparks + '/30'));
+                message.edit(message.content.replaceAll('Pending...', 'xBA: ' +
+                    matchingPlay.xba + '\n' + 'HR/Park: ' +
+                    matchingPlay.contextMetrics.homeRunBallparks + '/30'));
             } else if (attempts === 5) {
                 message.edit(message.content.replaceAll('Pending...', 'Not Available'));
                 console.log('not available');
