@@ -1,5 +1,12 @@
 const globalCache = require('./global-cache');
 
+/*
+    This module concerns updating the base MLB gameday object (AKA "GUMBO") with changes derived from the "diffPatch" resource
+    (/feed/live/diffPatch). What diffPatch does is return collections of "operations" which selectively manipulate the JSON tree.
+    This is a lighter weight alternative to fetching the entire game object every time an event happens. There are five
+    kinds of "operations" - add, replace, remove, copy, and move. Since the JSON paths diffPatch give me are not guaranteed
+    to point to defined values, I have to recursively descend the tree, constructing the object if needed.
+ */
 module.exports = {
     hydrate: (patch) => {
         patch.diff.forEach(difference => {

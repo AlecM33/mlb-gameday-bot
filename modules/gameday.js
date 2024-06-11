@@ -15,6 +15,8 @@ module.exports = {
             globalCache.values.nearestGames = games;
             globalCache.values.game.isDoubleHeader = games.length > 1;
             globalCache.values.subscribedChannels = (await queries.getAllSubscribedChannels()).map(channel => channel.channel_id);
+            console.log('Subscribed channels: ' + JSON.stringify(globalCache.values.subscribedChannels, null, 2));
+            await pollForSavantData(745248, '0ff0ada6-9cab-4403-9816-b6ed4d62c9e0');
             await statusPoll(BOT, games);
         }).catch((e) => {
             console.log(e);
@@ -57,7 +59,7 @@ function subscribe (bot, liveGame, games) {
             ws.close();
             const linescore = await mlbAPIUtil.linescore(liveGame.gamePk);
             const linescoreAttachment = new AttachmentBuilder(
-                await commandUtil.buildLineScoreTable(liveGame, linescore)
+                await commandUtil.buildLineScoreTable(globalCache.values.game.currentLiveFeed, linescore)
                 , { name: 'line_score.png' });
             globalCache.values.subscribedChannels.forEach((channel) => {
                 bot.channels.fetch(channel).then((returnedChannel) => {
@@ -84,32 +86,35 @@ function subscribe (bot, liveGame, games) {
         if (Array.isArray(update)) {
             for (const patch of update) {
                 diffPatch.hydrate(patch);
-                await reportPlay(bot);
+                await reportPlay(bot, liveGame.gamePk);
             }
         } else {
             globalCache.values.game.currentLiveFeed = update;
-            await reportPlay(bot);
+            await reportPlay(bot, liveGame.gamePk);
         }
     });
     ws.addEventListener('error', (e) => console.error(e));
     ws.addEventListener('close', (e) => console.log('Gameday socket closed: ' + JSON.stringify(e)));
 }
 
-async function reportPlay (bot) {
+async function reportPlay (bot, gamePk) {
     const lastCompleteAtBatIndex = globalCache.values.game.lastCompleteAtBatIndex;
     const currentAtBatIndex = globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.atBatIndex;
     if (lastCompleteAtBatIndex !== null && ((currentAtBatIndex - lastCompleteAtBatIndex) > 1)) { // updates we received skipped a result. Happens every so often.
         const skippedPlay = globalCache.values.game.currentLiveFeed.liveData.plays.allPlays.find((play) => play.about.atBatIndex === (lastCompleteAtBatIndex + 1));
         if (skippedPlay) {
-            await processAndPushPlay(bot, (await currentPlayProcessor.process(skippedPlay)));
+            await processAndPushPlay(bot, (await currentPlayProcessor.process(skippedPlay)), gamePk);
             return;
         }
     }
-    await processAndPushPlay(bot, (await currentPlayProcessor.process(globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay)));
+    await processAndPushPlay(bot, (await currentPlayProcessor.process(globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay)), gamePk);
 }
 
-async function processAndPushPlay (bot, play) {
-    if (play.reply && play.reply.length > 0 && play.description !== globalCache.values.game.lastReportedPlayDescription && play.isScoringPlay) {
+async function processAndPushPlay (bot, play, gamePk) {
+    if (play.reply
+        && play.reply.length > 0
+        && play.description !== globalCache.values.game.lastReportedPlayDescription
+        && (play.isScoringPlay || play.eventType === "pitching_substitution")) {
         globalCache.values.game.lastReportedPlayDescription = play.description;
         const embed = new EmbedBuilder()
             .setTitle(deriveHalfInning(globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.halfInning) + ' ' +
@@ -118,15 +123,44 @@ async function processAndPushPlay (bot, play) {
                 globalCache.values.game.currentLiveFeed.gameData.teams.away.abbreviation)
             .setDescription(play.reply)
             .setColor('#E31937');
-        globalCache.values.subscribedChannels.forEach((channel) => {
+        for (const channel of globalCache.values.subscribedChannels) {
             bot.channels.fetch(channel).then((returnedChannel) => {
                 console.log('Sending!');
                 returnedChannel.send({
                     embeds: [embed]
+                }).then(async message => {
+                    if (play.isInPlay && play.playId) {
+                        await pollForSavantData(gamePk, play.playId, message); // xBA and HR/Park for balls in play is available on a delay via baseballsavant.
+                    }
+                    console.log('message: ' + message.content);
                 });
             });
-        });
+        }
     }
+}
+
+async function pollForSavantData(gamePk, playId, message) {
+    let attempts = 1;
+    const pollingFunction = async () => {
+        console.log('Savant: polling for ' + playId + '...');
+        const gameFeed = await mlbAPIUtil.savantGameFeed(gamePk);
+        const matchingPlay = gameFeed.team_away.find(play => play.play_id === playId)
+            || gameFeed.team_home.find(play => play.play_id === playId);
+        if (matchingPlay) {
+            if (matchingPlay.xba || matchingPlay.contextMetrics.homeRunBallParks) {
+                message.edit(message.content.replaceAll('Pending...', 'xBA: '
+                    + matchingPlay.xba + '\n' + 'HR/Park: '
+                    + matchingPlay.contextMetrics.homeRunBallparks + '/30'));
+            } else if (attempts === 5) {
+                message.edit(message.content.replaceAll('Pending...', 'Not Available'));
+                console.log('not available');
+            } else {
+                attempts ++;
+                setTimeout(pollingFunction, globals.SAVANT_POLLING_INTERVAL);
+            }
+        }
+    };
+    await pollingFunction();
 }
 
 function deriveHalfInning (halfInningFull) {

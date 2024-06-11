@@ -4,12 +4,13 @@ const mlbAPIUtil = require('../modules/MLB-API-util');
 
 module.exports = {
     process: async (currentPlayJSON) => {
+        // console.log('PLAY: ' + JSON.stringify(currentPlayJSON, null, 2))
         let reply = '';
         if (!globalCache.values.game.startReported && currentPlayJSON.playEvents.find(event => event.details?.description === 'Status Change - In Progress')) {
             globalCache.values.game.startReported = true;
             reply += 'A game is starting! Go Guards!';
         }
-        if (currentPlayJSON.about.isComplete) {
+        if (currentPlayJSON.about.isComplete || currentPlayJSON.result.eventType === "pitching_substitution") {
             globalCache.values.game.lastCompleteAtBatIndex = currentPlayJSON.about.atBatIndex;
             reply += getDescription(currentPlayJSON);
             if (currentPlayJSON.about?.hasOut) {
@@ -35,12 +36,7 @@ module.exports = {
                         (lastEvent.hitData.launchSpeed > 95.0 ? ' \uD83D\uDD25\uD83D\uDD25' : '') + '\n';
                     reply += 'Launch Angle: ' + lastEvent.hitData.launchAngle + '° \n';
                     reply += 'Distance: ' + lastEvent.hitData.totalDistance + ' ft.\n';
-                    if (lastEvent.hitData.totalDistance >= 300) {
-                        const hrPerPark = await mlbAPIUtil.xParks(globalCache.values.game.currentLiveFeed.gamePk, lastEvent.playId);
-                        if (hrPerPark.hr && hrPerPark.not) {
-                            reply += 'HR/Park: ' + hrPerPark.hr.length + '/' + (hrPerPark.hr.length + hrPerPark.not.length);
-                        }
-                    }
+                    reply += '\n**Statcast:**\nPending...'
                 } else {
                     reply += '\n\n';
                     reply += 'Exit Velocity: Unavailable\n';
@@ -49,7 +45,16 @@ module.exports = {
                 }
             }
         }
-        return { reply, description: currentPlayJSON.result?.description, event: currentPlayJSON.result?.event, isScoringPlay: currentPlayJSON.about?.isScoringPlay };
+        return {
+            reply: reply,
+            description: currentPlayJSON.result?.description,
+            event: currentPlayJSON.result?.event,
+            eventType: currentPlayJSON.result?.eventType,
+            isScoringPlay: currentPlayJSON.about?.isScoringPlay,
+            isInPlay: lastEvent?.details?.isInPlay,
+            playId: lastEvent?.playId,
+            hitDistance: lastEvent?.hitData?.hitDistance
+        };
     }
 };
 

@@ -70,6 +70,10 @@ const endpoints = {
     },
     boxScore: (gamePk) => {
         return 'https://statsapi.mlb.com/api/v1/game/' + gamePk + '/boxscore';
+    },
+    savantGameFeed: (gamePk) => {
+        console.log('https://baseballsavant.mlb.com/gf?game_pk=' + gamePk);
+        return 'https://baseballsavant.mlb.com/gf?game_pk=' + gamePk;
     }
 };
 
@@ -165,5 +169,8 @@ module.exports = {
     },
     xParks: async (gamePk, playId) => {
         return (await fetch(endpoints.xParks(gamePk, playId))).json();
+    },
+    savantGameFeed: async (gamePk) => {
+        return (await fetch(endpoints.savantGameFeed(gamePk))).json();
     }
 };

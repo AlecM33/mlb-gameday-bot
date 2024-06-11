@@ -13,6 +13,7 @@
     "ascii-table": "^0.0.9",
     "discord.js": "^14.15.2",
     "fuse.js": "^7.0.0",
+    "jasmine": "^5.1.0",
     "join-images": "^1.1.5",
     "jsdom": "^24.1.0",
     "partysocket": "^1.0.1",
