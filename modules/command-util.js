@@ -238,7 +238,7 @@ it how we want, and taking a screenshot of that, attaching it to the reply as a 
 is subject to formatting issues on phone screens, which rudely break up the characters and make the tables look like gibberish.
  */
 async function getScreenshotOfHTMLTables (tables) {
-    const browser = await puppeteer.launch({'args' : [
+    const browser = await puppeteer.launch({ headless: true, 'args' : [
         '--no-sandbox',
         '--disable-setuid-sandbox'
     ]});

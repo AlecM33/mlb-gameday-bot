@@ -114,6 +114,7 @@ module.exports = {
                     });
                 }
             });
+            globalCache.values.subscribedChannels = (await queries.getAllSubscribedChannels()).map(channel => channel.channel_id);
         } else {
             throw new Error('Could not subscribe to the gameday feed.');
         }
@@ -144,6 +145,7 @@ module.exports = {
                 content: 'Un-subscribed this channel to the gameday feed. It will no longer receive real-time updates.'
             });
         }
+        globalCache.values.subscribedChannels = (await queries.getAllSubscribedChannels()).map(channel => channel.channel_id);
     },
 
     linescoreHandler: async (interaction) => {
