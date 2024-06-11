@@ -256,7 +256,7 @@ module.exports = {
                 ephemeral: false,
                 content: commandUtil.constructGameDisplayString(game) + '\n',
                 components: [],
-                files: [new AttachmentBuilder(await commandUtil.getLineupCardTable(game), { name: 'lineup.png' })]
+                files: [new AttachmentBuilder(await commandUtil.getLineupCardTable(updatedLineup), { name: 'lineup.png' })]
             });
         }
     },
