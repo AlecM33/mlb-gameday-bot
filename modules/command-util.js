@@ -179,8 +179,10 @@ module.exports = {
     },
 
     constructGameDisplayString: (game) => {
-        return game.teams.home.team.abbreviation + ' vs. ' + game.teams.away.team.abbreviation +
-            ', ' + new Date(game.gameDate).toLocaleString('default', {
+        return (game.teams.home.team?.abbreviation || game.teams.home?.abbreviation)
+            + ' vs. '
+            + (game.teams.away.team?.abbreviation || game.teams.away?.abbreviation)
+            + ', ' + new Date((game.gameDate || game.datetime.dateTime)).toLocaleString('default', {
             month: 'short',
             day: 'numeric',
             timeZone: 'America/New_York',

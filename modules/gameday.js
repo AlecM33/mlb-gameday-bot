@@ -59,13 +59,13 @@ function subscribe (bot, liveGame, games) {
             ws.close();
             const linescore = await mlbAPIUtil.linescore(liveGame.gamePk);
             const linescoreAttachment = new AttachmentBuilder(
-                await commandUtil.buildLineScoreTable(globalCache.values.game.currentLiveFeed, linescore)
+                await commandUtil.buildLineScoreTable(globalCache.values.game.currentLiveFeed.gameData, linescore)
                 , { name: 'line_score.png' });
             globalCache.values.subscribedChannels.forEach((channel) => {
                 bot.channels.fetch(channel).then((returnedChannel) => {
                     console.log('Sending!');
                     returnedChannel.send({
-                        content: commandUtil.constructGameDisplayString(liveGame) +
+                        content: commandUtil.constructGameDisplayString(globalCache.values.game.currentLiveFeed.gameData) +
                             ' - **' + (globalCache.values.game.currentLiveFeed.gameData.status.abstractGameState === 'Final'
                             ? 'Final'
                             : linescore.inningState + ' ' + linescore.currentInningOrdinal) + '**\n\n',
@@ -114,7 +114,7 @@ async function processAndPushPlay (bot, play, gamePk) {
     if (play.reply
         && play.reply.length > 0
         && play.description !== globalCache.values.game.lastReportedPlayDescription
-        && (play.isScoringPlay || play.eventType === 'pitching_substitution')) {
+        /* && (play.isScoringPlay || play.eventType === 'pitching_substitution') */) {
         globalCache.values.game.lastReportedPlayDescription = play.description;
         const embed = new EmbedBuilder()
             .setTitle(deriveHalfInning(globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.halfInning) + ' ' +
@@ -130,7 +130,7 @@ async function processAndPushPlay (bot, play, gamePk) {
                     embeds: [embed]
                 }).then(async message => {
                     if (play.isInPlay && play.playId) {
-                        await pollForSavantData(gamePk, play.playId, message); // xBA and HR/Park for balls in play is available on a delay via baseballsavant.
+                        await pollForSavantData(gamePk, play.playId, message, play.hitDistance); // xBA and HR/Park for balls in play is available on a delay via baseballsavant.
                     }
                     console.log('message: ' + message.content);
                 });
@@ -139,8 +139,10 @@ async function processAndPushPlay (bot, play, gamePk) {
     }
 }
 
-async function pollForSavantData (gamePk, playId, message) {
+async function pollForSavantData (gamePk, playId, message, hitDistance) {
     let attempts = 1;
+    const receivedEmbed = EmbedBuilder.from(message.embeds[0]);
+    let description = message.embeds[0].description;
     const pollingFunction = async () => {
         console.log('Savant: polling for ' + playId + '...');
         const gameFeed = await mlbAPIUtil.savantGameFeed(gamePk);
@@ -148,16 +150,30 @@ async function pollForSavantData (gamePk, playId, message) {
             || gameFeed.team_home.find(play => play.play_id === playId);
         if (matchingPlay) {
             if (matchingPlay.xba || matchingPlay.contextMetrics.homeRunBallParks) {
-                message.edit(message.content.replaceAll('Pending...', 'xBA: ' +
-                    matchingPlay.xba + '\n' + 'HR/Park: ' +
-                    matchingPlay.contextMetrics.homeRunBallparks + '/30'));
-            } else if (attempts === 5) {
-                message.edit(message.content.replaceAll('Pending...', 'Not Available'));
-                console.log('not available');
+                description = description.replaceAll('xBA: Pending...', 'xBA: ' + matchingPlay.xba +
+                    (parseFloat(matchingPlay.xba) > 0.5 ? ' \uD83D\uDFE2' : ''));
+                if (hitDistance && hitDistance >= 300) {
+                    description = description.replaceAll('HR/Park: Pending...', 'HR/Park: ' +
+                        matchingPlay.contextMetrics.homeRunBallparks + '/30' +
+                        (matchingPlay.contextMetrics.homeRunBallparks === 30 ? '\u203C\uFE0F' : ''));
+                }
+                receivedEmbed.setDescription(description);
+                console.log('Editing with data!');
+                message.edit({
+                    embeds: [receivedEmbed]
+                });
+            } else if (attempts === 10) {
+                description = description.replaceAll('Pending...', 'Not Available.');
+                receivedEmbed.setDescription(description);
+                console.log('Editing with unavailable...');
+                message.edit({ embeds: [receivedEmbed] });
             } else {
                 attempts ++;
                 setTimeout(pollingFunction, globals.SAVANT_POLLING_INTERVAL);
             }
+        } else if (attempts < 10) {
+            attempts ++;
+            setTimeout(pollingFunction, globals.SAVANT_POLLING_INTERVAL);
         }
     };
     await pollingFunction();

@@ -1,0 +1,1573 @@
+[
+  {
+    "diff": [
+      {
+        "op": "replace",
+        "path": "/metaData/timeStamp",
+        "value": "20240612_042758"
+      },
+      {
+        "op": "replace",
+        "path": "/metaData/gameEvents/0",
+        "value": "pitching_substitution"
+      },
+      {
+        "op": "add",
+        "path": "/metaData/logicalEvents/0",
+        "value": "pitcherChange"
+      },
+      {
+        "op": "replace",
+        "path": "/gameData/moundVisits/away/used",
+        "value": 3
+      },
+      {
+        "op": "replace",
+        "path": "/gameData/moundVisits/away/remaining",
+        "value": 1
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/allPlays/66/playEvents/4/pitchData/extension",
+        "value": 6.284173097213461
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/allPlays/67/result/event",
+        "value": "Pitching Substitution"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/allPlays/67/result/eventType",
+        "value": "pitching_substitution"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/allPlays/67/result/description",
+        "value": "Pitching Change: Andrew Knizner replaces Jesus Tinoco."
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/allPlays/67/about/endTime",
+        "value": "2024-06-12T04:27:58.735Z"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/allPlays/67/matchup/pitcher/id",
+        "value": 668800
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/allPlays/67/matchup/pitcher/fullName",
+        "value": "Andrew Knizner"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/allPlays/67/matchup/pitcher/link",
+        "value": "/api/v1/people/668800"
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/allPlays/67/matchup/pitcherHotColdZones/0",
+        "value": {
+          "temp": "cold",
+          "color": "rgba(6, 90, 238, .55)",
+          "zone": "01",
+          "value": ".000"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/allPlays/67/matchup/pitcherHotColdZones/1",
+        "value": {
+          "temp": "cold",
+          "color": "rgba(6, 90, 238, .55)",
+          "zone": "02",
+          "value": ".000"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/allPlays/67/matchup/pitcherHotColdZones/2",
+        "value": {
+          "temp": "warm",
+          "color": "rgba(234, 147, 153, .55)",
+          "zone": "03",
+          "value": ".333"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/allPlays/67/matchup/pitcherHotColdZones/3",
+        "value": {
+          "temp": "hot",
+          "color": "rgba(214, 41, 52, .55)",
+          "zone": "04",
+          "value": ".500"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/allPlays/67/matchup/pitcherHotColdZones/4",
+        "value": {
+          "temp": "cold",
+          "color": "rgba(6, 90, 238, .55)",
+          "zone": "05",
+          "value": ".167"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/allPlays/67/matchup/pitcherHotColdZones/5",
+        "value": {
+          "temp": "cold",
+          "color": "rgba(6, 90, 238, .55)",
+          "zone": "06",
+          "value": ".000"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/allPlays/67/matchup/pitcherHotColdZones/6",
+        "value": {
+          "temp": "cold",
+          "color": "rgba(6, 90, 238, .55)",
+          "zone": "07",
+          "value": ".000"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/allPlays/67/matchup/pitcherHotColdZones/7",
+        "value": {
+          "temp": "cold",
+          "color": "rgba(6, 90, 238, .55)",
+          "zone": "08",
+          "value": ".000"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/allPlays/67/matchup/pitcherHotColdZones/8",
+        "value": {
+          "temp": "cold",
+          "color": "rgba(6, 90, 238, .55)",
+          "zone": "09",
+          "value": ".200"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/allPlays/67/matchup/pitcherHotColdZones/9",
+        "value": {
+          "temp": "cold",
+          "color": "rgba(6, 90, 238, .55)",
+          "zone": "11",
+          "value": ".000"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/allPlays/67/matchup/pitcherHotColdZones/10",
+        "value": {
+          "temp": "cool",
+          "color": "rgba(150, 188, 255, .55)",
+          "zone": "12",
+          "value": ".250"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/allPlays/67/matchup/pitcherHotColdZones/11",
+        "value": {
+          "temp": "cold",
+          "color": "rgba(6, 90, 238, .55)",
+          "zone": "13",
+          "value": ".000"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/allPlays/67/matchup/pitcherHotColdZones/12",
+        "value": {
+          "temp": "cold",
+          "color": "rgba(6, 90, 238, .55)",
+          "zone": "14",
+          "value": ".200"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/allPlays/67/matchup/pitcherHotColdZoneStats",
+        "value": {
+          "stats": [
+            {
+              "splits": [
+                {
+                  "stat": {
+                    "name": "exitVelocity",
+                    "zones": [
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "01",
+                        "value": "80.61"
+                      },
+                      {
+                        "temp": "warm",
+                        "color": "rgba(234, 147, 153, .55)",
+                        "zone": "02",
+                        "value": "91.56"
+                      },
+                      {
+                        "temp": "hot",
+                        "color": "rgba(214, 41, 52, .55)",
+                        "zone": "03",
+                        "value": "97.37"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "04",
+                        "value": "86.26"
+                      },
+                      {
+                        "temp": "hot",
+                        "color": "rgba(214, 41, 52, .55)",
+                        "zone": "05",
+                        "value": "99.01"
+                      },
+                      {
+                        "temp": "lukewarm",
+                        "color": "rgba(255, 255, 255, 0.55)",
+                        "zone": "06",
+                        "value": "89.43"
+                      },
+                      {
+                        "temp": "hot",
+                        "color": "rgba(214, 41, 52, .55)",
+                        "zone": "07",
+                        "value": "99.98"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "08",
+                        "value": "80.24"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "09",
+                        "value": "78.35"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "11",
+                        "value": "69.79"
+                      },
+                      {
+                        "temp": "cool",
+                        "color": "rgba(150, 188, 255, .55)",
+                        "zone": "12",
+                        "value": "88.43"
+                      },
+                      {
+                        "temp": "lukewarm",
+                        "color": "rgba(255, 255, 255, 0.55)",
+                        "zone": "13",
+                        "value": "-"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "14",
+                        "value": "79.03"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "stat": {
+                    "name": "onBasePlusSlugging",
+                    "zones": [
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "01",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "02",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "hot",
+                        "color": "rgba(214, 41, 52, .55)",
+                        "zone": "03",
+                        "value": "1.167"
+                      },
+                      {
+                        "temp": "warm",
+                        "color": "rgba(234, 147, 153, .55)",
+                        "zone": "04",
+                        "value": "1.000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "05",
+                        "value": ".333"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "06",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "07",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "08",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "09",
+                        "value": ".400"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "11",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "12",
+                        "value": ".400"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "13",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "14",
+                        "value": ".400"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "stat": {
+                    "name": "battingAverage",
+                    "zones": [
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "01",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "02",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "warm",
+                        "color": "rgba(234, 147, 153, .55)",
+                        "zone": "03",
+                        "value": ".333"
+                      },
+                      {
+                        "temp": "hot",
+                        "color": "rgba(214, 41, 52, .55)",
+                        "zone": "04",
+                        "value": ".500"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "05",
+                        "value": ".167"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "06",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "07",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "08",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "09",
+                        "value": ".200"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "11",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cool",
+                        "color": "rgba(150, 188, 255, .55)",
+                        "zone": "12",
+                        "value": ".250"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "13",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "14",
+                        "value": ".200"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "exemptions": [],
+              "type": {
+                "displayName": "hotColdZones"
+              },
+              "group": {
+                "displayName": "pitching"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/plays/allPlays/67/actionIndex/0",
+        "from": "/liveData/linescore/outs"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/allPlays/67/playEvents/0/endTime",
+        "value": "2024-06-12T04:27:58.735Z"
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/allPlays/67/playEvents/1",
+        "value": {
+          "isPitch": false,
+          "count": {
+            "outs": 1,
+            "balls": 0,
+            "strikes": 0
+          },
+          "index": 1,
+          "details": {
+            "homeScore": 14,
+            "awayScore": 2,
+            "isScoringPlay": false,
+            "description": "Pitching Change: Andrew Knizner replaces Jesus Tinoco.",
+            "isOut": false,
+            "eventType": "pitching_substitution",
+            "event": "Pitching Substitution",
+            "hasReview": false
+          },
+          "startTime": "2024-06-12T04:27:58.735Z",
+          "endTime": "2024-06-12T04:27:58.735Z",
+          "isSubstitution": true,
+          "position": {
+            "code": "1",
+            "name": "Pitcher",
+            "type": "Pitcher",
+            "abbreviation": "P"
+          },
+          "type": "action",
+          "player": {
+            "link": "/api/v1/people/668800",
+            "id": 668800
+          }
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/allPlays/67/playEndTime",
+        "value": "2024-06-12T04:27:58.735Z"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/currentPlay/result/event",
+        "value": "Pitching Substitution"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/currentPlay/result/eventType",
+        "value": "pitching_substitution"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/currentPlay/result/description",
+        "value": "Pitching Change: Andrew Knizner replaces Jesus Tinoco."
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/currentPlay/about/endTime",
+        "value": "2024-06-12T04:27:58.735Z"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/currentPlay/matchup/pitcher/id",
+        "value": 668800
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/currentPlay/matchup/pitcher/fullName",
+        "value": "Andrew Knizner"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/currentPlay/matchup/pitcher/link",
+        "value": "/api/v1/people/668800"
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/currentPlay/matchup/pitcherHotColdZones/0",
+        "value": {
+          "temp": "cold",
+          "color": "rgba(6, 90, 238, .55)",
+          "zone": "01",
+          "value": ".000"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/currentPlay/matchup/pitcherHotColdZones/1",
+        "value": {
+          "temp": "cold",
+          "color": "rgba(6, 90, 238, .55)",
+          "zone": "02",
+          "value": ".000"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/currentPlay/matchup/pitcherHotColdZones/2",
+        "value": {
+          "temp": "warm",
+          "color": "rgba(234, 147, 153, .55)",
+          "zone": "03",
+          "value": ".333"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/currentPlay/matchup/pitcherHotColdZones/3",
+        "value": {
+          "temp": "hot",
+          "color": "rgba(214, 41, 52, .55)",
+          "zone": "04",
+          "value": ".500"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/currentPlay/matchup/pitcherHotColdZones/4",
+        "value": {
+          "temp": "cold",
+          "color": "rgba(6, 90, 238, .55)",
+          "zone": "05",
+          "value": ".167"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/currentPlay/matchup/pitcherHotColdZones/5",
+        "value": {
+          "temp": "cold",
+          "color": "rgba(6, 90, 238, .55)",
+          "zone": "06",
+          "value": ".000"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/currentPlay/matchup/pitcherHotColdZones/6",
+        "value": {
+          "temp": "cold",
+          "color": "rgba(6, 90, 238, .55)",
+          "zone": "07",
+          "value": ".000"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/currentPlay/matchup/pitcherHotColdZones/7",
+        "value": {
+          "temp": "cold",
+          "color": "rgba(6, 90, 238, .55)",
+          "zone": "08",
+          "value": ".000"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/currentPlay/matchup/pitcherHotColdZones/8",
+        "value": {
+          "temp": "cold",
+          "color": "rgba(6, 90, 238, .55)",
+          "zone": "09",
+          "value": ".200"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/currentPlay/matchup/pitcherHotColdZones/9",
+        "value": {
+          "temp": "cold",
+          "color": "rgba(6, 90, 238, .55)",
+          "zone": "11",
+          "value": ".000"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/currentPlay/matchup/pitcherHotColdZones/10",
+        "value": {
+          "temp": "cool",
+          "color": "rgba(150, 188, 255, .55)",
+          "zone": "12",
+          "value": ".250"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/currentPlay/matchup/pitcherHotColdZones/11",
+        "value": {
+          "temp": "cold",
+          "color": "rgba(6, 90, 238, .55)",
+          "zone": "13",
+          "value": ".000"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/currentPlay/matchup/pitcherHotColdZones/12",
+        "value": {
+          "temp": "cold",
+          "color": "rgba(6, 90, 238, .55)",
+          "zone": "14",
+          "value": ".200"
+        }
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/currentPlay/matchup/pitcherHotColdZoneStats",
+        "value": {
+          "stats": [
+            {
+              "splits": [
+                {
+                  "stat": {
+                    "name": "exitVelocity",
+                    "zones": [
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "01",
+                        "value": "80.61"
+                      },
+                      {
+                        "temp": "warm",
+                        "color": "rgba(234, 147, 153, .55)",
+                        "zone": "02",
+                        "value": "91.56"
+                      },
+                      {
+                        "temp": "hot",
+                        "color": "rgba(214, 41, 52, .55)",
+                        "zone": "03",
+                        "value": "97.37"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "04",
+                        "value": "86.26"
+                      },
+                      {
+                        "temp": "hot",
+                        "color": "rgba(214, 41, 52, .55)",
+                        "zone": "05",
+                        "value": "99.01"
+                      },
+                      {
+                        "temp": "lukewarm",
+                        "color": "rgba(255, 255, 255, 0.55)",
+                        "zone": "06",
+                        "value": "89.43"
+                      },
+                      {
+                        "temp": "hot",
+                        "color": "rgba(214, 41, 52, .55)",
+                        "zone": "07",
+                        "value": "99.98"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "08",
+                        "value": "80.24"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "09",
+                        "value": "78.35"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "11",
+                        "value": "69.79"
+                      },
+                      {
+                        "temp": "cool",
+                        "color": "rgba(150, 188, 255, .55)",
+                        "zone": "12",
+                        "value": "88.43"
+                      },
+                      {
+                        "temp": "lukewarm",
+                        "color": "rgba(255, 255, 255, 0.55)",
+                        "zone": "13",
+                        "value": "-"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "14",
+                        "value": "79.03"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "stat": {
+                    "name": "onBasePlusSlugging",
+                    "zones": [
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "01",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "02",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "hot",
+                        "color": "rgba(214, 41, 52, .55)",
+                        "zone": "03",
+                        "value": "1.167"
+                      },
+                      {
+                        "temp": "warm",
+                        "color": "rgba(234, 147, 153, .55)",
+                        "zone": "04",
+                        "value": "1.000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "05",
+                        "value": ".333"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "06",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "07",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "08",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "09",
+                        "value": ".400"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "11",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "12",
+                        "value": ".400"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "13",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "14",
+                        "value": ".400"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "stat": {
+                    "name": "battingAverage",
+                    "zones": [
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "01",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "02",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "warm",
+                        "color": "rgba(234, 147, 153, .55)",
+                        "zone": "03",
+                        "value": ".333"
+                      },
+                      {
+                        "temp": "hot",
+                        "color": "rgba(214, 41, 52, .55)",
+                        "zone": "04",
+                        "value": ".500"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "05",
+                        "value": ".167"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "06",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "07",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "08",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "09",
+                        "value": ".200"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "11",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cool",
+                        "color": "rgba(150, 188, 255, .55)",
+                        "zone": "12",
+                        "value": ".250"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "13",
+                        "value": ".000"
+                      },
+                      {
+                        "temp": "cold",
+                        "color": "rgba(6, 90, 238, .55)",
+                        "zone": "14",
+                        "value": ".200"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "exemptions": [],
+              "type": {
+                "displayName": "hotColdZones"
+              },
+              "group": {
+                "displayName": "pitching"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/plays/currentPlay/actionIndex/0",
+        "from": "/liveData/linescore/outs"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/currentPlay/playEvents/0/endTime",
+        "value": "2024-06-12T04:27:58.735Z"
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/currentPlay/playEvents/1",
+        "value": {
+          "isPitch": false,
+          "count": {
+            "outs": 1,
+            "balls": 0,
+            "strikes": 0
+          },
+          "index": 1,
+          "details": {
+            "homeScore": 14,
+            "awayScore": 2,
+            "isScoringPlay": false,
+            "description": "Pitching Change: Andrew Knizner replaces Jesus Tinoco.",
+            "isOut": false,
+            "eventType": "pitching_substitution",
+            "event": "Pitching Substitution",
+            "hasReview": false
+          },
+          "startTime": "2024-06-12T04:27:58.735Z",
+          "endTime": "2024-06-12T04:27:58.735Z",
+          "isSubstitution": true,
+          "position": {
+            "code": "1",
+            "name": "Pitcher",
+            "type": "Pitcher",
+            "abbreviation": "P"
+          },
+          "type": "action",
+          "player": {
+            "link": "/api/v1/people/668800",
+            "id": 668800
+          }
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/currentPlay/playEndTime",
+        "value": "2024-06-12T04:27:58.735Z"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/linescore/defense/pitcher/id",
+        "value": 668800
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/linescore/defense/pitcher/fullName",
+        "value": "Andrew Knizner"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/linescore/defense/pitcher/link",
+        "value": "/api/v1/people/668800"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/teams/away/players/ID622786/gameStatus/isCurrentPitcher",
+        "value": false
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/position/code",
+        "value": "1"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/position/name",
+        "value": "Pitcher"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/position/type",
+        "value": "Pitcher"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/position/abbreviation",
+        "value": "P"
+      },
+      {
+        "op": "add",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/summary",
+        "value": "0-0"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/gamesPlayed",
+        "from": "/liveData/linescore/outs"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/flyOuts",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/groundOuts",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/airOuts",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/runs",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/doubles",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/triples",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/homeRuns",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/strikeOuts",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/baseOnBalls",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/intentionalWalks",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/hits",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/hitByPitch",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/atBats",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/caughtStealing",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/stolenBases",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/stolenBasePercentage",
+        "from": "/liveData/boxscore/teams/away/players/ID668800/seasonStats/batting/stolenBasePercentage"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/groundIntoDoublePlay",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/groundIntoTriplePlay",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/plateAppearances",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/totalBases",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/rbi",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/leftOnBase",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/sacBunts",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/sacFlies",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/catchersInterference",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/pickoffs",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/atBatsPerHomeRun",
+        "from": "/liveData/boxscore/teams/away/players/ID668800/seasonStats/pitching/era"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/popOuts",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/batting/lineOuts",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "add",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/summary",
+        "value": "0.0 IP, 0 ER, 0 K, 0 BB"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/gamesPlayed",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/gamesStarted",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/flyOuts",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/groundOuts",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/airOuts",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/runs",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/doubles",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/triples",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/homeRuns",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/strikeOuts",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/baseOnBalls",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/intentionalWalks",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/hits",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/hitByPitch",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/atBats",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/caughtStealing",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/stolenBases",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/stolenBasePercentage",
+        "from": "/liveData/boxscore/teams/away/players/ID668800/seasonStats/batting/stolenBasePercentage"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/numberOfPitches",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/inningsPitched",
+        "from": "/liveData/boxscore/teams/away/players/ID668800/seasonStats/pitching/inningsPitched"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/wins",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/losses",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/saves",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/saveOpportunities",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/holds",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/blownSaves",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/earnedRuns",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/battersFaced",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/outs",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/gamesPitched",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/completeGames",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/shutouts",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/balls",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/strikes",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/strikePercentage",
+        "from": "/liveData/boxscore/teams/away/players/ID668800/seasonStats/pitching/era"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/hitBatsmen",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/balks",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/wildPitches",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/pickoffs",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/rbi",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/gamesFinished",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/runsScoredPer9",
+        "from": "/liveData/boxscore/teams/away/players/ID668800/seasonStats/pitching/era"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/homeRunsPer9",
+        "from": "/liveData/boxscore/teams/away/players/ID668800/seasonStats/pitching/era"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/inheritedRunners",
+        "from": "/liveData/boxscore/teams/away/players/ID668800/seasonStats/batting/runs"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/inheritedRunnersScored",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/catchersInterference",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/sacBunts",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/sacFlies",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/passedBall",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/popOuts",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/pitching/lineOuts",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/fielding/caughtStealing",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/fielding/stolenBases",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/fielding/stolenBasePercentage",
+        "from": "/liveData/boxscore/teams/away/players/ID668800/seasonStats/batting/stolenBasePercentage"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/fielding/assists",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/fielding/putOuts",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/fielding/errors",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/fielding/chances",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/fielding/fielding",
+        "from": "/liveData/boxscore/teams/away/players/ID668800/seasonStats/pitching/obp"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/fielding/passedBall",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/stats/fielding/pickoffs",
+        "from": "/liveData/plays/allPlays/67/result/rbi"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/seasonStats/batting/gamesPlayed",
+        "value": 22
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/seasonStats/pitching/inheritedRunners",
+        "value": 3
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/gameStatus/isCurrentPitcher",
+        "value": true
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/gameStatus/isOnBench",
+        "value": false
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/boxscore/teams/away/players/ID668800/allPositions",
+        "from": "/liveData/boxscore/teams/away/players/ID622786/allPositions"
+      },
+      {
+        "op": "move",
+        "path": "/liveData/boxscore/teams/away/batters/15",
+        "from": "/liveData/boxscore/teams/away/bench/0"
+      },
+      {
+        "op": "add",
+        "path": "/liveData/boxscore/teams/away/pitchers/4",
+        "value": 668800
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/info/2/value",
+        "value": "Dunning 84-49; Hernández, J 24-13; Anderson, G 38-21; Tinoco 28-14; Knizner 0-0; Paxton 87-51; Grove 20-13."
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/info/3/value",
+        "value": "Dunning 6-1; Hernández, J 2-0; Anderson, G 0-0; Tinoco 1-0; Knizner 0-0; Paxton 4-6; Grove 3-0."
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/info/5/value",
+        "value": "Hernández, J 3-3; Knizner 3-0."
+      }
+    ]
+  }
+]

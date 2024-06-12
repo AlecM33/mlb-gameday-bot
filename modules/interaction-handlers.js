@@ -288,21 +288,21 @@ module.exports = {
                     );
                     if (i === 0) {
                         await commandUtil.giveFinalCommandResponse(toHandle, {
-                            content: '### Highlights: ' + commandUtil.constructGameDisplayString(game) + highlightsForMessage.reduce((acc, value) =>
+                            content: '### Highlights: ' + commandUtil.constructGameDisplayString(game) + '\n' + highlightsForMessage.reduce((acc, value) =>
                                 acc + '[' + value.title + '](<' + value.playbacks.find((playback) => playback.name === 'mp4Avc')?.url + '>)\n\n',
                             ''),
                             ephemeral: false,
                             components: []
                         });
                     } else {
-                        await interaction.channel.send(highlightsForMessage.reduce((acc, value) =>
+                        await interaction.channel.send('\n' + highlightsForMessage.reduce((acc, value) =>
                             acc + '[' + value.title + '](<' + value.playbacks.find((playback) => playback.name === 'mp4Avc')?.url + '>)\n\n',
                         'Continued...\n\n'));
                     }
                 }
             } else if (messagesNeeded === 0) {
                 await commandUtil.giveFinalCommandResponse(toHandle, {
-                    content: commandUtil.constructGameDisplayString(game) + 'There are no highlights available for this game yet.',
+                    content: commandUtil.constructGameDisplayString(game) + '\nThere are no highlights available for this game yet.',
                     ephemeral: false,
                     components: []
                 });

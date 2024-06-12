@@ -1,0 +1,316 @@
+[
+  {
+    "diff": [
+      {
+        "op": "replace",
+        "path": "/metaData/timeStamp",
+        "value": "20240612_041302"
+      },
+      {
+        "op": "replace",
+        "path": "/metaData/gameEvents/0",
+        "value": "ball"
+      },
+      {
+        "op": "add",
+        "path": "/metaData/logicalEvents/0",
+        "value": "countChange"
+      },
+      {
+        "op": "add",
+        "path": "/metaData/logicalEvents/1",
+        "value": "count12"
+      },
+      {
+        "op": "remove",
+        "path": "/liveData/plays/allPlays/61/result/event"
+      },
+      {
+        "op": "remove",
+        "path": "/liveData/plays/allPlays/61/result/eventType"
+      },
+      {
+        "op": "remove",
+        "path": "/liveData/plays/allPlays/61/result/description"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/allPlays/61/about/endTime",
+        "value": "2024-06-12T04:13:02.349Z"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/allPlays/61/count/balls",
+        "value": 1
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/plays/allPlays/61/pitchIndex/2",
+        "from": "/liveData/boxscore/teams/home/teamStats/pitching/hits"
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/allPlays/61/playEvents/1/pitchData/extension",
+        "value": 6.812142593808014
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/allPlays/61/playEvents/2/endTime",
+        "value": "2024-06-12T04:13:02.349Z"
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/allPlays/61/playEvents/3",
+        "value": {
+          "playId": "0aa412c1-17d5-4107-90ca-86d52a0bdd4a",
+          "pitchData": {
+            "endSpeed": 81.7,
+            "breaks": {
+              "breakHorizontal": -3.7,
+              "breakAngle": 36,
+              "breakVertical": -31.8,
+              "breakVerticalInduced": 3
+            },
+            "startSpeed": 88.8,
+            "zone": 14,
+            "plateTime": 0.4244445475475507,
+            "coordinates": {
+              "pfxX": 1.3593493313697014,
+              "pX": 1.6737511051556269,
+              "pZ": 0.8921185288521423,
+              "pfxZ": 2.372352205363935,
+              "vY0": -129.19129923822442,
+              "vZ0": -6.757483918116006,
+              "vX0": 5.226696442168592,
+              "z0": 5.716476345947533,
+              "y0": 50.004486710905276,
+              "aX": 2.291387686431467,
+              "aY": 27.672347359584403,
+              "x": 53.2,
+              "x0": -0.5547765184980451,
+              "aZ": -28.18119723115616,
+              "y": 214.69
+            },
+            "strikeZoneTop": 3.319,
+            "strikeZoneBottom": 1.513
+          },
+          "isPitch": true,
+          "pitchNumber": 3,
+          "count": {
+            "outs": 2,
+            "balls": 1,
+            "strikes": 2
+          },
+          "index": 3,
+          "details": {
+            "call": {
+              "code": "B",
+              "description": "Ball"
+            },
+            "ballColor": "rgba(39, 161, 39, 1.0)",
+            "code": "B",
+            "description": "Ball",
+            "isBall": true,
+            "isOut": false,
+            "type": {
+              "code": "SL",
+              "description": "Slider"
+            },
+            "trailColor": "rgba(0, 0, 254, 1.0)",
+            "hasReview": false,
+            "isInPlay": false,
+            "isStrike": false
+          },
+          "startTime": "2024-06-12T04:13:02.349Z",
+          "endTime": "2024-06-12T04:13:02.349Z",
+          "type": "pitch"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/allPlays/61/playEndTime",
+        "value": "2024-06-12T04:13:02.349Z"
+      },
+      {
+        "op": "remove",
+        "path": "/liveData/plays/currentPlay/result/event"
+      },
+      {
+        "op": "remove",
+        "path": "/liveData/plays/currentPlay/result/eventType"
+      },
+      {
+        "op": "remove",
+        "path": "/liveData/plays/currentPlay/result/description"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/currentPlay/about/endTime",
+        "value": "2024-06-12T04:13:02.349Z"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/currentPlay/count/balls",
+        "value": 1
+      },
+      {
+        "op": "copy",
+        "path": "/liveData/plays/currentPlay/pitchIndex/2",
+        "from": "/liveData/boxscore/teams/home/teamStats/pitching/hits"
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/currentPlay/playEvents/1/pitchData/extension",
+        "value": 6.812142593808014
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/currentPlay/playEvents/2/endTime",
+        "value": "2024-06-12T04:13:02.349Z"
+      },
+      {
+        "op": "add",
+        "path": "/liveData/plays/currentPlay/playEvents/3",
+        "value": {
+          "playId": "0aa412c1-17d5-4107-90ca-86d52a0bdd4a",
+          "pitchData": {
+            "endSpeed": 81.7,
+            "breaks": {
+              "breakHorizontal": -3.7,
+              "breakAngle": 36,
+              "breakVertical": -31.8,
+              "breakVerticalInduced": 3
+            },
+            "startSpeed": 88.8,
+            "zone": 14,
+            "plateTime": 0.4244445475475507,
+            "coordinates": {
+              "pfxX": 1.3593493313697014,
+              "pX": 1.6737511051556269,
+              "pZ": 0.8921185288521423,
+              "pfxZ": 2.372352205363935,
+              "vY0": -129.19129923822442,
+              "vZ0": -6.757483918116006,
+              "vX0": 5.226696442168592,
+              "z0": 5.716476345947533,
+              "y0": 50.004486710905276,
+              "aX": 2.291387686431467,
+              "aY": 27.672347359584403,
+              "x": 53.2,
+              "x0": -0.5547765184980451,
+              "aZ": -28.18119723115616,
+              "y": 214.69
+            },
+            "strikeZoneTop": 3.319,
+            "strikeZoneBottom": 1.513
+          },
+          "isPitch": true,
+          "pitchNumber": 3,
+          "count": {
+            "outs": 2,
+            "balls": 1,
+            "strikes": 2
+          },
+          "index": 3,
+          "details": {
+            "call": {
+              "code": "B",
+              "description": "Ball"
+            },
+            "ballColor": "rgba(39, 161, 39, 1.0)",
+            "code": "B",
+            "description": "Ball",
+            "isBall": true,
+            "isOut": false,
+            "type": {
+              "code": "SL",
+              "description": "Slider"
+            },
+            "trailColor": "rgba(0, 0, 254, 1.0)",
+            "hasReview": false,
+            "isInPlay": false,
+            "isStrike": false
+          },
+          "startTime": "2024-06-12T04:13:02.349Z",
+          "endTime": "2024-06-12T04:13:02.349Z",
+          "type": "pitch"
+        }
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/plays/currentPlay/playEndTime",
+        "value": "2024-06-12T04:13:02.349Z"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/linescore/balls",
+        "value": 1
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/teams/home/teamStats/pitching/numberOfPitches",
+        "value": 99
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/teams/home/teamStats/pitching/pitchesThrown",
+        "value": 99
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/teams/home/teamStats/pitching/balls",
+        "value": 40
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/teams/home/teamStats/pitching/pitchesPerInning",
+        "value": "14.85"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/teams/home/players/ID675627/stats/pitching/numberOfPitches",
+        "value": 12
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/teams/home/players/ID675627/stats/pitching/pitchesThrown",
+        "value": 12
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/teams/home/players/ID675627/stats/pitching/balls",
+        "value": 4
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/teams/home/players/ID675627/stats/pitching/strikePercentage",
+        "value": ".670"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/teams/home/players/ID675627/seasonStats/pitching/numberOfPitches",
+        "value": 553
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/teams/home/players/ID675627/seasonStats/pitching/pitchesThrown",
+        "value": 553
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/teams/home/players/ID675627/seasonStats/pitching/balls",
+        "value": 204
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/teams/home/players/ID675627/seasonStats/pitching/pitchesPerInning",
+        "value": "16.26"
+      },
+      {
+        "op": "replace",
+        "path": "/liveData/boxscore/info/1/value",
+        "value": "Dunning 84-49; Hernández, J 24-13; Anderson, G 38-21; Tinoco 6-4; Paxton 87-51; Grove 12-8."
+      }
+    ]
+  }
+]

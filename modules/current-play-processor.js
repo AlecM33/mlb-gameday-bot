@@ -9,6 +9,7 @@ module.exports = {
             globalCache.values.game.startReported = true;
             reply += 'A game is starting! Go Guards!';
         }
+        let lastEvent;
         if (currentPlayJSON.about.isComplete || currentPlayJSON.result.eventType === 'pitching_substitution') {
             globalCache.values.game.lastCompleteAtBatIndex = currentPlayJSON.about.atBatIndex;
             reply += getDescription(currentPlayJSON);
@@ -27,20 +28,22 @@ module.exports = {
                         ' now leads ' + currentPlayJSON.result.awayScore + '-' + currentPlayJSON.result.homeScore + '\n';
                 }
             }
-            const lastEvent = currentPlayJSON.playEvents[currentPlayJSON.playEvents.length - 1];
+            lastEvent = currentPlayJSON.playEvents[currentPlayJSON.playEvents.length - 1];
             if (lastEvent?.details?.isInPlay) {
                 if (lastEvent.hitData.launchSpeed) { // this data can be randomly unavailable
-                    reply += '\n\n';
-                    reply += 'EV: ' + lastEvent.hitData.launchSpeed + ' mph' +
+                    reply += '\n\n**Statcast Metrics:**\n';
+                    reply += 'Exit Velo: ' + lastEvent.hitData.launchSpeed + ' mph' +
                         (lastEvent.hitData.launchSpeed > 95.0 ? ' \uD83D\uDD25\uD83D\uDD25' : '') + '\n';
                     reply += 'Launch Angle: ' + lastEvent.hitData.launchAngle + '° \n';
                     reply += 'Distance: ' + lastEvent.hitData.totalDistance + ' ft.\n';
-                    reply += '\n**Statcast:**\nPending...';
+                    reply += 'xBA: Pending...\n';
+                    reply += lastEvent.hitData.totalDistance && lastEvent.hitData.totalDistance >= 300 ? 'HR/Park: Pending...' : '';
                 } else {
-                    reply += '\n\n';
+                    reply += '\n\n**Statcast Metrics:**\n';
                     reply += 'Exit Velocity: Unavailable\n';
                     reply += 'Launch Angle: Unavailable\n';
                     reply += 'Distance: Unavailable\n';
+                    reply += 'xBA: Unavailable';
                 }
             }
         }
@@ -52,7 +55,7 @@ module.exports = {
             isScoringPlay: currentPlayJSON.about?.isScoringPlay,
             isInPlay: lastEvent?.details?.isInPlay,
             playId: lastEvent?.playId,
-            hitDistance: lastEvent?.hitData?.hitDistance
+            hitDistance: lastEvent?.hitData?.totalDistance
         };
     }
 };

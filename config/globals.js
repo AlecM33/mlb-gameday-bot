@@ -23,7 +23,7 @@ module.exports = {
         "injury",
         "umpire_substitution"
     ],
-    TEAM_ID: 114,
+    TEAM_ID: 109,
     GUARDIANS: 114, // guardians team ID for MLB stats API
     AL_CENTRAL: 202,
     AMERICAN_LEAGUE: 103,
