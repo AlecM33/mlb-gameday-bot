@@ -21,7 +21,7 @@ Examples:
 
 ![boxscore](https://github.com/AlecM33/gameday-bot/assets/24642328/8e1da205-8a81-4db9-9a8c-9791f44c3113)
 
-![gameday](https://github.com/AlecM33/gameday-bot/assets/24642328/53852830-c0f5-4051-8cba-0e7d92a72f77)
+![image](https://github.com/AlecM33/gameday-bot/assets/24642328/8952ed05-810d-41c4-bbf6-033f5bd50145)
 
 ![starters](https://github.com/AlecM33/gameday-bot/assets/24642328/ced20a8b-9f7b-4d71-9b81-e5abf186fe14)
 
