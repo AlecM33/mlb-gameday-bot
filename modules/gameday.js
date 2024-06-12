@@ -150,9 +150,11 @@ async function pollForSavantData (gamePk, playId, message, hitDistance) {
             || gameFeed.team_home.find(play => play.play_id === playId);
         if (matchingPlay) {
             if (matchingPlay.xba || matchingPlay.contextMetrics.homeRunBallParks) {
-                description = description.replaceAll('xBA: Pending...', 'xBA: ' + matchingPlay.xba +
-                    (parseFloat(matchingPlay.xba) > 0.5 ? ' \uD83D\uDFE2' : ''));
-                if (hitDistance && hitDistance >= 300) {
+                if (matchingPlay.xba) {
+                    description = description.replaceAll('xBA: Pending...', 'xBA: ' + matchingPlay.xba +
+                        (parseFloat(matchingPlay.xba) > 0.5 ? ' \uD83D\uDFE2' : ''));
+                }
+                if (hitDistance && hitDistance >= 300 && matchingPlay.contextMetrics.homeRunBallparks) {
                     description = description.replaceAll('HR/Park: Pending...', 'HR/Park: ' +
                         matchingPlay.contextMetrics.homeRunBallparks + '/30' +
                         (matchingPlay.contextMetrics.homeRunBallparks === 30 ? '\u203C\uFE0F' : ''));
@@ -162,6 +164,8 @@ async function pollForSavantData (gamePk, playId, message, hitDistance) {
                 message.edit({
                     embeds: [receivedEmbed]
                 });
+                attempts ++;
+                setTimeout(pollingFunction, globals.SAVANT_POLLING_INTERVAL);
             } else if (attempts === 10) {
                 description = description.replaceAll('Pending...', 'Not Available.');
                 receivedEmbed.setDescription(description);
