@@ -6,7 +6,8 @@ const values = {
         isDoubleHeader: null,
         lastCompleteAtBatIndex: null,
         lastReportedPlayDescription: null,
-        startReported: false
+        startReported: false,
+        reportedActionIds: []
     }
 };
 
@@ -16,6 +17,7 @@ function resetGameCache () {
     values.game.lastCompleteAtBatIndex = null;
     values.game.lastReportedPlayDescription = null;
     values.game.startReported = false;
+    values.game.reportedActionIds = [];
 }
 
 module.exports = { values, resetGameCache };
