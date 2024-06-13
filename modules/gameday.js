@@ -144,40 +144,41 @@ async function pollForSavantData (gamePk, playId, message, hitDistance) {
     const receivedEmbed = EmbedBuilder.from(message.embeds[0]);
     let description = message.embeds[0].description;
     const pollingFunction = async () => {
-        console.log('Savant: polling for ' + playId + '...');
-        const gameFeed = await mlbAPIUtil.savantGameFeed(gamePk);
-        const matchingPlay = gameFeed.team_away.find(play => play.play_id === playId)
-            || gameFeed.team_home.find(play => play.play_id === playId);
-        if (matchingPlay) {
-            if (matchingPlay.xba || matchingPlay.contextMetrics.homeRunBallParks) {
+        if (attempts < 10) {
+            console.log('Savant: polling for ' + playId + '...');
+            const gameFeed = await mlbAPIUtil.savantGameFeed(gamePk);
+            const matchingPlay = gameFeed.team_away.find(play => play.play_id === playId)
+                || gameFeed.team_home.find(play => play.play_id === playId);
+            if (matchingPlay && (matchingPlay.xba || matchingPlay.contextMetrics.homeRunBallparks)) {
                 if (matchingPlay.xba) {
+                    console.log('Editing with xba: ' + playId);
                     description = description.replaceAll('xBA: Pending...', 'xBA: ' + matchingPlay.xba +
                         (parseFloat(matchingPlay.xba) > 0.5 ? ' \uD83D\uDFE2' : ''));
+                    receivedEmbed.setDescription(description);
+                    message.edit({
+                        embeds: [receivedEmbed]
+                    });
                 }
                 if (hitDistance && hitDistance >= 300 && matchingPlay.contextMetrics.homeRunBallparks) {
+                    console.log('Editing with HR/Park: ' + playId);
                     description = description.replaceAll('HR/Park: Pending...', 'HR/Park: ' +
                         matchingPlay.contextMetrics.homeRunBallparks + '/30' +
                         (matchingPlay.contextMetrics.homeRunBallparks === 30 ? '\u203C\uFE0F' : ''));
+                    receivedEmbed.setDescription(description);
+                    message.edit({
+                        embeds: [receivedEmbed]
+                    });
                 }
-                receivedEmbed.setDescription(description);
-                console.log('Editing with data!');
-                message.edit({
-                    embeds: [receivedEmbed]
-                });
-                attempts ++;
-                setTimeout(pollingFunction, globals.SAVANT_POLLING_INTERVAL);
-            } else if (attempts === 10) {
+            }
+            attempts ++
+            setTimeout(pollingFunction, globals.SAVANT_POLLING_INTERVAL);
+        } else {
+            console.log('max savant polling attempts reached for: ' + playId);
+            if (description.includes('Pending...')) {
                 description = description.replaceAll('Pending...', 'Not Available.');
                 receivedEmbed.setDescription(description);
-                console.log('Editing with unavailable...');
-                message.edit({ embeds: [receivedEmbed] });
-            } else {
-                attempts ++;
-                setTimeout(pollingFunction, globals.SAVANT_POLLING_INTERVAL);
+                message.edit({embeds: [receivedEmbed]});
             }
-        } else if (attempts < 10) {
-            attempts ++;
-            setTimeout(pollingFunction, globals.SAVANT_POLLING_INTERVAL);
         }
     };
     await pollingFunction();
