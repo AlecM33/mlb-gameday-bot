@@ -85,7 +85,12 @@ function subscribe (bot, liveGame, games) {
         console.log('UPDATE LENGTH: ' + update.length);
         if (Array.isArray(update)) {
             for (const patch of update) {
-                diffPatch.hydrate(patch);
+                try {
+                    diffPatch.hydrate(patch);
+                } catch (e) {
+                    // catching something here means our game object could now be incorrect. reset the live feed.
+                    globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(liveGame.gamePk);
+                }
                 await reportPlay(bot, liveGame.gamePk);
             }
         } else {
@@ -101,6 +106,7 @@ async function reportPlay (bot, gamePk) {
     const lastCompleteAtBatIndex = globalCache.values.game.lastCompleteAtBatIndex;
     const currentAtBatIndex = globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.atBatIndex;
     if (lastCompleteAtBatIndex !== null && ((currentAtBatIndex - lastCompleteAtBatIndex) > 1)) { // updates we received skipped a result. Happens every so often.
+        console.log('An at-bat index was skipped.')
         const skippedPlay = globalCache.values.game.currentLiveFeed.liveData.plays.allPlays.find((play) => play.about.atBatIndex === (lastCompleteAtBatIndex + 1));
         if (skippedPlay) {
             await processAndPushPlay(bot, (await currentPlayProcessor.process(skippedPlay)), gamePk);
@@ -113,9 +119,9 @@ async function reportPlay (bot, gamePk) {
 async function processAndPushPlay (bot, play, gamePk) {
     if (play.reply
         && play.reply.length > 0
-        && play.description !== globalCache.values.game.lastReportedPlayDescription
+        && !globalCache.values.game.reportedDescriptions.includes(play.description)
         /* && (play.isScoringPlay || play.eventType === 'pitching_substitution') */) {
-        globalCache.values.game.lastReportedPlayDescription = play.description;
+        globalCache.values.game.reportedDescriptions.push(play.description);
         const embed = new EmbedBuilder()
             .setTitle(deriveHalfInning(globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.halfInning) + ' ' +
                 globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.inning + ', ' +
@@ -132,7 +138,6 @@ async function processAndPushPlay (bot, play, gamePk) {
                     if (play.isInPlay && play.playId) {
                         await pollForSavantData(gamePk, play.playId, message, play.hitDistance); // xBA and HR/Park for balls in play is available on a delay via baseballsavant.
                     }
-                    console.log('message: ' + message.content);
                 });
             });
         }
@@ -149,8 +154,8 @@ async function pollForSavantData (gamePk, playId, message, hitDistance) {
             const gameFeed = await mlbAPIUtil.savantGameFeed(gamePk);
             const matchingPlay = gameFeed.team_away.find(play => play.play_id === playId)
                 || gameFeed.team_home.find(play => play.play_id === playId);
-            if (matchingPlay && (matchingPlay.xba || matchingPlay.contextMetrics.homeRunBallparks)) {
-                if (matchingPlay.xba) {
+            if (matchingPlay && (matchingPlay.xba || matchingPlay.contextMetrics.homeRunBallparks !== undefined)) {
+                if (matchingPlay.xba && description.includes('xBA: Pending...')) {
                     console.log('Editing with xba: ' + playId);
                     description = description.replaceAll('xBA: Pending...', 'xBA: ' + matchingPlay.xba +
                         (parseFloat(matchingPlay.xba) > 0.5 ? ' \uD83D\uDFE2' : ''));
@@ -158,8 +163,14 @@ async function pollForSavantData (gamePk, playId, message, hitDistance) {
                     message.edit({
                         embeds: [receivedEmbed]
                     });
+                    if (hitDistance && hitDistance < 300) {
+                        console.log('Found xba, done polling for: ' + playId);
+                        return
+                    }
                 }
-                if (hitDistance && hitDistance >= 300 && matchingPlay.contextMetrics.homeRunBallparks) {
+                if (hitDistance && hitDistance >= 300
+                    && matchingPlay.contextMetrics.homeRunBallparks !== undefined
+                    && description.includes('HR/Park: Pending...')) {
                     console.log('Editing with HR/Park: ' + playId);
                     description = description.replaceAll('HR/Park: Pending...', 'HR/Park: ' +
                         matchingPlay.contextMetrics.homeRunBallparks + '/30' +
@@ -168,6 +179,10 @@ async function pollForSavantData (gamePk, playId, message, hitDistance) {
                     message.edit({
                         embeds: [receivedEmbed]
                     });
+                    if (matchingPlay.xba) {
+                        console.log('Found all metrics: done polling for: ' + playId);
+                        return
+                    }
                 }
             }
             attempts ++

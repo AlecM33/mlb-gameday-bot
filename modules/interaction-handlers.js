@@ -308,7 +308,7 @@ module.exports = {
                 });
             } else {
                 await commandUtil.giveFinalCommandResponse(toHandle, {
-                    content: '### Highlights: ' + commandUtil.constructGameDisplayString(game) + highlights.reduce((acc, value) =>
+                    content: '### Highlights: ' + commandUtil.constructGameDisplayString(game) + '\n' + highlights.reduce((acc, value) =>
                         acc + '[' + value.title + '](<' + value.playbacks.find((playback) => playback.name === 'mp4Avc')?.url + '>)\n\n',
                     ''),
                     ephemeral: false,

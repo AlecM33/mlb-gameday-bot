@@ -7,7 +7,7 @@ const values = {
         lastCompleteAtBatIndex: null,
         lastReportedPlayDescription: null,
         startReported: false,
-        reportedActionIds: []
+        reportedDescriptions: []
     }
 };
 
@@ -17,7 +17,7 @@ function resetGameCache () {
     values.game.lastCompleteAtBatIndex = null;
     values.game.lastReportedPlayDescription = null;
     values.game.startReported = false;
-    values.game.reportedActionIds = [];
+    values.game.reportedDescriptions = [];
 }
 
 module.exports = { values, resetGameCache };

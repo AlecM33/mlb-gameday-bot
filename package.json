@@ -23,6 +23,7 @@
     "reconnecting-websocket": "^4.4.0",
     "sharp": "^0.32.6",
     "sockette": "^2.0.6",
+    "uuid": "^10.0.0",
     "ws": "^8.17.0"
   },
   "devDependencies": {

@@ -5,7 +5,8 @@ module.exports = {
     process: async (currentPlayJSON) => {
         // console.log('PLAY: ' + JSON.stringify(currentPlayJSON, null, 2))
         let reply = '';
-        if (!globalCache.values.game.startReported && currentPlayJSON.playEvents.find(event => event.details?.description === 'Status Change - In Progress')) {
+        if (!globalCache.values.game.startReported
+            && currentPlayJSON.playEvents.find(event => event?.details?.description === 'Status Change - In Progress')) {
             globalCache.values.game.startReported = true;
             reply += 'A game is starting! Go Guards!';
         }
