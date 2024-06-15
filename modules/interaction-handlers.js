@@ -31,12 +31,16 @@ module.exports = {
                         .setTitle('Pitching Matchup - ' + commandUtil.constructGameDisplayString(game))
                         .setImage('attachment://matchupSpots.png')
                         .addFields({
-                            name: hydratedHomeProbable.handedness + 'HP **' + (probables.homeProbableLastName || 'TBD') + '** (' + probables.homeAbbreviation + ')',
+                            name: (hydratedHomeProbable.handedness
+                                ? hydratedHomeProbable.handedness + 'HP **'
+                                : '**') + (probables.homeProbableLastName || 'TBD') + '** (' + probables.homeAbbreviation + ')',
                             value: buildPitchingStatsMarkdown(hydratedHomeProbable.pitchingStats, hydratedHomeProbable.pitchMix),
                             inline: true
                         })
                         .addFields({
-                            name: hydratedAwayProbable.handedness + 'HP **' + (probables.awayProbableLastName || 'TBD') + '** (' + probables.awayAbbreviation + ')',
+                            name: (hydratedAwayProbable.handedness
+                                ? hydratedAwayProbable.handedness + 'HP **'
+                                : '**') + (probables.awayProbableLastName || 'TBD') + '** (' + probables.awayAbbreviation + ')',
                             value: buildPitchingStatsMarkdown(hydratedAwayProbable.pitchingStats, hydratedAwayProbable.pitchMix),
                             inline: true
                         });
@@ -93,6 +97,7 @@ module.exports = {
     },
 
     subscribeGamedayHandler: async (interaction) => {
+        console.info(`SUBSCRIBE GAMEDAY command invoked by guild: ${interaction.guildId}`);
         if (!interaction.member.roles.cache.some(role => globals.ADMIN_ROLES.includes(role.name))) {
             await interaction.reply({
                 ephemeral: true,
@@ -128,6 +133,7 @@ module.exports = {
     },
 
     unSubscribeGamedayHandler: async (interaction) => {
+        console.info(`UNSUBSCRIBE GAMEDAY command invoked by guild: ${interaction.guildId}`);
         if (!interaction.member.roles.cache.some(role => globals.ADMIN_ROLES.includes(role.name))) {
             await interaction.reply({
                 ephemeral: true,
@@ -162,7 +168,7 @@ module.exports = {
             if (statusCheck.gameData.status.abstractGameState === 'Preview') {
                 await commandUtil.giveFinalCommandResponse(toHandle, {
                     ephemeral: false,
-                    content: 'The game has not yet started.',
+                    content: commandUtil.constructGameDisplayString(game) + ' - the game has not yet started.',
                     components: []
                 });
                 return;
@@ -197,7 +203,7 @@ module.exports = {
             if (statusCheck.gameData.status.abstractGameState === 'Preview') {
                 await commandUtil.giveFinalCommandResponse(toHandle, {
                     ephemeral: false,
-                    content: 'The game has not yet started.',
+                    content: commandUtil.constructGameDisplayString(game) + ' - the game has not yet started.',
                     components: []
                 });
                 return;
@@ -239,6 +245,9 @@ module.exports = {
                 ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId)) // the user's choice between the two games of the double-header.
                 : globalCache.values.nearestGames[0];
             const updatedLineup = (await mlbAPIUtil.lineup(game.gamePk))?.dates[0].games[0];
+            const ourTeamLineup = updatedLineup.teams.home.team.id === globals.TEAM_ID
+                ? updatedLineup.lineups.homePlayers
+                : updatedLineup.lineups.awayPlayers;
             if (updatedLineup.status.detailedState === 'Postponed') {
                 await commandUtil.giveFinalCommandResponse(toHandle, {
                     content: commandUtil.constructGameDisplayString(game) + ' - this game is postponed.',
@@ -246,9 +255,9 @@ module.exports = {
                     components: []
                 });
                 return;
-            } else if (Object.keys(updatedLineup.lineups).length === 0) {
+            } else if (!ourTeamLineup) {
                 await commandUtil.giveFinalCommandResponse(toHandle, {
-                    content: commandUtil.constructGameDisplayString(game) + 'No lineup card has been submitted for this game yet.',
+                    content: commandUtil.constructGameDisplayString(game) + ' - No lineup card has been submitted for this game yet.',
                     ephemeral: false,
                     components: []
                 });

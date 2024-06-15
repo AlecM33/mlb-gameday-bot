@@ -1,6 +1,8 @@
 const globalCache = require('./global-cache');
 const fs = require('fs');
+const globals = require('../config/globals');
 const { v4: uuidv4 } = require('uuid');
+const LOGGER = require('./logger')(process.env.LOG_LEVEL || globals.LOG_LEVEL.INFO);
 
 /*
     This module concerns updating the base MLB gameday object (AKA "GUMBO") with changes derived from the "diffPatch" resource
@@ -69,18 +71,18 @@ module.exports = {
                         );
                         break;
                     default:
-                        console.log('UNRECOGNIZED OPERATION: ' + difference.op);
+                        LOGGER.info('UNRECOGNIZED OPERATION: ' + difference.op);
                 }
             });
         } catch (e) {
-            console.log('diffPatch error!');
+            LOGGER.error('diffPatch error!');
             // const errorPatch = JSON.stringify(patch, null, 2);
             // const errorFeed = JSON.stringify(globalCache.values.game.currentLiveFeed, null, 2)
             // const fs = require('fs');
             // const uuid = uuidv4();
             // fs.writeFileSync(path.join(__dirname, './' + uuid + '-patch.json'), errorPatch, 'utf8');
             // fs.writeFileSync(path.join(__dirname, './' + uuid + '-feed.json'), errorFeed, 'utf8');
-            console.error(e);
+            LOGGER.error(e);
             throw e;
         }
     }

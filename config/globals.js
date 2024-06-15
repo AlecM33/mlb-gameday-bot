@@ -98,6 +98,13 @@ module.exports = {
         "Triple",
         "Walk"
     ],
+    LOG_LEVEL: {
+        INFO: 'info',
+        DEBUG: 'debug',
+        ERROR: 'error',
+        WARN: 'warn',
+        TRACE: 'trace'
+    },
     TEAMS: [
         {
             "id": 133,

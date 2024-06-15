@@ -1,16 +1,18 @@
 const globals = require('../config/globals');
 const ReconnectingWebSocket = require('reconnecting-websocket');
+const { LOG_LEVEL } = require('../config/globals');
+const LOGGER = require('./logger')(process.env.LOG_LEVEL || LOG_LEVEL.INFO);
 
 const endpoints = {
     schedule: (startDate = '', endDate = '', teamId = globals.TEAM_ID) => {
-        console.log('https://statsapi.mlb.com/api/v1/schedule?hydrate=team,lineups&sportId=1&startDate=' + startDate + '&endDate=' + endDate + '&teamId=' + teamId);
+        LOGGER.debug('https://statsapi.mlb.com/api/v1/schedule?hydrate=team,lineups&sportId=1&startDate=' + startDate + '&endDate=' + endDate + '&teamId=' + teamId);
         return 'https://statsapi.mlb.com/api/v1/schedule?hydrate=team,lineups&sportId=1&startDate=' + startDate + '&endDate=' + endDate + '&teamId=' + teamId;
     },
     lineup: (gamePk, teamId = globals.TEAM_ID) => {
         return 'https://statsapi.mlb.com/api/v1/schedule?hydrate=lineups&sportId=1&gamePk=' + gamePk + '&teamId=' + teamId;
     },
     liveFeed: (gamePk) => {
-        console.log('https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live');
+        LOGGER.debug('https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live');
         return 'https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live';
     },
     liveFeedAtTimestamp: (gamePk, timestamp) => {
@@ -36,18 +38,18 @@ const endpoints = {
         return 'https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live/timestamps';
     },
     websocketQueryUpdateId: (gamePk, updateId, timestamp) => {
-        console.log('https://ws.statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live/diffPatch?language=en&startTimecode=' + timestamp + '&pushUpdateId=' + updateId);
+        LOGGER.debug('https://ws.statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live/diffPatch?language=en&startTimecode=' + timestamp + '&pushUpdateId=' + updateId);
         return 'https://ws.statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live/diffPatch?language=en&startTimecode=' + timestamp + '&pushUpdateId=' + updateId;
     },
     linescore: (gamePk) => {
-        console.log('https://statsapi.mlb.com/api/v1/game/' + gamePk + '/linescore');
+        LOGGER.debug('https://statsapi.mlb.com/api/v1/game/' + gamePk + '/linescore');
         return 'https://statsapi.mlb.com/api/v1/game/' + gamePk + '/linescore';
     },
     liveFeedBoxScoreNamesOnly: (gamePk) => {
         return 'https://ws.statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live?fields=gameData,players,boxscoreName';
     },
     savantPitchData: (personId) => {
-        console.log('https://baseballsavant.mlb.com/player-services/statcast-pitches-breakdown?playerId=' + personId +
+        LOGGER.debug('https://baseballsavant.mlb.com/player-services/statcast-pitches-breakdown?playerId=' + personId +
             '&position=1&pitchBreakdown=pitches&timeFrame=yearly&season=' + new Date().getFullYear() + '&updatePitches=true');
         return 'https://baseballsavant.mlb.com/player-services/statcast-pitches-breakdown?playerId=' + personId +
             '&position=1&pitchBreakdown=pitches&timeFrame=yearly&season=' + new Date().getFullYear() + '&updatePitches=true';
@@ -66,20 +68,20 @@ const endpoints = {
         return 'https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live?fields=gamePk,gameData,status,abstractGameState';
     },
     people: (personIds) => {
+        LOGGER.debug('https://statsapi.mlb.com/api/v1/people?personIds=' + personIds.reduce((acc, value) => acc + ',' + value, '') + '&hydrate=stats(type=season,groups=hitting,pitching)');
         return 'https://statsapi.mlb.com/api/v1/people?personIds=' + personIds.reduce((acc, value) => acc + ',' + value, '') + '&hydrate=stats(type=season,groups=hitting,pitching)';
     },
     boxScore: (gamePk) => {
         return 'https://statsapi.mlb.com/api/v1/game/' + gamePk + '/boxscore';
     },
     savantGameFeed: (gamePk) => {
-        console.log('https://baseballsavant.mlb.com/gf?game_pk=' + gamePk);
+        LOGGER.debug('https://baseballsavant.mlb.com/gf?game_pk=' + gamePk);
         return 'https://baseballsavant.mlb.com/gf?game_pk=' + gamePk;
     }
 };
 
 module.exports = {
     currentGames: async () => {
-        const now = globals.DATE || new Date();
         const twelveHoursFromNow = globals.DATE || new Date();
         const twelveHoursInThePast = globals.DATE || new Date();
         twelveHoursFromNow.setHours(twelveHoursFromNow.getHours() + 24);
@@ -95,8 +97,7 @@ module.exports = {
                 const games = [];
                 dates.forEach((date) => date.games?.forEach(game => games.push(game)));
                 if (games.length > 0) {
-                    games.sort((a, b) => Math.abs(now - new Date(a.gameDate)) - Math.abs(now - new Date(b.gameDate)));
-                    return games.filter(game => game.officialDate === games[0].officialDate); // could be more than one game for double-headers.
+                    return games;
                 } else {
                     return new Error('There is no recent or upcoming game!');
                 }
@@ -127,7 +128,6 @@ module.exports = {
         return (await fetch(endpoints.standings(leagueId))).json();
     },
     websocketSubscribe: (gamePk) => {
-        console.log(endpoints.websocketSubscribe(gamePk));
         const { WebSocket } = require('ws');
         return new ReconnectingWebSocket(endpoints.websocketSubscribe(gamePk),
             [],

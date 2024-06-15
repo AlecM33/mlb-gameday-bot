@@ -3,7 +3,6 @@ const globals = require('../config/globals');
 
 module.exports = {
     process: async (currentPlayJSON) => {
-        // console.log('PLAY: ' + JSON.stringify(currentPlayJSON, null, 2))
         let reply = '';
         if (!globalCache.values.game.startReported
             && currentPlayJSON.playEvents.find(event => event?.details?.description === 'Status Change - In Progress')) {
@@ -44,7 +43,8 @@ module.exports = {
                     reply += 'Exit Velocity: Unavailable\n';
                     reply += 'Launch Angle: Unavailable\n';
                     reply += 'Distance: Unavailable\n';
-                    reply += 'xBA: Unavailable';
+                    reply += 'xBA: Unavailable\n';
+                    reply += 'HR/Park: Unavailable';
                 }
             }
         }

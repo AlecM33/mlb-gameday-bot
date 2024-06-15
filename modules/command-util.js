@@ -5,6 +5,7 @@ const mlbAPIUtil = require('./MLB-API-util');
 const jsdom = require('jsdom');
 const globals = require('../config/globals');
 const puppeteer = require('puppeteer');
+const LOGGER = require('./logger')(process.env.LOG_LEVEL || globals.LOG_LEVEL.INFO);
 
 module.exports = {
     getLineupCardTable: async (game) => {
@@ -46,13 +47,21 @@ module.exports = {
                 reject(new Error('There was a problem getting the player spot.'));
             }),
             mlbAPIUtil.savantPitchData(probable),
-            mlbAPIUtil.people([probable])
+            new Promise((resolve, reject) => {
+                if (probable) {
+                    resolve(mlbAPIUtil.people([probable]));
+                } else {
+                    resolve(undefined);
+                }
+                reject(new Error('There was a problem getting stats for this person.'));
+            })
+
         ]);
         return {
             spot,
             pitchMix: getPitchCollections(new jsdom.JSDOM(savant)),
             pitchingStats: parsePitchingStats(people),
-            handedness: people.people[0].pitchHand?.code
+            handedness: people?.people[0].pitchHand?.code
         };
     },
 
@@ -179,10 +188,10 @@ module.exports = {
     },
 
     constructGameDisplayString: (game) => {
-        return (game.teams.home.team?.abbreviation || game.teams.home?.abbreviation)
-            + ' vs. '
-            + (game.teams.away.team?.abbreviation || game.teams.away?.abbreviation)
-            + ', ' + new Date((game.gameDate || game.datetime.dateTime)).toLocaleString('default', {
+        return (game.teams.home.team?.abbreviation || game.teams.home?.abbreviation) +
+            ' vs. ' +
+            (game.teams.away.team?.abbreviation || game.teams.away?.abbreviation) +
+            ', ' + new Date((game.gameDate || game.datetime.dateTime)).toLocaleString('default', {
             month: 'short',
             day: 'numeric',
             timeZone: 'America/New_York',
@@ -224,7 +233,7 @@ async function resolveDoubleHeaderSelection (interaction) {
     });
     const collectorFilter = i => i.user.id === interaction.user.id;
     try {
-        console.log('awaiting');
+        LOGGER.trace('awaiting');
         return await response.awaitMessageComponent({ filter: collectorFilter, time: 10_000 });
     } catch (e) {
         await interaction.editReply({ content: 'Confirmation not received within 10 seconds, cancelling', components: [] });
@@ -232,7 +241,7 @@ async function resolveDoubleHeaderSelection (interaction) {
 }
 
 function parsePitchingStats (people) {
-    return people.people[0]?.stats.find(stat => stat.group.displayName === 'pitching')?.splits[0]?.stat;
+    return people?.people[0]?.stats.find(stat => stat.group.displayName === 'pitching')?.splits[0]?.stat;
 }
 
 /* This is not the best solution, admittedly. We are building an HTML version of the table in a headless browser, styling

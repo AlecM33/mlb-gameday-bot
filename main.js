@@ -2,6 +2,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, GatewayIntentBits } = require('discord.js');
 const gameday = require('./modules/gameday');
+const { LOG_LEVEL } = require('./config/globals');
+const LOGGER = require('./modules/logger')(process.env.LOG_LEVEL || LOG_LEVEL.INFO);
 
 const BOT = new Client({
     intents: [
@@ -21,12 +23,12 @@ for (const file of commandFiles) {
 }
 
 BOT.once('ready', async () => {
-    console.log('Ready!');
+    LOGGER.info('Ready!');
     await gameday.checkForCurrentGames(BOT);
 });
 
 BOT.login(process.env.TOKEN?.trim()).then(() => {
-    console.log('bot successfully logged in');
+    LOGGER.info('bot successfully logged in');
 });
 
 BOT.on('interactionCreate', async interaction => {
@@ -39,7 +41,7 @@ BOT.on('interactionCreate', async interaction => {
     try {
         await command.execute(interaction, BOT.guilds);
     } catch (error) {
-        console.error(error);
+        LOGGER.error(error);
         if (interaction.deferred) {
             await interaction.followUp({ content: 'error', ephemeral: true });
         } else if (!interaction.replied) {
