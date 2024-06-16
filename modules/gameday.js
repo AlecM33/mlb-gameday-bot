@@ -25,7 +25,7 @@ module.exports = {
 
 async function statusPoll (bot, games) {
     const pollingFunction = async () => {
-        LOGGER.trace('Gameday: polling...');
+        LOGGER.info('Gameday: polling...');
         const now = globals.DATE || new Date();
         games.sort((a, b) => Math.abs(now - new Date(a.gameDate)) - Math.abs(now - new Date(b.gameDate)));
         const nearestGames = games.filter(game => game.officialDate === games[0].officialDate); // could be more than one game for double-headers.
@@ -40,7 +40,7 @@ async function statusPoll (bot, games) {
             globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(liveGame.gamePk);
             subscribe(bot, liveGame, nearestGames);
         } else if (statusChecks.every(statusCheck => statusCheck.gameData.status.abstractGameState === 'Final')) {
-            LOGGER.trace('Gameday: polling slowed: all games are final.');
+            LOGGER.info('Gameday: polling slowed: all games are final.');
             setTimeout(pollingFunction, globals.SLOW_POLL_INTERVAL);
         } else {
             setTimeout(pollingFunction, globals.STATUS_POLLING_INTERVAL);
@@ -105,7 +105,7 @@ async function reportPlay (bot, gamePk) {
     const lastCompleteAtBatIndex = globalCache.values.game.lastCompleteAtBatIndex;
     const currentAtBatIndex = globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.atBatIndex;
     if (lastCompleteAtBatIndex !== null && ((currentAtBatIndex - lastCompleteAtBatIndex) > 1)) { // updates we received skipped a result. Happens every so often.
-        LOGGER.trace('An at-bat index was skipped.');
+        LOGGER.info('An at-bat index was skipped.');
         const skippedPlay = globalCache.values.game.currentLiveFeed.liveData.plays.allPlays.find((play) => play.about.atBatIndex === (lastCompleteAtBatIndex + 1));
         if (skippedPlay) {
             await processAndPushPlay(bot, (await currentPlayProcessor.process(skippedPlay)), gamePk);

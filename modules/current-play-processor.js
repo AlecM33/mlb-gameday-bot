@@ -10,8 +10,10 @@ module.exports = {
             reply += 'A game is starting! Go Guards!';
         }
         let lastEvent;
-        if (currentPlayJSON.about.isComplete || globals.EVENT_WHITELIST.includes(currentPlayJSON.result?.eventType)) {
+        if (currentPlayJSON.about.isComplete) {
             globalCache.values.game.lastCompleteAtBatIndex = currentPlayJSON.about.atBatIndex;
+        }
+        if (currentPlayJSON.about.isComplete || globals.EVENT_WHITELIST.includes(currentPlayJSON.result?.eventType)) {
             reply += getDescription(currentPlayJSON);
             if (currentPlayJSON.about?.hasOut) {
                 reply += ' **' + currentPlayJSON.count.outs + (currentPlayJSON.count.outs > 1 ? ' outs. **' : ' out. **');
