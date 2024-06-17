@@ -102,17 +102,15 @@ function subscribe (bot, liveGame, games) {
 }
 
 async function reportPlay (bot, gamePk) {
-    const lastCompleteAtBatIndex = globalCache.values.game.lastCompleteAtBatIndex;
-    const currentAtBatIndex = globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.atBatIndex;
-    if (lastCompleteAtBatIndex !== null && ((currentAtBatIndex - lastCompleteAtBatIndex) > 1)) { // updates we received skipped a result. Happens every so often.
-        LOGGER.info('An at-bat index was skipped.');
-        const skippedPlay = globalCache.values.game.currentLiveFeed.liveData.plays.allPlays.find((play) => play.about.atBatIndex === (lastCompleteAtBatIndex + 1));
-        if (skippedPlay) {
-            await processAndPushPlay(bot, (await currentPlayProcessor.process(skippedPlay)), gamePk);
-            return;
-        }
+    const currentPlay = globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay;
+    const missedPlayEventsToReport = currentPlay.playEvents.filter(event =>
+        !event?.isPitch
+        && globals.EVENT_WHITELIST.includes(event?.details?.eventType)
+        && !globalCache.values.game.reportedDescriptions.includes(event?.details?.description));
+    for (const missedPlayEvent of missedPlayEventsToReport) {
+        await processAndPushPlay(bot, (await currentPlayProcessor.process(missedPlayEvent)), gamePk);
     }
-    await processAndPushPlay(bot, (await currentPlayProcessor.process(globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay)), gamePk);
+    await processAndPushPlay(bot, (await currentPlayProcessor.process(currentPlay)), gamePk);
 }
 
 async function processAndPushPlay (bot, play, gamePk) {
@@ -128,83 +126,90 @@ async function processAndPushPlay (bot, play, gamePk) {
                 globalCache.values.game.currentLiveFeed.gameData.teams.away.abbreviation)
             .setDescription(play.reply)
             .setColor('#E31937');
-        // TODO: refactor savant polling out of this loop and do a single poll for all subscribed channels.
+        const messages = [];
         for (const channel of globalCache.values.subscribedChannels) {
-            bot.channels.fetch(channel).then((returnedChannel) => {
-                LOGGER.trace('Sending!');
-                returnedChannel.send({
-                    embeds: [embed]
-                }).then(async message => {
-                    if (play.isInPlay) {
-                        if (play.playId) {
-                            // xBA and HR/Park for balls in play is available on a delay via baseballsavant.
-                            await pollForSavantData(gamePk, play.playId, message, play.hitDistance);
-                        } else {
-                            LOGGER.info('Play has no play ID.');
-                            const receivedEmbed = EmbedBuilder.from(message.embeds[0]);
-                            let description = message.embeds[0].description;
-                            if (description.includes('Pending...')) {
-                                description = description.replaceAll('Pending...', 'Not Available.');
-                                receivedEmbed.setDescription(description);
-                                message.edit({ embeds: [receivedEmbed] });
-                            }
-                        }
-                    }
-                });
+            const returnedChannel = await bot.channels.fetch(channel);
+            LOGGER.trace('Sending!');
+            const message = await returnedChannel.send({
+                embeds: [embed]
             });
+            messages.push(message);
+        }
+        if (play.isInPlay) {
+            if (play.playId) {
+                // xBA and HR/Park for balls in play is available on a delay via baseballsavant.
+                await pollForSavantData(gamePk, play.playId, messages, play.hitDistance);
+            } else {
+                LOGGER.info('Play has no play ID.');
+                for (let i = 0; i < messages.length; i ++) {
+                    const receivedEmbed = EmbedBuilder.from(messages[i].embeds[0]);
+                    let description = messages[i].embeds[0].description;
+                    if (description.includes('Pending...')) {
+                        description = description.replaceAll('Pending...', 'Not Available.');
+                        receivedEmbed.setDescription(description);
+                        messages[i].edit({ embeds: [receivedEmbed] });
+                    }
+                }
+            }
         }
     }
 }
 
-async function pollForSavantData (gamePk, playId, message, hitDistance) {
+async function pollForSavantData (gamePk, playId, messages, hitDistance) {
     let attempts = 1;
-    const receivedEmbed = EmbedBuilder.from(message.embeds[0]);
-    let description = message.embeds[0].description;
     const pollingFunction = async () => {
         if (attempts < 10) {
-            LOGGER.trace('Savant: polling for ' + playId + '...');
+            LOGGER.debug('Savant: polling for ' + playId + '...');
             const gameFeed = await mlbAPIUtil.savantGameFeed(gamePk);
             const matchingPlay = gameFeed?.team_away?.find(play => play?.play_id === playId)
                 || gameFeed?.team_home?.find(play => play?.play_id === playId);
             if (matchingPlay && (matchingPlay.xba || matchingPlay.contextMetrics?.homeRunBallparks !== undefined)) {
-                if (matchingPlay.xba && description.includes('xBA: Pending...')) {
-                    LOGGER.trace('Editing with xba: ' + playId);
-                    description = description.replaceAll('xBA: Pending...', 'xBA: ' + matchingPlay.xba +
-                        (parseFloat(matchingPlay.xba) > 0.5 ? ' \uD83D\uDFE2' : ''));
-                    receivedEmbed.setDescription(description);
-                    message.edit({
-                        embeds: [receivedEmbed]
-                    });
-                    if (hitDistance && hitDistance < 300) {
-                        LOGGER.trace('Found xba, done polling for: ' + playId);
-                        return;
+                for (let i = 0; i < messages.length; i ++) {
+                    const receivedEmbed = EmbedBuilder.from(messages[i].embeds[0]);
+                    let description = messages[i].embeds[0].description;
+                    if (matchingPlay.xba && description.includes('xBA: Pending...')) {
+                        LOGGER.debug('Editing with xba: ' + playId);
+                        description = description.replaceAll('xBA: Pending...', 'xBA: ' + matchingPlay.xba +
+                            (parseFloat(matchingPlay.xba) > 0.5 ? ' \uD83D\uDFE2' : ''));
+                        receivedEmbed.setDescription(description);
+                        messages[i].edit({
+                            embeds: [receivedEmbed]
+                        });
+                        if (hitDistance && hitDistance < 300) {
+                            LOGGER.debug('Found xba, done polling for: ' + playId);
+                            return;
+                        }
                     }
-                }
-                if (hitDistance && hitDistance >= 300
-                    && matchingPlay.contextMetrics.homeRunBallparks !== undefined
-                    && description.includes('HR/Park: Pending...')) {
-                    LOGGER.trace('Editing with HR/Park: ' + playId);
-                    description = description.replaceAll('HR/Park: Pending...', 'HR/Park: ' +
-                        matchingPlay.contextMetrics.homeRunBallparks + '/30' +
-                        (matchingPlay.contextMetrics.homeRunBallparks === 30 ? '\u203C\uFE0F' : ''));
-                    receivedEmbed.setDescription(description);
-                    message.edit({
-                        embeds: [receivedEmbed]
-                    });
-                    if (matchingPlay.xba) {
-                        LOGGER.trace('Found all metrics: done polling for: ' + playId);
-                        return;
+                    if (hitDistance && hitDistance >= 300
+                        && matchingPlay.contextMetrics.homeRunBallparks !== undefined
+                        && description.includes('HR/Park: Pending...')) {
+                        LOGGER.debug('Editing with HR/Park: ' + playId);
+                        description = description.replaceAll('HR/Park: Pending...', 'HR/Park: ' +
+                            matchingPlay.contextMetrics.homeRunBallparks + '/30' +
+                            (matchingPlay.contextMetrics.homeRunBallparks === 30 ? '\u203C\uFE0F' : ''));
+                        receivedEmbed.setDescription(description);
+                        messages[i].edit({
+                            embeds: [receivedEmbed]
+                        });
+                        if (matchingPlay.xba) {
+                            LOGGER.debug('Found all metrics: done polling for: ' + playId);
+                            return;
+                        }
                     }
                 }
             }
             attempts ++;
             setTimeout(pollingFunction, globals.SAVANT_POLLING_INTERVAL);
         } else {
-            LOGGER.trace('max savant polling attempts reached for: ' + playId);
-            if (description.includes('Pending...')) {
-                description = description.replaceAll('Pending...', 'Not Available.');
-                receivedEmbed.setDescription(description);
-                message.edit({ embeds: [receivedEmbed] });
+            LOGGER.debug('max savant polling attempts reached for: ' + playId);
+            for (let i = 0; i < messages.length; i ++) {
+                const receivedEmbed = EmbedBuilder.from(messages[i].embeds[0]);
+                let description = messages[i].embeds[0].description;
+                if (description.includes('Pending...')) {
+                    description = description.replaceAll('Pending...', 'Not Available.');
+                    receivedEmbed.setDescription(description);
+                    messages[i].edit({ embeds: [receivedEmbed] });
+                }
             }
         }
     };
