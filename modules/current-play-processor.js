@@ -14,10 +14,10 @@ module.exports = {
             || globals.EVENT_WHITELIST.includes((currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType))
         ) {
             reply += getDescription(currentPlayJSON);
-            if (currentPlayJSON.about?.hasOut || currentPlayJSON.details.isOut) {
+            if (currentPlayJSON.about?.hasOut || currentPlayJSON.details?.isOut) {
                 reply += ' **' + currentPlayJSON.count.outs + (currentPlayJSON.count.outs > 1 ? ' outs. **' : ' out. **');
             }
-            if (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details.isScoringPlay) {
+            if (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details?.isScoringPlay) {
                 reply += '\n';
                 const homeScore = currentPlayJSON.result?.homeScore || currentPlayJSON.details?.homeScore;
                 const awayScore = currentPlayJSON.result?.awayScore || currentPlayJSON.details?.awayScore;
@@ -45,8 +45,8 @@ module.exports = {
             description: (currentPlayJSON.result?.description || currentPlayJSON.details?.description),
             event: (currentPlayJSON.result?.event || currentPlayJSON.details?.event),
             eventType: (currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType),
-            isScoringPlay: (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details.isScoringPlay),
-            isInPlay: (lastEvent?.details?.isInPlay || currentPlayJSON.details.isInPlay),
+            isScoringPlay: (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details?.isScoringPlay),
+            isInPlay: (lastEvent?.details?.isInPlay || currentPlayJSON.details?.isInPlay),
             playId: (lastEvent?.playId || currentPlayJSON.playId),
             hitDistance: (lastEvent?.hitData?.totalDistance || currentPlayJSON.hitData?.totalDistance)
         };
