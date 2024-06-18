@@ -49,7 +49,6 @@ module.exports = {
         'other_advance',
         'pitching_substitution',
         'offensive_substitution',
-        'defensive_switch',
         'pitcher_switch',
         'stolen_base',
         'stolen_base_2b',
@@ -59,7 +58,6 @@ module.exports = {
         'caught_stealing_2b',
         'caught_stealing_3b',
         'caught_stealing_home',
-        'defensive_substitution',
         'pickoff_caught_stealing_2b',
         'pickoff_caught_stealing_3b',
         'pickoff_caught_stealing_home',
@@ -68,7 +66,7 @@ module.exports = {
         'wild_pitch',
         'other_out'
     ],
-    TEAM_ID: 143,
+    TEAM_ID: 114,
     GUARDIANS: 114, // guardians team ID for MLB stats API
     AL_CENTRAL: 202,
     AMERICAN_LEAGUE: 103,

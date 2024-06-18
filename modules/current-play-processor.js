@@ -19,8 +19,14 @@ module.exports = {
             }
             if (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details?.isScoringPlay) {
                 reply += '\n';
-                const homeScore = currentPlayJSON.result?.homeScore || currentPlayJSON.details?.homeScore;
-                const awayScore = currentPlayJSON.result?.awayScore || currentPlayJSON.details?.awayScore;
+                let homeScore, awayScore;
+                if (currentPlayJSON.result) {
+                    homeScore = currentPlayJSON.result.homeScore;
+                    awayScore = currentPlayJSON.result.awayScore;
+                } else if (currentPlayJSON.details) {
+                    homeScore = currentPlayJSON.details.homeScore;
+                    awayScore = currentPlayJSON.details.awayScore;
+                }
                 if (homeScore > awayScore) {
                     reply += '## ' + globalCache.values.game.currentLiveFeed.gameData.teams.home.abbreviation +
                         ' now leads ' + homeScore + '-' + awayScore + '\n';
