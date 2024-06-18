@@ -240,8 +240,8 @@ module.exports = {
         {
             "id": 114,
             "name": "Guardians",
-            primaryColor: "#00385D",
-            secondaryColor: "#E50022"
+            primaryColor: "#E50022",
+            secondaryColor: "#00385D"
         },
         {
             "id": 115,
