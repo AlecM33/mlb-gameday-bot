@@ -188,7 +188,11 @@ function notifySavantDataUnavailable (messages) {
 
 async function pollForSavantData (gamePk, playId, messages, hitDistance) {
     let attempts = 1;
+    let messageTrackers = messages.map(message => { return { id: message.id, done: false }})
     const pollingFunction = async () => {
+        if (messageTrackers.every(messageTracker => messageTracker.done)) {
+            return
+        }
         if (attempts < 10) {
             LOGGER.debug('Savant: polling for ' + playId + '...');
             const gameFeed = await mlbAPIUtil.savantGameFeed(gamePk);
@@ -208,7 +212,7 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance) {
                         });
                         if (hitDistance && hitDistance < 300) {
                             LOGGER.debug('Found xba, done polling for: ' + playId);
-                            return;
+                            messageTrackers.find(tracker => tracker.id === messages[i].id).done = true
                         }
                     }
                     if (hitDistance && hitDistance >= 300
@@ -224,7 +228,7 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance) {
                         });
                         if (matchingPlay.xba) {
                             LOGGER.debug('Found all metrics: done polling for: ' + playId);
-                            return;
+                            messageTrackers.find(tracker => tracker.id === messages[i].id)?.done = true
                         }
                     }
                 }
