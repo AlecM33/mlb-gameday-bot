@@ -234,13 +234,13 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance) {
                 }
             }
             attempts ++;
-            setTimeout(pollingFunction, globals.SAVANT_POLLING_INTERVAL);
+            setTimeout(async () => { await pollingFunction() }, globals.SAVANT_POLLING_INTERVAL);
         } else {
             LOGGER.debug('max savant polling attempts reached for: ' + playId);
             notifySavantDataUnavailable(messages);
         }
     };
-    await pollingFunction();
+    setTimeout(async () => { await pollingFunction() }, globals.SAVANT_POLLING_INTERVAL);
 }
 
 function deriveHalfInning (halfInningFull) {
