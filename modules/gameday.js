@@ -228,7 +228,7 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance) {
                         });
                         if (matchingPlay.xba) {
                             LOGGER.debug('Found all metrics: done polling for: ' + playId);
-                            messageTrackers.find(tracker => tracker.id === messages[i].id)?.done = true
+                            messageTrackers.find(tracker => tracker.id === messages[i].id).done = true
                         }
                     }
                 }
