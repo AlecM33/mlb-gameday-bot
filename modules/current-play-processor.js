@@ -10,8 +10,7 @@ module.exports = {
             reply += 'A game is starting! Go Guards!';
         }
         let lastEvent;
-        if ((currentPlayJSON.about?.isComplete
-            || globals.EVENT_WHITELIST.includes((currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType)))
+        if (globals.EVENT_WHITELIST.includes((currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType))
             && !currentPlayJSON.reviewDetails?.inProgress // a play that has been challenged
         ) {
             reply += getDescription(currentPlayJSON);
