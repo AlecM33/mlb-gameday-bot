@@ -2,66 +2,84 @@ const globalCache = require('./global-cache');
 const globals = require('../config/globals');
 
 module.exports = {
-    process: async (currentPlayJSON) => {
+    process: (currentPlayJSON) => {
         let reply = '';
         if (!globalCache.values.game.startReported
-            && currentPlayJSON.playEvents.find(event => event?.details?.description === 'Status Change - In Progress')) {
+            && currentPlayJSON.playEvents?.find(event => event?.details?.description === 'Status Change - In Progress')) {
             globalCache.values.game.startReported = true;
             reply += 'A game is starting! Go Guards!';
         }
         let lastEvent;
-        if (currentPlayJSON.about.isComplete) {
-            globalCache.values.game.lastCompleteAtBatIndex = currentPlayJSON.about.atBatIndex;
-        }
-        if (currentPlayJSON.about.isComplete || globals.EVENT_WHITELIST.includes(currentPlayJSON.result?.eventType)) {
+        if ((currentPlayJSON.about?.isComplete
+            || globals.EVENT_WHITELIST.includes((currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType)))
+            && !currentPlayJSON.reviewDetails?.inProgress // a play that has been challenged
+        ) {
             reply += getDescription(currentPlayJSON);
-            if (currentPlayJSON.about?.hasOut) {
+            if (currentPlayJSON.about?.hasOut || currentPlayJSON.details?.isOut) {
                 reply += ' **' + currentPlayJSON.count.outs + (currentPlayJSON.count.outs > 1 ? ' outs. **' : ' out. **');
             }
-            if (currentPlayJSON.about?.isScoringPlay) {
+            if (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details?.isScoringPlay) {
                 reply += '\n';
-                if (currentPlayJSON.result.homeScore > currentPlayJSON.result.awayScore) {
+                let homeScore, awayScore;
+                if (currentPlayJSON.result) {
+                    homeScore = currentPlayJSON.result.homeScore;
+                    awayScore = currentPlayJSON.result.awayScore;
+                } else if (currentPlayJSON.details) {
+                    homeScore = currentPlayJSON.details.homeScore;
+                    awayScore = currentPlayJSON.details.awayScore;
+                }
+                if (homeScore > awayScore) {
                     reply += '## ' + globalCache.values.game.currentLiveFeed.gameData.teams.home.abbreviation +
-                        ' now leads ' + currentPlayJSON.result.homeScore + '-' + currentPlayJSON.result.awayScore + '\n';
-                } else if (currentPlayJSON.result.homeScore === currentPlayJSON.result.awayScore) {
-                    reply += '## The game is now tied at ' + currentPlayJSON.result.homeScore + '-' + currentPlayJSON.result.awayScore + '\n';
+                        ' now leads ' + homeScore + '-' + awayScore + '\n';
+                } else if (homeScore === awayScore) {
+                    reply += '## The game is now tied at ' + homeScore + '-' + awayScore + '\n';
                 } else {
                     reply += '## ' + globalCache.values.game.currentLiveFeed.gameData.teams.away.abbreviation +
-                        ' now leads ' + currentPlayJSON.result.awayScore + '-' + currentPlayJSON.result.homeScore + '\n';
+                        ' now leads ' + awayScore + '-' + homeScore + '\n';
                 }
             }
-            lastEvent = currentPlayJSON.playEvents[currentPlayJSON.playEvents.length - 1];
-            if (lastEvent?.details?.isInPlay) {
-                if (lastEvent.hitData.launchSpeed) { // this data can be randomly unavailable
-                    reply += '\n\n**Statcast Metrics:**\n';
-                    reply += 'Exit Velo: ' + lastEvent.hitData.launchSpeed + ' mph' +
-                        (lastEvent.hitData.launchSpeed > 95.0 ? ' \uD83D\uDD25\uD83D\uDD25' : '') + '\n';
-                    reply += 'Launch Angle: ' + lastEvent.hitData.launchAngle + '° \n';
-                    reply += 'Distance: ' + lastEvent.hitData.totalDistance + ' ft.\n';
-                    reply += 'xBA: Pending...\n';
-                    reply += lastEvent.hitData.totalDistance && lastEvent.hitData.totalDistance >= 300 ? 'HR/Park: Pending...' : '';
-                } else {
-                    reply += '\n\n**Statcast Metrics:**\n';
-                    reply += 'Exit Velocity: Unavailable\n';
-                    reply += 'Launch Angle: Unavailable\n';
-                    reply += 'Distance: Unavailable\n';
-                    reply += 'xBA: Unavailable\n';
-                    reply += 'HR/Park: Unavailable';
+            if (currentPlayJSON.playEvents) {
+                lastEvent = currentPlayJSON.playEvents[currentPlayJSON.playEvents.length - 1];
+                if (lastEvent?.details?.isInPlay) {
+                    reply = addMetrics(lastEvent, reply);
                 }
+            } else if (currentPlayJSON.details?.isInPlay) {
+                reply = addMetrics(currentPlayJSON, reply);
             }
         }
         return {
             reply,
-            description: currentPlayJSON.result?.description,
-            event: currentPlayJSON.result?.event,
-            eventType: currentPlayJSON.result?.eventType,
-            isScoringPlay: currentPlayJSON.about?.isScoringPlay,
-            isInPlay: lastEvent?.details?.isInPlay,
-            playId: lastEvent?.playId,
-            hitDistance: lastEvent?.hitData?.totalDistance
+            description: (currentPlayJSON.result?.description || currentPlayJSON.details?.description),
+            event: (currentPlayJSON.result?.event || currentPlayJSON.details?.event),
+            eventType: (currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType),
+            isScoringPlay: (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details?.isScoringPlay),
+            isInPlay: (lastEvent?.details?.isInPlay || currentPlayJSON.details?.isInPlay),
+            playId: (lastEvent?.playId || currentPlayJSON.playId),
+            hitDistance: (lastEvent?.hitData?.totalDistance || currentPlayJSON.hitData?.totalDistance)
         };
     }
 };
+
+function addMetrics (lastEvent, reply) {
+    if (lastEvent.hitData.launchSpeed) { // this data can be randomly unavailable
+        reply += '\n\n**Statcast Metrics:**\n';
+        reply += 'Exit Velo: ' + lastEvent.hitData.launchSpeed + ' mph' +
+            (lastEvent.hitData.launchSpeed > 95.0 ? ' \uD83D\uDD25\uD83D\uDD25' : '') + '\n';
+        reply += 'Launch Angle: ' + lastEvent.hitData.launchAngle + '° \n';
+        reply += 'Distance: ' + lastEvent.hitData.totalDistance + ' ft.\n';
+        reply += 'xBA: Pending...\n';
+        reply += lastEvent.hitData.totalDistance && lastEvent.hitData.totalDistance >= 300 ? 'HR/Park: Pending...' : '';
+    } else {
+        reply += '\n\n**Statcast Metrics:**\n';
+        reply += 'Exit Velocity: Unavailable\n';
+        reply += 'Launch Angle: Unavailable\n';
+        reply += 'Distance: Unavailable\n';
+        reply += 'xBA: Unavailable\n';
+        reply += 'HR/Park: Unavailable';
+    }
+
+    return reply;
+}
 
 function getDescription (currentPlayJSON) {
     if (currentPlayJSON.result?.event === 'Home Run'
@@ -69,7 +87,7 @@ function getDescription (currentPlayJSON) {
         && currentPlayJSON.result?.description) {
         return getGuardiansHomeRunDescription(currentPlayJSON.result.description);
     }
-    return (currentPlayJSON.result?.description || '');
+    return (currentPlayJSON.result?.description || currentPlayJSON.details.description || '');
 }
 
 function guardiansBatting (currentPlayJSON) {

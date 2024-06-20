@@ -7,6 +7,7 @@ const globals = require('../config/globals');
 const commandUtil = require('./command-util');
 const queries = require('../database/queries.js');
 const LOGGER = require('./logger')(process.env.LOG_LEVEL || globals.LOG_LEVEL.INFO);
+const ColorContrastChecker = require('color-contrast-checker');
 
 module.exports = {
     checkForCurrentGames: async (BOT) => {
@@ -38,6 +39,18 @@ async function statusPoll (bot, games) {
             LOGGER.info('Gameday: polling stopped: a game is live.');
             globalCache.resetGameCache();
             globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(liveGame.gamePk);
+            globalCache.values.game.homeTeamColor = globals.TEAMS.find(
+                team => team.id === globalCache.values.game.currentLiveFeed.gameData.teams.home.id
+            ).primaryColor;
+            const awayTeam = globals.TEAMS.find(
+                team => team.id === globalCache.values.game.currentLiveFeed.gameData.teams.away.id
+            );
+            const colorContrastChecker = new ColorContrastChecker();
+            if (colorContrastChecker.isLevelCustom(globalCache.values.game.homeTeamColor, awayTeam.primaryColor, globals.TEAM_COLOR_CONTRAST_RATIO)) {
+                globalCache.values.game.awayTeamColor = awayTeam.primaryColor;
+            } else {
+                globalCache.values.game.awayTeamColor = awayTeam.secondaryColor;
+            }
             subscribe(bot, liveGame, nearestGames);
         } else if (statusChecks.every(statusCheck => statusCheck.gameData.status.abstractGameState === 'Final')) {
             LOGGER.info('Gameday: polling slowed: all games are final.');
@@ -54,65 +67,86 @@ function subscribe (bot, liveGame, games) {
     LOGGER.trace('Gameday: subscribing...');
     const ws = mlbAPIUtil.websocketSubscribe(liveGame.gamePk);
     ws.addEventListener('message', async (e) => {
-        const eventJSON = JSON.parse(e.data);
-        if (eventJSON.gameEvents.includes('game_finished') && !acknowledgedGameFinish) {
-            acknowledgedGameFinish = true;
-            globalCache.values.game.startReported = false;
-            LOGGER.trace('NOTIFIED OF GAME CONCLUSION: CLOSING...');
-            ws.close();
-            const linescore = await mlbAPIUtil.linescore(liveGame.gamePk);
-            const linescoreAttachment = new AttachmentBuilder(
-                await commandUtil.buildLineScoreTable(globalCache.values.game.currentLiveFeed.gameData, linescore)
-                , { name: 'line_score.png' });
-            globalCache.values.subscribedChannels.forEach((channel) => {
-                bot.channels.fetch(channel).then((returnedChannel) => {
-                    LOGGER.trace('Sending!');
-                    returnedChannel.send({
-                        content: commandUtil.constructGameDisplayString(globalCache.values.game.currentLiveFeed.gameData) + ' - **Final**',
-                        files: [linescoreAttachment]
+        try {
+            const eventJSON = JSON.parse(e.data);
+            if (eventJSON.gameEvents.includes('game_finished') && !acknowledgedGameFinish) {
+                acknowledgedGameFinish = true;
+                globalCache.values.game.startReported = false;
+                LOGGER.trace('NOTIFIED OF GAME CONCLUSION: CLOSING...');
+                ws.close();
+                const linescore = await mlbAPIUtil.linescore(liveGame.gamePk);
+                const linescoreAttachment = new AttachmentBuilder(
+                    await commandUtil.buildLineScoreTable(globalCache.values.game.currentLiveFeed.gameData, linescore)
+                    , { name: 'line_score.png' });
+                globalCache.values.subscribedChannels.forEach((channel) => {
+                    bot.channels.fetch(channel).then((returnedChannel) => {
+                        LOGGER.trace('Sending!');
+                        returnedChannel.send({
+                            content: commandUtil.constructGameDisplayString(globalCache.values.game.currentLiveFeed.gameData) + ' - **Final**',
+                            files: [linescoreAttachment]
+                        });
                     });
                 });
-            });
-            await statusPoll(bot, games);
-            return;
-        }
-        LOGGER.trace('RECEIVED: ' + eventJSON.updateId);
-        const update = await mlbAPIUtil.websocketQueryUpdateId(
-            eventJSON.gamePk,
-            eventJSON.updateId,
-            globalCache.values.game.currentLiveFeed.metaData.timeStamp
-        );
-        if (Array.isArray(update)) {
-            for (const patch of update) {
-                try {
-                    diffPatch.hydrate(patch);
-                } catch (e) {
-                    // catching something here means our game object could now be incorrect. reset the live feed.
-                    globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(liveGame.gamePk);
-                }
-                await reportPlay(bot, liveGame.gamePk);
+                await statusPoll(bot, games);
+                return;
             }
-        } else {
-            globalCache.values.game.currentLiveFeed = update;
-            await reportPlay(bot, liveGame.gamePk);
+            LOGGER.trace('RECEIVED: ' + eventJSON.updateId);
+            const update = await mlbAPIUtil.websocketQueryUpdateId(
+                eventJSON.gamePk,
+                eventJSON.updateId,
+                globalCache.values.game.currentLiveFeed.metaData.timeStamp
+            );
+            if (Array.isArray(update)) {
+                for (const patch of update) {
+                    try {
+                        diffPatch.hydrate(patch);
+                    } catch (e) {
+                        // catching something here means our game object could now be incorrect. reset the live feed.
+                        globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(liveGame.gamePk);
+                    }
+                    await reportPlays(bot, liveGame.gamePk);
+                }
+            } else {
+                globalCache.values.game.currentLiveFeed = update;
+                await reportPlays(bot, liveGame.gamePk);
+            }
+        } catch (e) {
+            LOGGER.error('There was a problem processing a gameday event!');
+            LOGGER.error(e);
         }
     });
     ws.addEventListener('error', (e) => console.error(e));
     ws.addEventListener('close', (e) => LOGGER.info('Gameday socket closed: ' + JSON.stringify(e)));
 }
 
-async function reportPlay (bot, gamePk) {
-    const lastCompleteAtBatIndex = globalCache.values.game.lastCompleteAtBatIndex;
-    const currentAtBatIndex = globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.atBatIndex;
-    if (lastCompleteAtBatIndex !== null && ((currentAtBatIndex - lastCompleteAtBatIndex) > 1)) { // updates we received skipped a result. Happens every so often.
-        LOGGER.info('An at-bat index was skipped.');
-        const skippedPlay = globalCache.values.game.currentLiveFeed.liveData.plays.allPlays.find((play) => play.about.atBatIndex === (lastCompleteAtBatIndex + 1));
-        if (skippedPlay) {
-            await processAndPushPlay(bot, (await currentPlayProcessor.process(skippedPlay)), gamePk);
-            return;
+/*
+    This will report any results from the current play and its events, as well as from the previous play. The data moves fast sometimes,
+    so we have to look back a bit to make sure we didn't miss anything. Sometimes, for example, an at-bat is quickly overridden
+    by a new at-bat before we had a chance to report its result.
+ */
+async function reportPlays (bot, gamePk) {
+    const currentPlay = globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay;
+    const lastAtBatIndex = currentPlay.about.atBatIndex - 1;
+    if (lastAtBatIndex >= 0) {
+        const lastAtBat = globalCache.values.game.currentLiveFeed.liveData.plays.allPlays
+            .find((play) => play.about.atBatIndex === lastAtBatIndex);
+        if (lastAtBat) {
+            await reportAnyMissedEvents(lastAtBat, bot, gamePk);
+            await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat));
         }
     }
-    await processAndPushPlay(bot, (await currentPlayProcessor.process(globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay)), gamePk);
+    await reportAnyMissedEvents(currentPlay, bot, gamePk);
+    await processAndPushPlay(bot, currentPlayProcessor.process(currentPlay), gamePk);
+}
+
+async function reportAnyMissedEvents (atBat, bot, gamePk) {
+    const missedEventsToReport = atBat.playEvents?.filter(event =>
+        !event?.isPitch
+        && globals.EVENT_WHITELIST.includes(event?.details?.eventType)
+        && !globalCache.values.game.reportedDescriptions.includes(event?.details?.description));
+    for (const missedEvent of missedEventsToReport) {
+        await processAndPushPlay(bot, currentPlayProcessor.process(missedEvent), gamePk);
+    }
 }
 
 async function processAndPushPlay (bot, play, gamePk) {
@@ -124,91 +158,107 @@ async function processAndPushPlay (bot, play, gamePk) {
         const embed = new EmbedBuilder()
             .setTitle(deriveHalfInning(globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.halfInning) + ' ' +
                 globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.inning + ', ' +
-                globalCache.values.game.currentLiveFeed.gameData.teams.home.abbreviation + ' vs. ' +
-                globalCache.values.game.currentLiveFeed.gameData.teams.away.abbreviation)
+                globalCache.values.game.currentLiveFeed.gameData.teams.away.abbreviation + ' vs. ' +
+                globalCache.values.game.currentLiveFeed.gameData.teams.home.abbreviation)
             .setDescription(play.reply)
-            .setColor('#E31937');
-        // TODO: refactor savant polling out of this loop and do a single poll for all subscribed channels.
+            .setColor((globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.halfInning === 'top'
+                ? globalCache.values.game.awayTeamColor
+                : globalCache.values.game.homeTeamColor
+            ));
+        const messages = [];
         for (const channel of globalCache.values.subscribedChannels) {
-            bot.channels.fetch(channel).then((returnedChannel) => {
-                LOGGER.trace('Sending!');
-                returnedChannel.send({
-                    embeds: [embed]
-                }).then(async message => {
-                    if (play.isInPlay) {
-                        if (play.playId) {
-                            // xBA and HR/Park for balls in play is available on a delay via baseballsavant.
-                            await pollForSavantData(gamePk, play.playId, message, play.hitDistance);
-                        } else {
-                            LOGGER.info('Play has no play ID.');
-                            const receivedEmbed = EmbedBuilder.from(message.embeds[0]);
-                            let description = message.embeds[0].description;
-                            if (description.includes('Pending...')) {
-                                description = description.replaceAll('Pending...', 'Not Available.');
-                                receivedEmbed.setDescription(description);
-                                message.edit({ embeds: [receivedEmbed] });
-                            }
-                        }
-                    }
-                });
+            const returnedChannel = await bot.channels.fetch(channel);
+            LOGGER.trace('Sending!');
+            const message = await returnedChannel.send({
+                embeds: [embed]
             });
+            messages.push(message);
+        }
+        if (play.isInPlay) {
+            if (play.playId) {
+                try {
+                    // xBA and HR/Park for balls in play is available on a delay via baseballsavant.
+                    await pollForSavantData(gamePk, play.playId, messages, play.hitDistance);
+                } catch (e) {
+                    LOGGER.error('There was a problem polling for savant data!');
+                    LOGGER.error(e);
+                    notifySavantDataUnavailable(messages);
+                }
+            } else {
+                LOGGER.info('Play has no play ID.');
+                notifySavantDataUnavailable(messages);
+            }
         }
     }
 }
 
-async function pollForSavantData (gamePk, playId, message, hitDistance) {
+function notifySavantDataUnavailable (messages) {
+    for (let i = 0; i < messages.length; i ++) {
+        const receivedEmbed = EmbedBuilder.from(messages[i].embeds[0]);
+        let description = messages[i].embeds[0].description;
+        if (description.includes('Pending...')) {
+            description = description.replaceAll('Pending...', 'Not Available.');
+            receivedEmbed.setDescription(description);
+            messages[i].edit({ embeds: [receivedEmbed] });
+        }
+    }
+}
+
+async function pollForSavantData (gamePk, playId, messages, hitDistance) {
     let attempts = 1;
-    const receivedEmbed = EmbedBuilder.from(message.embeds[0]);
-    let description = message.embeds[0].description;
+    const messageTrackers = messages.map(message => { return { id: message.id, done: false }; });
     const pollingFunction = async () => {
+        if (messageTrackers.every(messageTracker => messageTracker.done)) {
+            return;
+        }
         if (attempts < 10) {
-            LOGGER.trace('Savant: polling for ' + playId + '...');
+            LOGGER.debug('Savant: polling for ' + playId + '...');
             const gameFeed = await mlbAPIUtil.savantGameFeed(gamePk);
             const matchingPlay = gameFeed?.team_away?.find(play => play?.play_id === playId)
                 || gameFeed?.team_home?.find(play => play?.play_id === playId);
             if (matchingPlay && (matchingPlay.xba || matchingPlay.contextMetrics?.homeRunBallparks !== undefined)) {
-                if (matchingPlay.xba && description.includes('xBA: Pending...')) {
-                    LOGGER.trace('Editing with xba: ' + playId);
-                    description = description.replaceAll('xBA: Pending...', 'xBA: ' + matchingPlay.xba +
-                        (parseFloat(matchingPlay.xba) > 0.5 ? ' \uD83D\uDFE2' : ''));
-                    receivedEmbed.setDescription(description);
-                    message.edit({
-                        embeds: [receivedEmbed]
-                    });
-                    if (hitDistance && hitDistance < 300) {
-                        LOGGER.trace('Found xba, done polling for: ' + playId);
-                        return;
+                for (let i = 0; i < messages.length; i ++) {
+                    const receivedEmbed = EmbedBuilder.from(messages[i].embeds[0]);
+                    let description = messages[i].embeds[0].description;
+                    if (matchingPlay.xba && description.includes('xBA: Pending...')) {
+                        LOGGER.debug('Editing with xba: ' + playId);
+                        description = description.replaceAll('xBA: Pending...', 'xBA: ' + matchingPlay.xba +
+                            (parseFloat(matchingPlay.xba) > 0.5 ? ' \uD83D\uDFE2' : ''));
+                        receivedEmbed.setDescription(description);
+                        messages[i].edit({
+                            embeds: [receivedEmbed]
+                        });
+                        if (hitDistance && hitDistance < 300) {
+                            LOGGER.debug('Found xba, done polling for: ' + playId);
+                            messageTrackers.find(tracker => tracker.id === messages[i].id).done = true;
+                        }
                     }
-                }
-                if (hitDistance && hitDistance >= 300
-                    && matchingPlay.contextMetrics.homeRunBallparks !== undefined
-                    && description.includes('HR/Park: Pending...')) {
-                    LOGGER.trace('Editing with HR/Park: ' + playId);
-                    description = description.replaceAll('HR/Park: Pending...', 'HR/Park: ' +
-                        matchingPlay.contextMetrics.homeRunBallparks + '/30' +
-                        (matchingPlay.contextMetrics.homeRunBallparks === 30 ? '\u203C\uFE0F' : ''));
-                    receivedEmbed.setDescription(description);
-                    message.edit({
-                        embeds: [receivedEmbed]
-                    });
-                    if (matchingPlay.xba) {
-                        LOGGER.trace('Found all metrics: done polling for: ' + playId);
-                        return;
+                    if (hitDistance && hitDistance >= 300
+                        && matchingPlay.contextMetrics.homeRunBallparks !== undefined
+                        && description.includes('HR/Park: Pending...')) {
+                        LOGGER.debug('Editing with HR/Park: ' + playId);
+                        description = description.replaceAll('HR/Park: Pending...', 'HR/Park: ' +
+                            matchingPlay.contextMetrics.homeRunBallparks + '/30' +
+                            (matchingPlay.contextMetrics.homeRunBallparks === 30 ? '\u203C\uFE0F' : ''));
+                        receivedEmbed.setDescription(description);
+                        messages[i].edit({
+                            embeds: [receivedEmbed]
+                        });
+                        if (matchingPlay.xba) {
+                            LOGGER.debug('Found all metrics: done polling for: ' + playId);
+                            messageTrackers.find(tracker => tracker.id === messages[i].id).done = true;
+                        }
                     }
                 }
             }
             attempts ++;
-            setTimeout(pollingFunction, globals.SAVANT_POLLING_INTERVAL);
+            setTimeout(async () => { await pollingFunction(); }, globals.SAVANT_POLLING_INTERVAL);
         } else {
-            LOGGER.trace('max savant polling attempts reached for: ' + playId);
-            if (description.includes('Pending...')) {
-                description = description.replaceAll('Pending...', 'Not Available.');
-                receivedEmbed.setDescription(description);
-                message.edit({ embeds: [receivedEmbed] });
-            }
+            LOGGER.debug('max savant polling attempts reached for: ' + playId);
+            notifySavantDataUnavailable(messages);
         }
     };
-    await pollingFunction();
+    setTimeout(async () => { await pollingFunction(); }, globals.SAVANT_POLLING_INTERVAL);
 }
 
 function deriveHalfInning (halfInningFull) {

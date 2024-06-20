@@ -87,10 +87,11 @@ module.exports = {
     },
 
     standingsHandler: async (interaction) => {
+        interaction.deferReply();
         console.info(`STANDINGS command invoked by guild: ${interaction.guildId}`);
         const americanLeagueCentralStandings = (await mlbAPIUtil.standings())
             .records.find((record) => record.division.id === globals.DIVISION_ID);
-        await interaction.reply({
+        await interaction.followUp({
             ephemeral: false,
             files: [new AttachmentBuilder((await commandUtil.buildStandingsTable(americanLeagueCentralStandings)), { name: 'standings.png' })]
         });

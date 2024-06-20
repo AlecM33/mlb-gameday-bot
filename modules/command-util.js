@@ -82,7 +82,18 @@ module.exports = {
             .concat(innings.map(inning => inning.home.runs))
             .concat(['', linescore.teams.home.runs, linescore.teams.home.hits, linescore.teams.home.errors, linescore.teams.home.leftOnBase]));
         linescoreTable.removeBorder();
-        return (await getScreenshotOfHTMLTables([linescoreTable]));
+        const inningState = linescore.outs < 3
+            ? (linescore.inningHalf === 'Bottom' ? 'Bot' : 'Top')
+            : (linescore.inningHalf === 'Top' ? 'Mid' : 'End');
+        return (await getScreenshotOfLineScore(
+            [linescoreTable],
+            linescore.currentInningOrdinal,
+            inningState,
+            linescore.teams.away.runs,
+            linescore.teams.home.runs,
+            awayAbbreviation,
+            homeAbbreviation
+        ));
     },
 
     buildBoxScoreTable: async (game, boxScore, boxScoreNames, status) => {
@@ -266,6 +277,58 @@ async function getScreenshotOfHTMLTables (tables) {
             tables.reduce((acc, value) => acc + value.toString() + '\n\n', '') +
             '</pre>');
     const element = await page.waitForSelector('#boxscore');
+    const buffer = await element.screenshot({
+        type: 'png',
+        omitBackground: false
+    });
+    await browser.close();
+    return buffer;
+}
+
+async function getScreenshotOfLineScore (tables, inning, half, awayScore, homeScore, awayAbbreviation, homeAbbreviation) {
+    const browser = await puppeteer.launch({
+        headless: true,
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox'
+        ]
+    });
+    const page = await browser.newPage();
+    await page.setContent(`
+            <style>
+                #home-score, #away-score, #home-abb, #away-abb {
+                    font-size: 35px;
+                }
+                #boxscore {
+                    margin: 0;
+                }
+                #header-inning {
+                    font-size: 16px;
+                }
+            </style>
+            <div id="line-score-container" style="
+                    background-color: #151820;
+                    color: whitesmoke;
+                    padding: 15px;
+                    font-size: 20px;
+                    width: fit-content;">
+                <div id="line-score-header" style="display: flex;
+                    width: 100%;
+                    justify-content: space-evenly;
+                    align-items: center;
+                    font-family: monospace;
+                    margin-bottom: 2em;">
+                    <div id="away-abb">` + awayAbbreviation + `</div>
+                    <div id="away-score">` + awayScore + `</div>
+                    <div id="header-inning">` + half + ' ' + inning + `</div>
+                    <div id="home-score">` + homeScore + `</div>
+                    <div id="home-abb">` + homeAbbreviation + `</div>
+                </div>
+                <pre id="boxscore">` +
+                    tables.reduce((acc, value) => acc + value.toString() + '\n\n', '') +
+                `</pre>
+            </div>`);
+    const element = await page.waitForSelector('#line-score-container');
     const buffer = await element.screenshot({
         type: 'png',
         omitBackground: false
