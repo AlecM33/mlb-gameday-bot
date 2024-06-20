@@ -15,7 +15,7 @@ module.exports = {
             && !currentPlayJSON.reviewDetails?.inProgress // a play that has been challenged
         ) {
             reply += getDescription(currentPlayJSON);
-            if (currentPlayJSON.about?.hasOut || currentPlayJSON.details?.isOut) {
+            if (currentPlayJSON.result?.isOut || currentPlayJSON.details?.isOut) {
                 reply += ' **' + currentPlayJSON.count.outs + (currentPlayJSON.count.outs > 1 ? ' outs. **' : ' out. **');
             }
             if (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details?.isScoringPlay) {

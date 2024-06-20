@@ -69,7 +69,7 @@ module.exports = {
             const game = date.games[0];
             const gameDate = new Date(game.gameDate);
             const teams = game.teams;
-            const home = teams.home.team.id === globals.TEAM_ID;
+            const home = teams.home.team.id === parseInt(process.env.TEAM_ID);
             reply += date.date.substr(6) +
                 (home ? ' vs. ' : ' @ ') + (home ? teams.away.team.name : teams.home.team.name) + ' ' +
                 gameDate.toLocaleString('en-US', {
@@ -246,7 +246,7 @@ module.exports = {
                 ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId)) // the user's choice between the two games of the double-header.
                 : globalCache.values.nearestGames[0];
             const updatedLineup = (await mlbAPIUtil.lineup(game.gamePk))?.dates[0].games[0];
-            const ourTeamLineup = updatedLineup.teams.home.team.id === globals.TEAM_ID
+            const ourTeamLineup = updatedLineup.teams.home.team.id === parseInt(process.env.TEAM_ID)
                 ? updatedLineup.lineups.homePlayers
                 : updatedLineup.lineups.awayPlayers;
             if (updatedLineup.status.detailedState === 'Postponed') {

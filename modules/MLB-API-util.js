@@ -4,11 +4,11 @@ const { LOG_LEVEL } = require('../config/globals');
 const LOGGER = require('./logger')(process.env.LOG_LEVEL || LOG_LEVEL.INFO);
 
 const endpoints = {
-    schedule: (startDate = '', endDate = '', teamId = globals.TEAM_ID) => {
+    schedule: (startDate = '', endDate = '', teamId = parseInt(process.env.TEAM_ID)) => {
         LOGGER.debug('https://statsapi.mlb.com/api/v1/schedule?hydrate=team,lineups&sportId=1&startDate=' + startDate + '&endDate=' + endDate + '&teamId=' + teamId);
         return 'https://statsapi.mlb.com/api/v1/schedule?hydrate=team,lineups&sportId=1&startDate=' + startDate + '&endDate=' + endDate + '&teamId=' + teamId;
     },
-    lineup: (gamePk, teamId = globals.TEAM_ID) => {
+    lineup: (gamePk, teamId = parseInt(process.env.TEAM_ID)) => {
         return 'https://statsapi.mlb.com/api/v1/schedule?hydrate=lineups&sportId=1&gamePk=' + gamePk + '&teamId=' + teamId;
     },
     liveFeed: (gamePk) => {
@@ -90,7 +90,7 @@ module.exports = {
         return fetch(endpoints.schedule(
             twelveHoursInThePast.toISOString().split('T')[0],
             twelveHoursFromNow.toISOString().split('T')[0],
-            globals.TEAM_ID)
+            parseInt(process.env.TEAM_ID))
         )
             .then(async (scheduleResponse) => {
                 const dates = (await scheduleResponse.json()).dates;

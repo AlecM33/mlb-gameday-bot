@@ -10,7 +10,7 @@ const LOGGER = require('./logger')(process.env.LOG_LEVEL || globals.LOG_LEVEL.IN
 module.exports = {
     getLineupCardTable: async (game) => {
         const table = new AsciiTable();
-        const lineup = game.teams.home.team.id === globals.TEAM_ID
+        const lineup = game.teams.home.team.id === parseInt(process.env.TEAM_ID)
             ? game.lineups.homePlayers
             : game.lineups.awayPlayers;
         const people = (await mlbAPIUtil.people(lineup.map(lineupPlayer => lineupPlayer.id))).people;
@@ -98,7 +98,7 @@ module.exports = {
 
     buildBoxScoreTable: async (game, boxScore, boxScoreNames, status) => {
         const tables = [];
-        const players = boxScore.teams.away.team.id === globals.TEAM_ID
+        const players = boxScore.teams.away.team.id === parseInt(process.env.TEAM_ID)
             ? boxScore.teams.away.players
             : boxScore.teams.home.players;
         const sortedBattingOrder = Object.keys(players)
@@ -114,7 +114,7 @@ module.exports = {
                 };
             })
             .sort((a, b) => parseInt(a.battingOrder) > parseInt(b.battingOrder) ? 1 : -1);
-        const pitcherIDs = boxScore.teams.away.team.id === globals.TEAM_ID
+        const pitcherIDs = boxScore.teams.away.team.id === parseInt(process.env.TEAM_ID)
             ? boxScore.teams.away.pitchers
             : boxScore.teams.home.pitchers;
         const inOrderPitchers = pitcherIDs.map(pitcherID => ((pitcher) => {
