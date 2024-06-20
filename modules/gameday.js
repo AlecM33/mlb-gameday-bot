@@ -104,11 +104,11 @@ function subscribe (bot, liveGame, games) {
                         // catching something here means our game object could now be incorrect. reset the live feed.
                         globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(liveGame.gamePk);
                     }
-                    await reportPlay(bot, liveGame.gamePk);
+                    await reportPlays(bot, liveGame.gamePk);
                 }
             } else {
                 globalCache.values.game.currentLiveFeed = update;
-                await reportPlay(bot, liveGame.gamePk);
+                await reportPlays(bot, liveGame.gamePk);
             }
         } catch (e) {
             LOGGER.error('There was a problem processing a gameday event!');
@@ -119,16 +119,34 @@ function subscribe (bot, liveGame, games) {
     ws.addEventListener('close', (e) => LOGGER.info('Gameday socket closed: ' + JSON.stringify(e)));
 }
 
-async function reportPlay (bot, gamePk) {
+/*
+    This will report any results from the current play and its events, as well as from the previous play. The data moves fast sometimes,
+    so we have to look back a bit to make sure we didn't miss anything. Sometimes, for example, an at-bat is quickly overridden
+    by a new at-bat before we had a chance to report its result.
+ */
+async function reportPlays (bot, gamePk) {
     const currentPlay = globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay;
-    const missedPlayEventsToReport = currentPlay.playEvents.filter(event =>
+    const lastAtBatIndex = currentPlay.about.atBatIndex - 1;
+    if (lastAtBatIndex >= 0) {
+        const lastAtBat = globalCache.values.game.currentLiveFeed.liveData.plays.allPlays
+            .find((play) => play.about.atBatIndex === lastAtBatIndex);
+        if (lastAtBat) {
+            await reportAnyMissedEvents(lastAtBat, bot, gamePk);
+            await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat));
+        }
+    }
+    await reportAnyMissedEvents(currentPlay, bot, gamePk);
+    await processAndPushPlay(bot, currentPlayProcessor.process(currentPlay), gamePk);
+}
+
+async function reportAnyMissedEvents (atBat, bot, gamePk) {
+    const missedEventsToReport = atBat.playEvents?.filter(event =>
         !event?.isPitch
         && globals.EVENT_WHITELIST.includes(event?.details?.eventType)
         && !globalCache.values.game.reportedDescriptions.includes(event?.details?.description));
-    for (const missedPlayEvent of missedPlayEventsToReport) {
-        await processAndPushPlay(bot, (await currentPlayProcessor.process(missedPlayEvent)), gamePk);
+    for (const missedEvent of missedEventsToReport) {
+        await processAndPushPlay(bot, currentPlayProcessor.process(missedEvent), gamePk);
     }
-    await processAndPushPlay(bot, (await currentPlayProcessor.process(currentPlay)), gamePk);
 }
 
 async function processAndPushPlay (bot, play, gamePk) {
@@ -188,10 +206,10 @@ function notifySavantDataUnavailable (messages) {
 
 async function pollForSavantData (gamePk, playId, messages, hitDistance) {
     let attempts = 1;
-    let messageTrackers = messages.map(message => { return { id: message.id, done: false }})
+    const messageTrackers = messages.map(message => { return { id: message.id, done: false }; });
     const pollingFunction = async () => {
         if (messageTrackers.every(messageTracker => messageTracker.done)) {
-            return
+            return;
         }
         if (attempts < 10) {
             LOGGER.debug('Savant: polling for ' + playId + '...');
@@ -212,7 +230,7 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance) {
                         });
                         if (hitDistance && hitDistance < 300) {
                             LOGGER.debug('Found xba, done polling for: ' + playId);
-                            messageTrackers.find(tracker => tracker.id === messages[i].id).done = true
+                            messageTrackers.find(tracker => tracker.id === messages[i].id).done = true;
                         }
                     }
                     if (hitDistance && hitDistance >= 300
@@ -228,19 +246,19 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance) {
                         });
                         if (matchingPlay.xba) {
                             LOGGER.debug('Found all metrics: done polling for: ' + playId);
-                            messageTrackers.find(tracker => tracker.id === messages[i].id)?.done = true
+                            messageTrackers.find(tracker => tracker.id === messages[i].id).done = true;
                         }
                     }
                 }
             }
             attempts ++;
-            setTimeout(async () => { await pollingFunction() }, globals.SAVANT_POLLING_INTERVAL);
+            setTimeout(async () => { await pollingFunction(); }, globals.SAVANT_POLLING_INTERVAL);
         } else {
             LOGGER.debug('max savant polling attempts reached for: ' + playId);
             notifySavantDataUnavailable(messages);
         }
     };
-    setTimeout(async () => { await pollingFunction() }, globals.SAVANT_POLLING_INTERVAL);
+    setTimeout(async () => { await pollingFunction(); }, globals.SAVANT_POLLING_INTERVAL);
 }
 
 function deriveHalfInning (halfInningFull) {

@@ -66,7 +66,7 @@ module.exports = {
         'wild_pitch',
         'other_out'
     ],
-    TEAM_ID: 114,
+    TEAM_ID: 158,
     GUARDIANS: 114, // guardians team ID for MLB stats API
     AL_CENTRAL: 202,
     AMERICAN_LEAGUE: 103,

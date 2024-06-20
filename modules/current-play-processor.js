@@ -2,7 +2,7 @@ const globalCache = require('./global-cache');
 const globals = require('../config/globals');
 
 module.exports = {
-    process: async (currentPlayJSON) => {
+    process: (currentPlayJSON) => {
         let reply = '';
         if (!globalCache.values.game.startReported
             && currentPlayJSON.playEvents?.find(event => event?.details?.description === 'Status Change - In Progress')) {
