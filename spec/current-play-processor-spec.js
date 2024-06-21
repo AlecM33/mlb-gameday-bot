@@ -11,7 +11,7 @@ describe('currentPlayProcessor', () => {
             const result = await currentPlayProcessor.process(examplePlays.homeRun);
             console.log('HEY' +  JSON.stringify(result, null, 2))
             expect(result.reply).toMatch(/Brice Turang homers \(4\) on a fly ball to right center field\./);
-            expect(result.reply).toMatch(/## MIL 3/);
+            expect(result.reply).toMatch(/# _MIL 3_/);
             expect(result.reply).toMatch(/LAA 5/);
             expect(result.reply).toMatch(/Exit Velo: 105\.5 mph \uD83D\uDD25\uD83D\uDD25/);
             expect(result.reply).toMatch(/Launch Angle: 24°/);
