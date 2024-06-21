@@ -132,7 +132,7 @@ async function reportPlays (bot, gamePk) {
             .find((play) => play.about.atBatIndex === lastAtBatIndex);
         if (lastAtBat) {
             await reportAnyMissedEvents(lastAtBat, bot, gamePk);
-            await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat));
+            await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat), gamePk);
         }
     }
     await reportAnyMissedEvents(currentPlay, bot, gamePk);
@@ -159,7 +159,7 @@ async function processAndPushPlay (bot, play, gamePk) {
             .setTitle(deriveHalfInning(globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.halfInning) + ' ' +
                 globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.inning + ', ' +
                 globalCache.values.game.currentLiveFeed.gameData.teams.away.abbreviation + ' vs. ' +
-                globalCache.values.game.currentLiveFeed.gameData.teams.home.abbreviation)
+                globalCache.values.game.currentLiveFeed.gameData.teams.home.abbreviation + (play.isScoringPlay ? ' - Scoring Play \u2757' : ''))
             .setDescription(play.reply)
             .setColor((globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.halfInning === 'top'
                 ? globalCache.values.game.awayTeamColor

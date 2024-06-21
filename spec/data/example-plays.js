@@ -772,7 +772,7 @@ module.exports = {
         },
         about: {
             atBatIndex: 36,
-            halfInning: 'top',
+            halfInning: 'bottom',
             isTopInning: true,
             inning: 5,
             startTime: '2024-06-18T02:51:48.066Z',

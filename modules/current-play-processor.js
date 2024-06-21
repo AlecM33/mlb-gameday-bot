@@ -10,7 +10,7 @@ module.exports = {
             reply += 'A game is starting! Go Guards!';
         }
         let lastEvent;
-        if (globals.EVENT_WHITELIST.includes((currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType))
+        if ((currentPlayJSON.about?.isComplete || globals.EVENT_WHITELIST.includes((currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType)))
             && !currentPlayJSON.reviewDetails?.inProgress // a play that has been challenged
         ) {
             reply += getDescription(currentPlayJSON);
@@ -27,15 +27,11 @@ module.exports = {
                     homeScore = currentPlayJSON.details.homeScore;
                     awayScore = currentPlayJSON.details.awayScore;
                 }
-                if (homeScore > awayScore) {
-                    reply += '## ' + globalCache.values.game.currentLiveFeed.gameData.teams.home.abbreviation +
-                        ' now leads ' + homeScore + '-' + awayScore + '\n';
-                } else if (homeScore === awayScore) {
-                    reply += '## The game is now tied at ' + homeScore + '-' + awayScore + '\n';
-                } else {
-                    reply += '## ' + globalCache.values.game.currentLiveFeed.gameData.teams.away.abbreviation +
-                        ' now leads ' + awayScore + '-' + homeScore + '\n';
-                }
+                reply += (globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.halfInning === 'top'
+                    ? '# _' + globalCache.values.game.currentLiveFeed.gameData.teams.away.abbreviation + ' ' + awayScore + '_, ' +
+                        globalCache.values.game.currentLiveFeed.gameData.teams.home.abbreviation + ' ' + homeScore
+                    : '# ' + globalCache.values.game.currentLiveFeed.gameData.teams.away.abbreviation + ' ' + awayScore + ', _' +
+                        globalCache.values.game.currentLiveFeed.gameData.teams.home.abbreviation + ' ' + homeScore + '_');
             }
             if (currentPlayJSON.playEvents) {
                 lastEvent = currentPlayJSON.playEvents[currentPlayJSON.playEvents.length - 1];
