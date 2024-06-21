@@ -326,26 +326,77 @@ module.exports = {
                 });
             }
         }
+    },
+
+    pitcherHandler: async (interaction) => {
+        await interaction.deferReply();
+        const currentLiveFeed = globalCache.values.game.currentLiveFeed;
+        if (currentLiveFeed === null || currentLiveFeed.gameData.status.abstractGameState !== 'Live') {
+            await interaction.followUp('No game is live right now!');
+            return;
+        }
+        const pitcher = currentLiveFeed.liveData.plays.currentPlay.matchup.pitcher;
+        const pitcherInfo = await commandUtil.hydrateProbable(pitcher.id);
+        const attachment = new AttachmentBuilder(Buffer.from(pitcherInfo.spot), { name: 'spot.png' });
+        const abbreviations = commandUtil.getAbbreviations(currentLiveFeed);
+        const halfInning = currentLiveFeed.liveData.plays.currentPlay.about.halfInning;
+        const inning = currentLiveFeed.liveData.plays.currentPlay.about.inning;
+        const abbreviation = halfInning === 'top'
+            ? abbreviations.home
+            : abbreviations.away;
+        const myEmbed = new EmbedBuilder()
+            .setTitle(halfInning.toUpperCase() + ' ' + inning + ', ' +
+                abbreviations.away + ' vs. ' + abbreviations.home + ': Current Pitcher')
+            .setThumbnail('attachment://spot.png')
+            .addFields({
+                name: (pitcherInfo.handedness
+                    ? pitcherInfo.handedness + 'HP **'
+                    : '**') + (pitcher.fullName || 'TBD') + '** (' + abbreviation + ')',
+                value: buildPitchingStatsMarkdown(pitcherInfo.pitchingStats, pitcherInfo.pitchMix, true),
+                inline: true
+            });
+        await interaction.followUp({
+            ephemeral: false,
+            files: [attachment],
+            embeds: [myEmbed],
+            components: [],
+            content: ''
+        });
     }
 };
 
-function buildPitchingStatsMarkdown (pitchingStats, pitchMix) {
-    let reply = '';
+function buildPitchingStatsMarkdown (pitchingStats, pitchMix, includeExtra = false) {
+    let reply = '\n';
     if (!pitchingStats) {
         reply += 'W-L: -\n' +
             'ERA: -.--\n' +
-            'WHIP: -.--\n';
+            'WHIP: -.--\n' +
+            (includeExtra
+                ? 'K/9: -.--\n' +
+                    'BB/9: -.--\n' +
+                    'H/9: -.--\n' +
+                    'HR/9: -.--\n' +
+                    'Saves/Opps: -/-\n'
+                : '');
     } else {
         reply += 'W-L: ' + pitchingStats.wins + '-' + pitchingStats.losses + '\n' +
             'ERA: ' + pitchingStats.era + '\n' +
-            'WHIP: ' + pitchingStats.whip + '\n';
+            'WHIP: ' + pitchingStats.whip + '\n' +
+            (includeExtra
+                ? 'K/9: ' + pitchingStats.strikeoutsPer9Inn + '\n' +
+                    'BB/9: ' + pitchingStats.walksPer9Inn + '\n' +
+                    'H/9: ' + pitchingStats.hitsPer9Inn + '\n' +
+                    'HR/9: ' + pitchingStats.homeRunsPer9 + '\n' +
+                    'Saves/Opps: ' + pitchingStats.saves + '/' + pitchingStats.saveOpportunities + '\n'
+                : '');
     }
-    reply += '**Arsenal:**' + '\n';
+    reply += '\n**Arsenal:**' + '\n';
     if (pitchMix && pitchMix.length > 0 && pitchMix[0].length > 0) {
         reply += (() => {
             let arsenal = '';
             for (let i = 0; i < pitchMix[0].length; i ++) {
-                arsenal += pitchMix[0][i] + ' (' + pitchMix[1][i] + '%)\n';
+                arsenal += pitchMix[0][i] + ' (' + pitchMix[1][i] + '%)' +
+                    (includeExtra ? ':\n' + pitchMix[2][i] + ' mph, ' + pitchMix[3][i] + ' BAA\n' : '') + '\n';
             }
             return arsenal;
         })();

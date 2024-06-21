@@ -199,10 +199,11 @@ module.exports = {
     },
 
     constructGameDisplayString: (game) => {
-        return (game.teams.home.team?.abbreviation || game.teams.home?.abbreviation) +
+        // the game object can be passed here in a few different forms. We just check for them all
+        return (game.teams?.home?.team?.abbreviation || game.teams?.home?.abbreviation || game.gameData?.teams?.home?.abbreviation) +
             ' vs. ' +
-            (game.teams.away.team?.abbreviation || game.teams.away?.abbreviation) +
-            ', ' + new Date((game.gameDate || game.datetime.dateTime)).toLocaleString('default', {
+            (game.teams?.away?.team?.abbreviation || game.teams?.away?.abbreviation || game.gameData?.teams?.away?.abbreviation) +
+            ', ' + new Date((game.gameDate || game.datetime?.dateTime || game.gameData?.datetime?.dateTime)).toLocaleString('default', {
             month: 'short',
             day: 'numeric',
             timeZone: 'America/New_York',
@@ -210,6 +211,13 @@ module.exports = {
             minute: '2-digit',
             timeZoneName: 'short'
         });
+    },
+
+    getAbbreviations: (game) => {
+        return {
+            home: (game.teams?.home?.team?.abbreviation || game.teams?.home?.abbreviation || game.gameData?.teams?.home?.abbreviation),
+            away: (game.teams?.away?.team?.abbreviation || game.teams?.away?.abbreviation || game.gameData?.teams?.away?.abbreviation)
+        };
     }
 };
 
@@ -217,13 +225,18 @@ function getPitchCollections (dom) {
     const pitches = [];
     const percentages = [];
     const MPHs = [];
+    const battingAvgsAgainst = [];
     dom.window.document
         .querySelectorAll('tbody tr td:nth-child(2)').forEach(el => pitches.push(el.textContent.trim()));
     dom.window.document
         .querySelectorAll('tbody tr td:nth-child(6)').forEach(el => percentages.push(el.textContent.trim()));
     dom.window.document
         .querySelectorAll('tbody tr td:nth-child(7)').forEach(el => MPHs.push(el.textContent.trim()));
-    return [pitches, percentages, MPHs];
+    dom.window.document
+        .querySelectorAll('tbody tr td:nth-child(18)').forEach(el => battingAvgsAgainst.push(
+            (el.textContent.trim().length > 0 ? el.textContent.trim() : 'N/A')
+        ));
+    return [pitches, percentages, MPHs, battingAvgsAgainst];
 }
 
 async function resolveDoubleHeaderSelection (interaction) {
