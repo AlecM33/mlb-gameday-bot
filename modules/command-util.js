@@ -65,6 +65,70 @@ module.exports = {
         };
     },
 
+    hydrateHitter: async (hitter) => {
+        const [spot, stats] = await Promise.all([
+            new Promise((resolve, reject) => {
+                if (hitter) {
+                    resolve(mlbAPIUtil.spot(hitter));
+                } else {
+                    resolve(Buffer.from(
+                        `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="60" cy="60" r="60" />
+                    </svg>`));
+                }
+                reject(new Error('There was a problem getting the player spot.'));
+            }),
+            new Promise((resolve, reject) => {
+                if (hitter) {
+                    resolve(mlbAPIUtil.hitter(hitter));
+                } else {
+                    resolve(undefined);
+                }
+                reject(new Error('There was a problem getting stats for this person.'));
+            })
+
+        ]);
+        return {
+            spot,
+            stats
+        };
+    },
+
+    formatSplits: (season, splitStats, lastXGamesStats) => {
+        console.log(JSON.stringify(season, null, 2));
+        const vsLeft = (splitStats.splits.find(split => split?.split?.code === 'vl' && !split.team)
+            || splitStats.splits.find(split => split?.split?.code === 'vl'));
+        const vsRight = (splitStats.splits.find(split => split?.split?.code === 'vr' && !split.team)
+            || splitStats.splits.find(split => split?.split?.code === 'vr')
+        );
+        const risp = (splitStats.splits.find(split => split?.split?.code === 'risp' && !split.team)
+            || splitStats.splits.find(split => split?.split?.code === 'risp')
+        );
+        const lastXGames = (lastXGamesStats.splits.find(split => !split.team) || lastXGamesStats.splits[0]);
+        const seasonStats = (season.splits.find(split => !split.team) || season.splits[0]);
+        return '\n### ' +
+            seasonStats.stat.avg + '/' + seasonStats.stat.obp + '/' + seasonStats.stat.slg +
+            ', ' + seasonStats.stat.homeRuns + ' HR, ' + seasonStats.stat.rbi + ' RBIs' +
+            '\n\nSplits:\n\n' +
+        '**Last 7 Games**' + (lastXGames ? ' (' + lastXGames.stat.plateAppearances + ' ABs)\n' : '\n') + (
+            lastXGames
+                ? lastXGames.stat.avg + '/' + lastXGames.stat.obp + '/' + lastXGames.stat.slg
+                : 'No at-bats!'
+        ) + '\n\n**vs. Righties**' + (vsRight ? ' (' + vsRight.stat.plateAppearances + ' ABs)\n' : '\n') + (
+            vsRight
+                ? vsRight.stat.avg + '/' + vsRight.stat.obp + '/' + vsRight.stat.slg
+                : 'No at-bats!'
+        ) + '\n\n**vs. Lefties**' + (vsLeft ? ' (' + vsLeft.stat.plateAppearances + ' ABs)\n' : '\n') + (
+            vsLeft
+                ? vsLeft.stat.avg + '/' + vsLeft.stat.obp + '/' + vsLeft.stat.slg
+                : 'No at-bats!'
+        ) + '\n\n**with RISP**' + (risp ? ' (' + risp.stat.plateAppearances + ' ABs)\n' : '\n') + (
+            risp
+                ? risp.stat.avg + '/' + risp.stat.obp + '/' + risp.stat.slg
+                : 'No at-bats!'
+        );
+    },
+
     buildLineScoreTable: async (game, linescore) => {
         const awayAbbreviation = game.teams.away.team?.abbreviation || game.teams.away.abbreviation;
         const homeAbbreviation = game.teams.home.team?.abbreviation || game.teams.home.abbreviation;

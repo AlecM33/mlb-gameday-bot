@@ -354,7 +354,52 @@ module.exports = {
                     : '**') + (pitcher.fullName || 'TBD') + '** (' + abbreviation + ')',
                 value: buildPitchingStatsMarkdown(pitcherInfo.pitchingStats, pitcherInfo.pitchMix, true),
                 inline: true
-            });
+            })
+            .setColor((halfInning === 'top'
+                ? globalCache.values.game.homeTeamColor
+                : globalCache.values.game.awayTeamColor)
+            );
+        await interaction.followUp({
+            ephemeral: false,
+            files: [attachment],
+            embeds: [myEmbed],
+            components: [],
+            content: ''
+        });
+    },
+
+    batterHandler: async (interaction) => {
+        await interaction.deferReply();
+        const currentLiveFeed = globalCache.values.game.currentLiveFeed;
+        if (currentLiveFeed === null || currentLiveFeed.gameData.status.abstractGameState !== 'Live') {
+            await interaction.followUp('No game is live right now!');
+            return;
+        }
+        const batter = currentLiveFeed.liveData.plays.currentPlay.matchup.batter;
+        const batterInfo = await commandUtil.hydrateHitter(batter.id);
+        const attachment = new AttachmentBuilder(Buffer.from(batterInfo.spot), { name: 'spot.png' });
+        const abbreviations = commandUtil.getAbbreviations(currentLiveFeed);
+        const halfInning = currentLiveFeed.liveData.plays.currentPlay.about.halfInning;
+        const inning = currentLiveFeed.liveData.plays.currentPlay.about.inning;
+        const abbreviation = halfInning === 'top'
+            ? abbreviations.away
+            : abbreviations.home;
+        const myEmbed = new EmbedBuilder()
+            .setTitle(halfInning.toUpperCase() + ' ' + inning + ', ' +
+                abbreviations.away + ' vs. ' + abbreviations.home + ': Current Batter')
+            .setThumbnail('attachment://spot.png')
+            .setDescription(
+                '## ' + currentLiveFeed.liveData.plays.currentPlay.matchup.batSide.code +
+                'HB ' + batter.fullName + ' (' + abbreviation + ')' +
+                commandUtil.formatSplits(
+                    batterInfo.stats.stats.find(stat => stat.type.displayName === 'season'),
+                    batterInfo.stats.stats.find(stat => stat.type.displayName === 'statSplits'),
+                    batterInfo.stats.stats.find(stat => stat.type.displayName === 'lastXGames'))
+            )
+            .setColor((halfInning === 'top'
+                ? globalCache.values.game.awayTeamColor
+                : globalCache.values.game.homeTeamColor)
+            );
         await interaction.followUp({
             ephemeral: false,
             files: [attachment],

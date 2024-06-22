@@ -11,6 +11,9 @@ const endpoints = {
     lineup: (gamePk, teamId = parseInt(process.env.TEAM_ID)) => {
         return 'https://statsapi.mlb.com/api/v1/schedule?hydrate=lineups&sportId=1&gamePk=' + gamePk + '&teamId=' + teamId;
     },
+    hitter: (personId) => {
+        return 'https://statsapi.mlb.com/api/v1/people/' + personId + '/stats?stats=season,statSplits,lastXGames&group=hitting&gameType=R&sitCodes=vl,vr,risp&limit=7';
+    },
     liveFeed: (gamePk) => {
         LOGGER.debug('https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live');
         return 'https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live';
@@ -172,5 +175,8 @@ module.exports = {
     },
     savantGameFeed: async (gamePk) => {
         return (await fetch(endpoints.savantGameFeed(gamePk))).json();
+    },
+    hitter: async (personId) => {
+        return (await fetch(endpoints.hitter(personId))).json();
     }
 };
