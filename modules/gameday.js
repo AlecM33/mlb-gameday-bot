@@ -104,11 +104,11 @@ function subscribe (bot, liveGame, games) {
                         // catching something here means our game object could now be incorrect. reset the live feed.
                         globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(liveGame.gamePk);
                     }
-                    await reportPlays(bot, liveGame.gamePk);
                 }
+                await reportPlays(bot, liveGame.gamePk, eventJSON.updateId);
             } else {
                 globalCache.values.game.currentLiveFeed = update;
-                await reportPlays(bot, liveGame.gamePk);
+                await reportPlays(bot, liveGame.gamePk, eventJSON.updateId);
             }
         } catch (e) {
             LOGGER.error('There was a problem processing a gameday event!');
@@ -124,37 +124,40 @@ function subscribe (bot, liveGame, games) {
     so we have to look back a bit to make sure we didn't miss anything. Sometimes, for example, an at-bat is quickly overridden
     by a new at-bat before we had a chance to report its result.
  */
-async function reportPlays (bot, gamePk) {
+async function reportPlays (bot, gamePk, updateId) {
     const currentPlay = globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay;
     const lastAtBatIndex = currentPlay.about.atBatIndex - 1;
     if (lastAtBatIndex >= 0) {
         const lastAtBat = globalCache.values.game.currentLiveFeed.liveData.plays.allPlays
             .find((play) => play.about.atBatIndex === lastAtBatIndex);
         if (lastAtBat) {
-            await reportAnyMissedEvents(lastAtBat, bot, gamePk);
-            await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat), gamePk);
+            LOGGER.trace(updateId + ' LAST AT BAT RESULT: ' + JSON.stringify(lastAtBat.result, null, 2));
+            LOGGER.trace(updateId + ' LAST AT BAT ABOUT: ' + JSON.stringify(lastAtBat.about, null, 2));
+            await reportAnyMissedEvents(lastAtBat, bot, gamePk, lastAtBatIndex);
+            await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat), gamePk, lastAtBatIndex);
         }
     }
-    await reportAnyMissedEvents(currentPlay, bot, gamePk);
-    await processAndPushPlay(bot, currentPlayProcessor.process(currentPlay), gamePk);
+    LOGGER.trace(updateId + ' CURRENT AT BAT RESULT: ' + JSON.stringify(currentPlay.result, null, 2));
+    LOGGER.trace(updateId + ' CURRENT AT BAT ABOUT: ' + JSON.stringify(currentPlay.about, null, 2));
+    await reportAnyMissedEvents(currentPlay, bot, gamePk, currentPlay.about.atBatIndex);
+    await processAndPushPlay(bot, currentPlayProcessor.process(currentPlay), gamePk, currentPlay.about.atBatIndex);
 }
 
-async function reportAnyMissedEvents (atBat, bot, gamePk) {
-    const missedEventsToReport = atBat.playEvents?.filter(event =>
-        !event?.isPitch
-        && globals.EVENT_WHITELIST.includes(event?.details?.eventType)
-        && !globalCache.values.game.reportedDescriptions.includes(event?.details?.description));
+async function reportAnyMissedEvents (atBat, bot, gamePk, atBatIndex) {
+    const missedEventsToReport = atBat.playEvents?.filter(event => globals.EVENT_WHITELIST.includes(event?.details?.eventType)
+        && !globalCache.values.game.reportedDescriptions
+            .find(reportedDescription => reportedDescription.description === event?.details?.description && reportedDescription.atBatIndex === atBatIndex));
     for (const missedEvent of missedEventsToReport) {
-        await processAndPushPlay(bot, currentPlayProcessor.process(missedEvent), gamePk);
+        await processAndPushPlay(bot, currentPlayProcessor.process(missedEvent), gamePk, atBatIndex);
     }
 }
 
-async function processAndPushPlay (bot, play, gamePk) {
+async function processAndPushPlay (bot, play, gamePk, atBatIndex) {
     if (play.reply
         && play.reply.length > 0
-        && !globalCache.values.game.reportedDescriptions.includes(play.description)
-        /* && (play.isScoringPlay || play.eventType === 'pitching_substitution') */) {
-        globalCache.values.game.reportedDescriptions.push(play.description);
+        && !globalCache.values.game.reportedDescriptions
+            .find(reportedDescription => reportedDescription.description === play.description && reportedDescription.atBatIndex === atBatIndex)) {
+        globalCache.values.game.reportedDescriptions.push({ description: play.description, atBatIndex });
         const embed = new EmbedBuilder()
             .setTitle(deriveHalfInning(globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.halfInning) + ' ' +
                 globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.inning + ', ' +
