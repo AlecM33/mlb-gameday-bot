@@ -11,7 +11,7 @@ module.exports = {
         }
         let lastEvent;
         if ((currentPlayJSON.about?.isComplete || globals.EVENT_WHITELIST.includes((currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType)))
-            && !currentPlayJSON.reviewDetails?.inProgress // a play that has been challenged
+            && ((!currentPlayJSON.reviewDetails?.inProgress) || currentPlayJSON.details?.description.includes('call on the field was')) // a play that has been challenged
         ) {
             reply += getDescription(currentPlayJSON);
             if (currentPlayJSON.result?.isOut || currentPlayJSON.details?.isOut) {
