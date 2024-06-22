@@ -348,13 +348,11 @@ module.exports = {
             .setTitle(halfInning.toUpperCase() + ' ' + inning + ', ' +
                 abbreviations.away + ' vs. ' + abbreviations.home + ': Current Pitcher')
             .setThumbnail('attachment://spot.png')
-            .addFields({
-                name: (pitcherInfo.handedness
+            .setDescription(
+                '## ' + (pitcherInfo.handedness
                     ? pitcherInfo.handedness + 'HP **'
-                    : '**') + (pitcher.fullName || 'TBD') + '** (' + abbreviation + ')',
-                value: buildPitchingStatsMarkdown(pitcherInfo.pitchingStats, pitcherInfo.pitchMix, true),
-                inline: true
-            })
+                    : '**') + (pitcher.fullName || 'TBD') + '** (' + abbreviation + ')' +
+                buildPitchingStatsMarkdown(pitcherInfo.pitchingStats, pitcherInfo.pitchMix, true))
             .setColor((halfInning === 'top'
                 ? globalCache.values.game.homeTeamColor
                 : globalCache.values.game.awayTeamColor)
