@@ -16,18 +16,21 @@ module.exports = {
         const people = (await mlbAPIUtil.people(lineup.map(lineupPlayer => lineupPlayer.id))).people;
         table.setHeading(['', '', '', 'B', 'HR', 'RBI', 'AVG', 'OPS']);
         table.setHeadingAlign(AsciiTable.CENTER);
-        table.setAlign(AsciiTable.LEFT);
+        table.setAlign(4, AsciiTable.CENTER);
+        table.setAlign(5, AsciiTable.CENTER);
+        table.setAlign(6, AsciiTable.CENTER);
+        table.setAlign(7, AsciiTable.CENTER);
         for (let i = 0; i < lineup.length; i ++) {
-            const hittingStats = people[i]?.stats.find(stat => stat.group.displayName === 'hitting')?.splits[0]?.stat;
+            const hittingStats = people[i]?.stats?.find(stat => stat.group.displayName === 'hitting')?.splits[0]?.stat;
             table.addRow([
                 i + 1,
                 people[i]?.boxscoreName,
                 lineup[i]?.primaryPosition.abbreviation,
                 people[i].batSide.code,
-                hittingStats?.homeRuns,
-                hittingStats?.rbi,
-                hittingStats?.avg,
-                hittingStats?.ops
+                hittingStats?.homeRuns || '-',
+                hittingStats?.rbi || '-',
+                hittingStats?.avg || '-',
+                hittingStats?.ops || '-'
             ]);
         }
         table.removeBorder();
