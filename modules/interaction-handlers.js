@@ -9,11 +9,12 @@ const queries = require('../database/queries.js');
 module.exports = {
 
     helpHandler: async (interaction) => {
+        console.info(`HELP command invoked by guild: ${interaction.guildId}`);
         interaction.reply({ content: globals.HELP_MESSAGE, ephemeral: true });
     },
 
     startersHandler: async (interaction) => {
-        console.info(`MATCHUP command invoked by guild: ${interaction.guildId}`);
+        console.info(`STARTERS command invoked by guild: ${interaction.guildId}`);
         if (!globalCache.values.game.isDoubleHeader) {
             await interaction.deferReply();
         }
@@ -135,7 +136,7 @@ module.exports = {
         if (!interaction.replied) {
             await interaction.reply({
                 ephemeral: false,
-                content: 'Subscribed this channel to the gameday feed! It will receive real-time info about scoring plays for live games.'
+                content: 'Subscribed this channel to the gameday feed! It will receive real-time info about at-bat results and other key events.'
             });
         }
     },
@@ -336,6 +337,7 @@ module.exports = {
     },
 
     pitcherHandler: async (interaction) => {
+        console.info(`PITCHER command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
         const currentLiveFeed = globalCache.values.game.currentLiveFeed;
         if (currentLiveFeed === null || currentLiveFeed.gameData.status.abstractGameState !== 'Live') {
@@ -374,6 +376,7 @@ module.exports = {
     },
 
     batterHandler: async (interaction) => {
+        console.info(`BATTER command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
         const currentLiveFeed = globalCache.values.game.currentLiveFeed;
         if (currentLiveFeed === null || currentLiveFeed.gameData.status.abstractGameState !== 'Live') {
@@ -472,7 +475,7 @@ module.exports = {
     },
 
     attendanceHandler: async (interaction) => {
-        console.info(`HIGHLIGHTS command invoked by guild: ${interaction.guildId}`);
+            console.info(`ATTENDANCE command invoked by guild: ${interaction.guildId}`);
         if (!globalCache.values.game.isDoubleHeader) {
             await interaction.deferReply();
         }
@@ -500,7 +503,7 @@ module.exports = {
     },
 
     weatherHandler: async (interaction) => {
-        console.info(`HIGHLIGHTS command invoked by guild: ${interaction.guildId}`);
+        console.info(`WEATHER command invoked by guild: ${interaction.guildId}`);
         if (!globalCache.values.game.isDoubleHeader) {
             await interaction.deferReply();
         }
