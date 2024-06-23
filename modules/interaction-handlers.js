@@ -301,7 +301,7 @@ module.exports = {
                     );
                     if (i === 0) {
                         await commandUtil.giveFinalCommandResponse(toHandle, {
-                            content: '### Highlights: ' + commandUtil.constructGameDisplayString(game) + '\n' + highlightsForMessage.reduce((acc, value) =>
+                            content: 'Highlights (Most recent first): ' + commandUtil.constructGameDisplayString(game) + '\n\n' + highlightsForMessage.reduce((acc, value) =>
                                 acc + '[' + value.title + '](<' + value.playbacks.find((playback) => playback.name === 'mp4Avc')?.url + '>)\n\n',
                             ''),
                             ephemeral: false,
@@ -477,7 +477,9 @@ module.exports = {
             const game = globalCache.values.game.isDoubleHeader
                 ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId)) // the user's choice between the two games of the double-header.
                 : globalCache.values.nearestGames[0];
-            const currentLiveFeed = await mlbAPIUtil.liveFeed(game.gamePk);
+            const currentLiveFeed = await mlbAPIUtil.liveFeed(game.gamePk, [
+                'gameData', 'gameInfo', 'attendance', 'venue', 'name', 'fieldInfo', 'capacity'
+            ]);
             const attendance = currentLiveFeed.gameData.gameInfo.attendance;
             const capacity = currentLiveFeed.gameData.venue.fieldInfo.capacity;
             await interaction.followUp({
@@ -503,7 +505,9 @@ module.exports = {
             const game = globalCache.values.game.isDoubleHeader
                 ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId)) // the user's choice between the two games of the double-header.
                 : globalCache.values.nearestGames[0];
-            const currentLiveFeed = await mlbAPIUtil.liveFeed(game.gamePk);
+            const currentLiveFeed = await mlbAPIUtil.liveFeed(game.gamePk, [
+                'gameData', 'gameInfo', 'weather', 'condition', 'temp', 'wind', 'venue', 'name'
+            ]);
             const weather = currentLiveFeed.gameData.weather;
             await interaction.followUp({
                 ephemeral: false,

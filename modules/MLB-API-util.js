@@ -14,9 +14,9 @@ const endpoints = {
     hitter: (personId) => {
         return 'https://statsapi.mlb.com/api/v1/people/' + personId + '/stats?stats=season,statSplits,lastXGames&group=hitting&gameType=R&sitCodes=vl,vr,risp&limit=7';
     },
-    liveFeed: (gamePk) => {
-        LOGGER.debug('https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live');
-        return 'https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live';
+    liveFeed: (gamePk, fields = []) => {
+        LOGGER.debug('https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live' + (fields.length > 0 ? '?fields=' + fields.join() : ''));
+        return 'https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live' + (fields.length > 0 ? '?fields=' + fields.join() : '');
     },
     liveFeedAtTimestamp: (gamePk, timestamp) => {
         return 'https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live?timecode=' + timestamp;
@@ -113,8 +113,8 @@ module.exports = {
                 throw err;
             });
     },
-    liveFeed: async (gamePk) => {
-        return (await fetch(endpoints.liveFeed(gamePk))).json();
+    liveFeed: async (gamePk, fields) => {
+        return (await fetch(endpoints.liveFeed(gamePk, fields))).json();
     },
     liveFeedAtTimestamp: async (gamePk, timestamp) => {
         return (await fetch(endpoints.liveFeedAtTimestamp(gamePk, timestamp))).json();
