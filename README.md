@@ -26,6 +26,8 @@ Examples:
 
 ![image](https://github.com/AlecM33/gameday-bot/assets/24642328/231357e8-3f13-4713-8fb0-c6496435e012)
 
+![image](https://github.com/AlecM33/gameday-bot/assets/24642328/43a1a36c-d7d3-4d7c-9d6f-6c91616944eb)
+
 ![image](https://github.com/AlecM33/gameday-bot/assets/24642328/4fe71d7e-04bc-48fa-98e4-f3c96ec14dc2)
 
 ![image](https://github.com/AlecM33/gameday-bot/assets/24642328/a3e2538f-5516-4260-a319-ba18d6906e4a)
