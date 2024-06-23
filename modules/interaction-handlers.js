@@ -289,7 +289,7 @@ module.exports = {
                 ?.sort((a, b) => new Date(b.date) - new Date(a.date))
                 || [];
             // discord limits messages to 2,000 characters. We very well might need a couple messages to link everything.
-            const messagesNeeded = Math.round(highlights.length / globals.HIGHLIGHTS_PER_MESSAGE);
+            const messagesNeeded = Math.ceil(highlights.length / globals.HIGHLIGHTS_PER_MESSAGE);
             if (messagesNeeded > 1) {
                 for (let i = 0; i < messagesNeeded; i ++) {
                     const highlightsForMessage = highlights.slice(
@@ -405,8 +405,152 @@ module.exports = {
             components: [],
             content: ''
         });
+    },
+
+    scoringPlaysHandler: async (interaction) => {
+        console.info(`SCORING PLAYS command invoked by guild: ${interaction.guildId}`);
+        if (!globalCache.values.game.isDoubleHeader) {
+            await interaction.deferReply();
+        }
+        const toHandle = await commandUtil.screenInteraction(interaction);
+        if (toHandle) {
+            const game = globalCache.values.game.isDoubleHeader
+                ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId)) // the user's choice between the two games of the double-header.
+                : globalCache.values.nearestGames[0];
+            const liveFeed = await mlbAPIUtil.liveFeed(game.gamePk);
+            const links = [];
+            liveFeed.liveData.plays.scoringPlays.forEach((scoringPlayIndex) => {
+                const play = liveFeed.liveData.plays.allPlays
+                    .find(play => play.about.atBatIndex === scoringPlayIndex);
+                const link = 'https://www.mlb.com/gameday/' +
+                    liveFeed.gameData.teams.away.teamName.toLowerCase().replaceAll(' ', '-') +
+                    '-vs-' +
+                    liveFeed.gameData.teams.home.teamName.toLowerCase().replaceAll(' ', '-') + '/' +
+                    liveFeed.gameData.datetime.officialDate.replaceAll('-', '/') +
+                    '/' + game.gamePk + '/play/' + scoringPlayIndex;
+                links.push(getScoreString(liveFeed, play) + ' [' + play.result.description.trim() + '](<' + link + '>)\n');
+            });
+            // discord limits messages to 2,000 characters. We very well might need a couple messages to link everything.
+            const messagesNeeded = Math.ceil(liveFeed.liveData.plays.scoringPlays.length / globals.SCORING_PLAYS_PER_MESSAGE);
+            if (messagesNeeded > 1) {
+                for (let i = 0; i < messagesNeeded; i ++) {
+                    const linksForMessage = links.slice(
+                        globals.HIGHLIGHTS_PER_MESSAGE * i,
+                        Math.min((globals.HIGHLIGHTS_PER_MESSAGE * (i + 1)), links.length)
+                    );
+                    if (i === 0) {
+                        await commandUtil.giveFinalCommandResponse(toHandle, {
+                            content: '### Scoring Plays: ' + commandUtil.constructGameDisplayString(game) + '\n' + linksForMessage.join(''),
+                            ephemeral: false,
+                            components: []
+                        });
+                    } else {
+                        await interaction.channel.send('Continued...\n\n' + linksForMessage.join(''));
+                    }
+                }
+            } else if (messagesNeeded === 0) {
+                await commandUtil.giveFinalCommandResponse(toHandle, {
+                    content: commandUtil.constructGameDisplayString(game) + '\nThere are no scoring plays for this game yet.',
+                    ephemeral: false,
+                    components: []
+                });
+            } else {
+                await commandUtil.giveFinalCommandResponse(toHandle, {
+                    content: '### Scoring Plays: ' + commandUtil.constructGameDisplayString(game) + '\n' + links.join(''),
+                    ephemeral: false,
+                    components: []
+                });
+            }
+        }
+    },
+
+    attendanceHandler: async (interaction) => {
+        console.info(`HIGHLIGHTS command invoked by guild: ${interaction.guildId}`);
+        if (!globalCache.values.game.isDoubleHeader) {
+            await interaction.deferReply();
+        }
+        const toHandle = await commandUtil.screenInteraction(interaction);
+        if (toHandle) {
+            const game = globalCache.values.game.isDoubleHeader
+                ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId)) // the user's choice between the two games of the double-header.
+                : globalCache.values.nearestGames[0];
+            const currentLiveFeed = await mlbAPIUtil.liveFeed(game.gamePk);
+            const attendance = currentLiveFeed.gameData.gameInfo.attendance;
+            const capacity = currentLiveFeed.gameData.venue.fieldInfo.capacity;
+            await interaction.followUp({
+                ephemeral: false,
+                files: [],
+                embeds: [],
+                components: [],
+                content: currentLiveFeed.gameData.venue.name + ' attendance: ' +
+                    (attendance && capacity
+                        ? attendance.toLocaleString() + ' (' + Math.round((attendance / capacity) * 100) + '% capacity)'
+                        : 'Not Available.')
+            });
+        }
+    },
+
+    weatherHandler: async (interaction) => {
+        console.info(`HIGHLIGHTS command invoked by guild: ${interaction.guildId}`);
+        if (!globalCache.values.game.isDoubleHeader) {
+            await interaction.deferReply();
+        }
+        const toHandle = await commandUtil.screenInteraction(interaction);
+        if (toHandle) {
+            const game = globalCache.values.game.isDoubleHeader
+                ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId)) // the user's choice between the two games of the double-header.
+                : globalCache.values.nearestGames[0];
+            const currentLiveFeed = await mlbAPIUtil.liveFeed(game.gamePk);
+            const weather = currentLiveFeed.gameData.weather;
+            await interaction.followUp({
+                ephemeral: false,
+                files: [],
+                embeds: [],
+                components: [],
+                content: weather
+                    ? 'Weather at ' + currentLiveFeed.gameData.venue.name + ':\n' +
+                        weather.condition + ' ' + getWeatherEmoji(weather.condition) + '\n' +
+                        '\uD83C\uDF21 ' + weather.temp + '°\n' +
+                        '\uD83C\uDF43 ' + weather.wind
+                    : 'Not Available'
+            });
+        }
     }
 };
+
+function getWeatherEmoji (condition) {
+    switch (condition) {
+        case 'Clear':
+        case 'Sunny':
+            return '\u2600';
+        case 'Cloudy':
+            return '\u2601';
+        case 'Partly Cloudy':
+            return '\uD83C\uDF24';
+        case 'Dome':
+        case 'Roof Closed':
+            return '';
+        case 'Drizzle':
+        case 'Rain':
+            return '\uD83C\uDF27';
+        case 'Snow':
+            return '\u2744';
+        case 'Overcast':
+            return '\uD83C\uDF2B';
+        default:
+            return '';
+    }
+}
+
+function getScoreString (liveFeed, currentPlayJSON) {
+    const homeScore = currentPlayJSON.result.homeScore;
+    const awayScore = currentPlayJSON.result.awayScore;
+    return (currentPlayJSON.about.halfInning === 'top'
+        ? '**' + liveFeed.gameData.teams.away.abbreviation + ' ' + awayScore + '**, ' +
+        liveFeed.gameData.teams.home.abbreviation + ' ' + homeScore
+        : liveFeed.gameData.teams.away.abbreviation + ' ' + awayScore + ', **' +
+        liveFeed.gameData.teams.home.abbreviation + ' ' + homeScore + '**');
+}
 
 function buildPitchingStatsMarkdown (pitchingStats, pitchMix, includeExtra = false) {
     let reply = '\n';

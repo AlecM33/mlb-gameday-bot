@@ -1,5 +1,6 @@
 const globalCache = require('./global-cache');
 const globals = require('../config/globals');
+const LOGGER = require('./logger')(process.env.LOG_LEVEL || globals.LOG_LEVEL.INFO);
 
 module.exports = {
     process: (currentPlayJSON) => {
@@ -8,6 +9,10 @@ module.exports = {
             && currentPlayJSON.playEvents?.find(event => event?.details?.description === 'Status Change - In Progress')) {
             globalCache.values.game.startReported = true;
             reply += 'A game is starting! Go Guards!';
+        }
+        if (currentPlayJSON.details?.hasReview) {
+            LOGGER.debug('REVIEW DESCRIPTION: ' + JSON.stringify(currentPlayJSON.details?.description, null, 2));
+            LOGGER.debug('REVIEW DETAILS: ' + JSON.stringify(currentPlayJSON.reviewDetails, null, 2));
         }
         let lastEvent;
         if ((currentPlayJSON.about?.isComplete || globals.EVENT_WHITELIST.includes((currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType)))

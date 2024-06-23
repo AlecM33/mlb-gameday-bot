@@ -327,7 +327,7 @@ async function resolveDoubleHeaderSelection (interaction) {
         LOGGER.trace('awaiting');
         return await response.awaitMessageComponent({ filter: collectorFilter, time: 10_000 });
     } catch (e) {
-        await interaction.editReply({ content: 'Confirmation not received within 10 seconds, cancelling', components: [] });
+        await interaction.editReply({ content: 'Game selection not received within 10 seconds - request was canceled.', components: [] });
     }
 }
 

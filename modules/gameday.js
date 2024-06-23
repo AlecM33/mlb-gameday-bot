@@ -131,14 +131,10 @@ async function reportPlays (bot, gamePk, updateId) {
         const lastAtBat = globalCache.values.game.currentLiveFeed.liveData.plays.allPlays
             .find((play) => play.about.atBatIndex === lastAtBatIndex);
         if (lastAtBat) {
-            LOGGER.trace(updateId + ' LAST AT BAT RESULT: ' + JSON.stringify(lastAtBat.result, null, 2));
-            LOGGER.trace(updateId + ' LAST AT BAT ABOUT: ' + JSON.stringify(lastAtBat.about, null, 2));
             await reportAnyMissedEvents(lastAtBat, bot, gamePk, lastAtBatIndex);
             await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat), gamePk, lastAtBatIndex);
         }
     }
-    LOGGER.trace(updateId + ' CURRENT AT BAT RESULT: ' + JSON.stringify(currentPlay.result, null, 2));
-    LOGGER.trace(updateId + ' CURRENT AT BAT ABOUT: ' + JSON.stringify(currentPlay.about, null, 2));
     await reportAnyMissedEvents(currentPlay, bot, gamePk, currentPlay.about.atBatIndex);
     await processAndPushPlay(bot, currentPlayProcessor.process(currentPlay), gamePk, currentPlay.about.atBatIndex);
 }
