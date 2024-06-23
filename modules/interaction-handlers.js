@@ -8,6 +8,10 @@ const queries = require('../database/queries.js');
 
 module.exports = {
 
+    helpHandler: async (interaction) => {
+        interaction.reply(globals.HELP_MESSAGE);
+    },
+
     startersHandler: async (interaction) => {
         console.info(`MATCHUP command invoked by guild: ${interaction.guildId}`);
         if (!globalCache.values.game.isDoubleHeader) {

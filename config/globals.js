@@ -305,5 +305,19 @@ module.exports = {
             primaryColor: "#002D72",
             secondaryColor: "#FF5910"
         }
-    ]
+    ],
+    HELP_MESSAGE: `\`/starters\` - look at the starting pitching matchup for the current game. Includes portraits of both starters, their W/L, ERA, and WHIP, and a list of the pitches they throw.\n
+        \`/standings\` - check the standings for your team's division.\n
+        \`/lineup\` - view the lineup card for the current game.\n
+        \`/line_score\` - view the line score for the current game.\n
+        \`/box_score\` - view the box score for the current game, including hitting and pitching stats.\n
+        \`/scoring_plays\` - get a curated list of scoring plays, with direct links to the play on the Gameday page.\n
+        \`/highlights\` - get a curated list of direct links to key plays from the game. The links provide high quality videos.\n
+        \`/gameday_subscribe\` - subscribe a given Discord channel to receive real-time updates from the "Gameday" feed! This command is restricted to certain roles. This will report the result of each at bat, as well as other key events such as steals or pitching changes. The message includes a description of the play, any change in score, and statcast metrics for balls in play.\n
+        \`/gameday_unsubscribe\` - un-subscribe a given Discord channel from the above functionality.\n
+        \`/schedule\` - view the upcoming schedule for the next week of games.\n
+        \`/batter\` - view stats on the batter that is up right now. Only available when a game is live.\n
+        \`/pitcher\` - view stats on the pitcher that is pitching right now. Only available when a game is live.\n
+        \`/weather\` - view the weather for current the game.\n
+        \`/attendance\` - view the attendance for the current game.\n`
 }
