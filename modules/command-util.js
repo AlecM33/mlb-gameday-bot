@@ -212,7 +212,7 @@ module.exports = {
         return (await getScreenshotOfHTMLTables(tables));
     },
 
-    buildStandingsTable: async (standings) => {
+    buildStandingsTable: async (standings, divisionName) => {
         const centralMap = standings.teamRecords.map(teamRecord => {
             return {
                 name: teamRecord.team.name,
@@ -234,7 +234,7 @@ module.exports = {
                 })()
             };
         });
-        const table = new AsciiTable('AL Central Standings\n');
+        const table = new AsciiTable(divisionName + '\n');
         table.setHeading('Team', 'W-L', 'GB', 'L10');
         centralMap.forEach((entry) => table.addRow(
             entry.name,

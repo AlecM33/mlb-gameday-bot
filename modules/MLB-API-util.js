@@ -28,6 +28,7 @@ const endpoints = {
         return 'https://midfield.mlbstatic.com/v1/people/' + personId + '/spots/120';
     },
     standings: (leagueId = globals.AMERICAN_LEAGUE) => {
+        LOGGER.debug('https://statsapi.mlb.com/api/v1/standings?leagueId=' + leagueId);
         return 'https://statsapi.mlb.com/api/v1/standings?leagueId=' + leagueId;
     },
     playMetrics: (gamePk) => {
@@ -80,6 +81,9 @@ const endpoints = {
     savantGameFeed: (gamePk) => {
         LOGGER.debug('https://baseballsavant.mlb.com/gf?game_pk=' + gamePk);
         return 'https://baseballsavant.mlb.com/gf?game_pk=' + gamePk;
+    },
+    team: (teamId) => {
+        return 'https://statsapi.mlb.com/api/v1/teams/' + teamId;
     }
 };
 
@@ -178,5 +182,8 @@ module.exports = {
     },
     hitter: async (personId) => {
         return (await fetch(endpoints.hitter(personId))).json();
+    },
+    team: async (teamId) => {
+        return (await fetch(endpoints.team(teamId))).json();
     }
 };

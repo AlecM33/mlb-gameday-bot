@@ -4,7 +4,7 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('subscribe_gameday')
-        .setDescription('Subscribe this channel to live gameday updates (scoring plays only).'),
+        .setDescription('Subscribe this channel to live gameday updates, including the result of each at-bat + key events.'),
     async execute (interaction) {
         try {
             await interactionHandlers.subscribeGamedayHandler(interaction);

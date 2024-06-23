@@ -89,11 +89,14 @@ module.exports = {
     standingsHandler: async (interaction) => {
         interaction.deferReply();
         console.info(`STANDINGS command invoked by guild: ${interaction.guildId}`);
-        const americanLeagueCentralStandings = (await mlbAPIUtil.standings())
-            .records.find((record) => record.division.id === globals.DIVISION_ID);
+        const team = await mlbAPIUtil.team(process.env.TEAM_ID);
+        const divisionId = team.teams[0].division.id;
+        const leagueId = team.teams[0].league.id;
+        const divisionStandings = (await mlbAPIUtil.standings(leagueId))
+            .records.find((record) => record.division.id === divisionId);
         await interaction.followUp({
             ephemeral: false,
-            files: [new AttachmentBuilder((await commandUtil.buildStandingsTable(americanLeagueCentralStandings)), { name: 'standings.png' })]
+            files: [new AttachmentBuilder((await commandUtil.buildStandingsTable(divisionStandings, team.teams[0].division.name)), { name: 'standings.png' })]
         });
     },
 

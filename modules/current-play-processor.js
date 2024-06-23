@@ -82,7 +82,8 @@ function addMetrics (lastEvent, reply) {
 }
 
 function getDescription (currentPlayJSON) {
-    if (currentPlayJSON.result?.event === 'Home Run'
+    if (parseInt(process.env.TEAM_ID) === globals.GUARDIANS
+        && currentPlayJSON.result?.event === 'Home Run'
         && guardiansBatting(currentPlayJSON)
         && currentPlayJSON.result?.description) {
         return getGuardiansHomeRunDescription(currentPlayJSON.result.description);
