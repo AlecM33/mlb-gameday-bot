@@ -516,7 +516,7 @@ module.exports = {
                 components: [],
                 content: weather
                     ? 'Weather at ' + currentLiveFeed.gameData.venue.name + ':\n' +
-                        weather.condition + ' ' + getWeatherEmoji(weather.condition) + '\n' +
+                        getWeatherEmoji(weather.condition) + ' ' + weather.condition + '\n' +
                         '\uD83C\uDF21 ' + weather.temp + '°\n' +
                         '\uD83C\uDF43 ' + weather.wind
                     : 'Not Available'
