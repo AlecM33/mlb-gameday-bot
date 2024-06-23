@@ -1,7 +1,7 @@
 # MLB Gameday Bot
 A bot that integrates with the MLB Stats API to track your team of choice. For me, it's the Cleveland Guardians.
 
-Upon startup, the bot looks for your team's games in a 48-hour window centered on the current date - 24 hours into the past, 24 hours into the future. Whichever game (or games, in the case of a doubleheader) is the closest to the current date is
+Upon startup, the bot looks for your team's games in a 48-hour window centered on the current date. Whichever game (or games, in the case of a doubleheader) is the closest to the current date is
 set as the "current" game, and will be the game for which a lot of the commands returns data. Slash Commands include:
 
 - **/starters** - look at the starting pitching matchup for the current game. Includes portraits of both starters, their W/L, ERA, and WHIP, and a list of the pitches they throw.
@@ -9,11 +9,16 @@ set as the "current" game, and will be the game for which a lot of the commands 
 - **/lineup** - view the lineup card for the current game.
 - **/line_score** - view the line score for the current game. 
 - **/box_score** - view the box score for the current game, including hitting and pitching stats.
+- **/scoring_plays** - get a curated list of scoring plays, with direct links to the play on the Gameday page.
 - **/highlights** - get a curated list of direct links to key plays from the game. The links provide high quality videos.
-- **/gameday_subscribe** - subscribe a given Discord channel to receive real-time updates from the "Gameday" feed. This command is restricted to certain roles. The bot connects to Gameday via a WebSocket and pushes events to each subscribed channel. Right now
-                      this is scoring plays only. The message includes a description of the play, the change in score, and exit velo/launch angle/hit distance for balls in play.
+- **/gameday_subscribe** - subscribe a given Discord channel to receive real-time updates from the "Gameday" feed! This command is restricted to certain roles. The bot connects to Gameday via a WebSocket and pushes events to each subscribed channel. This will report
+                      the result of each at bat, as well as other key events such as steals or pitching changes. The message includes a description of the play, any change in score, and statcast metrics for balls in play.
 - **/gameday_unsubscribe** - un-subscribe a given Discord channel from the above functionality.
 - **/schedule** - view the upcoming schedule for the next week of games.
+- **/batter** - view stats on the batter that is up right now. Only available when a game is live.
+- **/pitcher** - view stats on the pitcher that is pitching right now. Only available when a game is live.
+- **/weather** - view the weather for current the game.
+- **/attendance** - view the attendance for the current game.
 
 ...and likely more to follow!
 
