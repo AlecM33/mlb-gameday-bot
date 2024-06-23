@@ -24,11 +24,12 @@ set as the "current" game, and will be the game for which a lot of the commands 
 
 Examples:
 
-![boxscore](https://github.com/AlecM33/gameday-bot/assets/24642328/8e1da205-8a81-4db9-9a8c-9791f44c3113)
+![image](https://github.com/AlecM33/gameday-bot/assets/24642328/231357e8-3f13-4713-8fb0-c6496435e012)
 
-![image](https://github.com/AlecM33/gameday-bot/assets/24642328/8952ed05-810d-41c4-bbf6-033f5bd50145)
+![image](https://github.com/AlecM33/gameday-bot/assets/24642328/4fe71d7e-04bc-48fa-98e4-f3c96ec14dc2)
 
-![starters](https://github.com/AlecM33/gameday-bot/assets/24642328/ced20a8b-9f7b-4d71-9b81-e5abf186fe14)
+![image](https://github.com/AlecM33/gameday-bot/assets/24642328/a3e2538f-5516-4260-a319-ba18d6906e4a)
+
 
 # Tech Stack
 
