@@ -9,7 +9,7 @@ const queries = require('../database/queries.js');
 module.exports = {
 
     helpHandler: async (interaction) => {
-        interaction.reply(globals.HELP_MESSAGE);
+        interaction.reply({ content: globals.HELP_MESSAGE, ephemeral: true });
     },
 
     startersHandler: async (interaction) => {
