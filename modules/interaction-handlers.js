@@ -490,7 +490,7 @@ module.exports = {
                 content: currentLiveFeed.gameData.venue.name + ' attendance: ' +
                     (attendance && capacity
                         ? attendance.toLocaleString() + ' (' + Math.round((attendance / capacity) * 100) + '% capacity)'
-                        : 'Not Available.')
+                        : 'Not Available (yet).')
             });
         }
     },
