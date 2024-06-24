@@ -11,9 +11,9 @@ set as the "current" game, and will be the game for which a lot of the commands 
 - **/box_score** - view the box score for the current game, including hitting and pitching stats.
 - **/scoring_plays** - get a curated list of scoring plays, with direct links to the play on the Gameday page.
 - **/highlights** - get a curated list of direct links to key plays from the game. The links provide high quality videos.
-- **/gameday_subscribe** - subscribe a given Discord channel to receive real-time updates from the "Gameday" feed! This command is restricted to certain roles. The bot connects to Gameday via a WebSocket and pushes events to each subscribed channel. This will report
-                      the result of each at bat, as well as other key events such as steals or pitching changes. The message includes a description of the play, any change in score, and statcast metrics for balls in play.
+- **/gameday_subscribe** - subscribe a given Discord channel to receive real-time updates from the "Gameday" feed! This command is restricted to certain roles. The bot connects to Gameday via a WebSocket and pushes events to each subscribed channel. Depending on your preference, this will report either just scoring plays or the results of all at-bats and other key events. The message includes a description of the play, any change in score, and statcast metrics for balls in play.
 - **/gameday_unsubscribe** - un-subscribe a given Discord channel from the above functionality.
+- **/gameday_preference** - change the preference for the gameday description. This can be either "scoring plays only" or "all plays".
 - **/schedule** - view the upcoming schedule for the next week of games.
 - **/batter** - view stats on the batter that is up right now. Only available when a game is live.
 - **/pitcher** - view stats on the pitcher that is pitching right now. Only available when a game is live.
