@@ -98,7 +98,6 @@ module.exports = {
     },
 
     formatSplits: (season, splitStats, lastXGamesStats) => {
-        console.log(JSON.stringify(season, null, 2));
         const vsLeft = (splitStats.splits.find(split => split?.split?.code === 'vl' && !split.team)
             || splitStats.splits.find(split => split?.split?.code === 'vl'));
         const vsRight = (splitStats.splits.find(split => split?.split?.code === 'vr' && !split.team)

@@ -9,7 +9,6 @@ describe('currentPlayProcessor', () => {
     describe('#process', () => {
         it('should correctly process a home run', async () => {
             const result = await currentPlayProcessor.process(examplePlays.homeRun);
-            console.log('HEY' + JSON.stringify(result, null, 2));
             expect(result.reply).toMatch(/Brice Turang homers \(4\) on a fly ball to right center field\./);
             expect(result.reply).toMatch(/# _MIL 3_/);
             expect(result.reply).toMatch(/LAA 5/);

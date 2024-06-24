@@ -35,7 +35,6 @@ describe('commandUtil', () => {
                 batterInfo.stats.find(stat => stat.type.displayName === 'season'),
                 batterInfo.stats.find(stat => stat.type.displayName === 'statSplits'),
                 batterInfo.stats.find(stat => stat.type.displayName === 'lastXGames'));
-            console.log(result);
             expect(result).toMatch(/\.387\/\.448\/\.545, 5 HR, 21 RBIs/); // total splits
             expect(result).toMatch(/\.387\/\.448\/\.545/); // lastXGames
             expect(result).toMatch(/\.363\/\.430\/\.548/); // vs righties
