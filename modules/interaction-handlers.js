@@ -114,8 +114,9 @@ module.exports = {
             });
             return;
         }
+        const scoringPlaysOnly = interaction.options.getBoolean('scoring_plays_only');
         if (interaction.channel) {
-            await queries.addToSubscribedChannels(interaction.guild.id, interaction.channel.id).catch(async (e) => {
+            await queries.addToSubscribedChannels(interaction.guild.id, interaction.channel.id, scoringPlaysOnly || false).catch(async (e) => {
                 if (e.message.includes('duplicate key')) {
                     await interaction.reply({
                         content: 'This channel is already subscribed to the gameday feed.',
@@ -128,7 +129,7 @@ module.exports = {
                     });
                 }
             });
-            globalCache.values.subscribedChannels = (await queries.getAllSubscribedChannels()).map(channel => channel.channel_id);
+            globalCache.values.subscribedChannels = await queries.getAllSubscribedChannels();
         } else {
             throw new Error('Could not subscribe to the gameday feed.');
         }
@@ -136,7 +137,52 @@ module.exports = {
         if (!interaction.replied) {
             await interaction.reply({
                 ephemeral: false,
-                content: 'Subscribed this channel to the gameday feed! It will receive real-time info about at-bat results and other key events.'
+                content: 'Subscribed this channel to the gameday feed! It will receive ' +
+                    (scoringPlaysOnly
+                        ? 'real-time updates on scoring plays.'
+                        : 'real-time info about at-bat results and other key events.')
+            });
+        }
+    },
+
+    gamedayPreferenceHandler: async (interaction) => {
+        console.info(`GAMEDAY PREFERENCE command invoked by guild: ${interaction.guildId}`);
+        if (!interaction.member.roles.cache.some(role => globals.ADMIN_ROLES.includes(role.name))) {
+            await interaction.reply({
+                ephemeral: true,
+                content: 'You do not have permission to use this command.'
+            });
+            return;
+        }
+        const scoringPlaysOnly = interaction.options.getBoolean('scoring_plays_only');
+        if (interaction.channel) {
+            await queries.updatePlayPreference(interaction.guild.id, interaction.channel.id, scoringPlaysOnly)
+                .then(async (rows) => {
+                    if (rows.length === 0) {
+                        await interaction.reply({
+                            content: 'This channel isn\'t currently subscribed. Use `/subscribe_gameday` to subscribe and provide a preference.',
+                            ephemeral: false
+                        });
+                    }
+                })
+                .catch(async (e) => {
+                    await interaction.reply({
+                        content: 'Error subscribing to the gameday feed: ' + e.message,
+                        ephemeral: true
+                    });
+                });
+            globalCache.values.subscribedChannels = await queries.getAllSubscribedChannels();
+        } else {
+            throw new Error('Could not update your subscription preference.');
+        }
+
+        if (!interaction.replied) {
+            await interaction.reply({
+                ephemeral: false,
+                content: 'Updated the subscription preference. The bot will ' +
+                    (scoringPlaysOnly
+                        ? 'only report scoring plays.'
+                        : 'report the results of at-bats and other key events.')
             });
         }
     },
@@ -157,10 +203,10 @@ module.exports = {
         if (!interaction.replied) {
             await interaction.reply({
                 ephemeral: false,
-                content: 'Un-subscribed this channel to the gameday feed. It will no longer receive real-time updates.'
+                content: 'This channel is un-subscribed to the Gameday feed. It will no longer receive real-time updates.'
             });
         }
-        globalCache.values.subscribedChannels = (await queries.getAllSubscribedChannels()).map(channel => channel.channel_id);
+        globalCache.values.subscribedChannels = await queries.getAllSubscribedChannels();
     },
 
     linescoreHandler: async (interaction) => {
@@ -475,7 +521,7 @@ module.exports = {
     },
 
     attendanceHandler: async (interaction) => {
-            console.info(`ATTENDANCE command invoked by guild: ${interaction.guildId}`);
+        console.info(`ATTENDANCE command invoked by guild: ${interaction.guildId}`);
         if (!globalCache.values.game.isDoubleHeader) {
             await interaction.deferReply();
         }
@@ -494,7 +540,7 @@ module.exports = {
                 files: [],
                 embeds: [],
                 components: [],
-                content: currentLiveFeed.gameData.venue.name + ' attendance: ' +
+                content: commandUtil.constructGameDisplayString(game) + ': ' + currentLiveFeed.gameData.venue.name + ' attendance: ' +
                     (attendance && capacity
                         ? attendance.toLocaleString() + ' (' + Math.round((attendance / capacity) * 100) + '% capacity)'
                         : 'Not Available (yet).')
@@ -526,7 +572,7 @@ module.exports = {
                         getWeatherEmoji(weather.condition) + ' ' + weather.condition + '\n' +
                         '\uD83C\uDF21 ' + weather.temp + '°\n' +
                         '\uD83C\uDF43 ' + weather.wind
-                    : 'Not Available'
+                    : 'Not available yet - check back an hour or two before game time.'
             });
         }
     }

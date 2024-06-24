@@ -3,15 +3,15 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('subscribe_gameday')
-        .setDescription('Subscribe this channel to live Gameday updates, including results of at-bats and other key events.')
+        .setName('gameday_preference')
+        .setDescription('Change the channel\'s preference for which live plays the bot will report.')
         .addBooleanOption(option =>
             option.setName('scoring_plays_only')
-                .setDescription('If true, the bot will only report scoring plays. The default is false.')
-                .setRequired(false)),
+                .setDescription('If true, the bot will only report scoring plays. Else, it reports at-bat results + other key events.')
+                .setRequired(true)),
     async execute (interaction) {
         try {
-            await interactionHandlers.subscribeGamedayHandler(interaction);
+            await interactionHandlers.gamedayPreferenceHandler(interaction);
         } catch (e) {
             console.error(e);
             if (interaction.deferred && !interaction.replied) {

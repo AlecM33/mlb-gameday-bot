@@ -14,7 +14,7 @@ module.exports = {
         mlbAPIUtil.currentGames().then(async (games) => {
             LOGGER.info('Current game PKs: ' + JSON.stringify(games
                 .map(game => { return { key: game.gamePk, date: game.officialDate }; }), null, 2));
-            globalCache.values.subscribedChannels = (await queries.getAllSubscribedChannels()).map(channel => channel.channel_id);
+            globalCache.values.subscribedChannels = await queries.getAllSubscribedChannels();
             LOGGER.info('Subscribed channels: ' + JSON.stringify(globalCache.values.subscribedChannels, null, 2));
             await statusPoll(BOT, games);
         }).catch((e) => {
@@ -79,7 +79,7 @@ function subscribe (bot, liveGame, games) {
                     await commandUtil.buildLineScoreTable(globalCache.values.game.currentLiveFeed.gameData, linescore)
                     , { name: 'line_score.png' });
                 globalCache.values.subscribedChannels.forEach((channel) => {
-                    bot.channels.fetch(channel).then((returnedChannel) => {
+                    bot.channels.fetch(channel.channel_id).then((returnedChannel) => {
                         LOGGER.trace('Sending!');
                         returnedChannel.send({
                             content: commandUtil.constructGameDisplayString(globalCache.values.game.currentLiveFeed.gameData) + ' - **Final**',
@@ -166,14 +166,18 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex) {
             ));
         const messages = [];
         for (const channel of globalCache.values.subscribedChannels) {
-            const returnedChannel = await bot.channels.fetch(channel);
-            LOGGER.trace('Sending!');
-            const message = await returnedChannel.send({
-                embeds: [embed]
-            });
-            messages.push(message);
+            const returnedChannel = await bot.channels.fetch(channel.channel_id);
+            if (!play.isScoringPlay && channel.scoring_plays_only) {
+                LOGGER.debug('Skipping - against the channel\'s preference');
+            } else {
+                LOGGER.debug('Sending!');
+                const message = await returnedChannel.send({
+                    embeds: [embed]
+                });
+                messages.push(message);
+            }
         }
-        if (play.isInPlay) {
+        if (play.isInPlay && messages.length > 0) {
             if (play.playId) {
                 try {
                     // xBA and HR/Park for balls in play is available on a delay via baseballsavant.
@@ -187,6 +191,8 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex) {
                 LOGGER.info('Play has no play ID.');
                 notifySavantDataUnavailable(messages);
             }
+        } else {
+            LOGGER.debug('Skipping savant poll - no channels are subscribed to this play.');
         }
     }
 }
