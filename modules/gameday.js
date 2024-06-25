@@ -5,59 +5,57 @@ const currentPlayProcessor = require('./current-play-processor');
 const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
 const globals = require('../config/globals');
 const commandUtil = require('./command-util');
-const queries = require('../database/queries.js');
 const LOGGER = require('./logger')(process.env.LOG_LEVEL || globals.LOG_LEVEL.INFO);
 const ColorContrastChecker = require('color-contrast-checker');
 
 module.exports = {
-    checkForCurrentGames: async (BOT) => {
-        mlbAPIUtil.currentGames().then(async (games) => {
-            LOGGER.info('Current game PKs: ' + JSON.stringify(games
-                .map(game => { return { key: game.gamePk, date: game.officialDate }; }), null, 2));
-            globalCache.values.subscribedChannels = await queries.getAllSubscribedChannels();
-            LOGGER.info('Subscribed channels: ' + JSON.stringify(globalCache.values.subscribedChannels, null, 2));
-            await statusPoll(BOT, games);
-        }).catch((e) => {
-            LOGGER.error(e);
-            globalCache.values.nearestGames = e;
-        });
-    }
+    statusPoll
 };
 
-async function statusPoll (bot, games) {
+async function statusPoll (bot) {
     const pollingFunction = async () => {
-        LOGGER.info('Gameday: polling...');
+        LOGGER.info('Games: polling...');
         const now = globals.DATE || new Date();
-        games.sort((a, b) => Math.abs(now - new Date(a.gameDate)) - Math.abs(now - new Date(b.gameDate)));
-        const nearestGames = games.filter(game => game.officialDate === games[0].officialDate); // could be more than one game for double-headers.
-        globalCache.values.nearestGames = nearestGames;
-        globalCache.values.game.isDoubleHeader = nearestGames.length > 1;
-        const statusChecks = await Promise.all(nearestGames.map(game => mlbAPIUtil.statusCheck(game.gamePk)));
-        LOGGER.trace('Gameday: statuses are: ' + JSON.stringify(statusChecks, null, 2));
-        if (statusChecks.find(statusCheck => statusCheck.gameData.status.abstractGameState === 'Live')) {
-            const liveGame = statusChecks.find(statusCheck => statusCheck.gameData.status.abstractGameState === 'Live');
-            LOGGER.info('Gameday: polling stopped: a game is live.');
-            globalCache.resetGameCache();
-            globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(liveGame.gamePk);
-            globalCache.values.game.homeTeamColor = globals.TEAMS.find(
-                team => team.id === globalCache.values.game.currentLiveFeed.gameData.teams.home.id
-            ).primaryColor;
-            const awayTeam = globals.TEAMS.find(
-                team => team.id === globalCache.values.game.currentLiveFeed.gameData.teams.away.id
-            );
-            const colorContrastChecker = new ColorContrastChecker();
-            if (colorContrastChecker.isLevelCustom(globalCache.values.game.homeTeamColor, awayTeam.primaryColor, globals.TEAM_COLOR_CONTRAST_RATIO)) {
-                globalCache.values.game.awayTeamColor = awayTeam.primaryColor;
-            } else {
-                globalCache.values.game.awayTeamColor = awayTeam.secondaryColor;
+        try {
+            const currentGames = await mlbAPIUtil.currentGames();
+            LOGGER.info('Current game PKs: ' + JSON.stringify(currentGames
+                .map(game => { return { key: game.gamePk, date: game.officialDate }; }), null, 2));
+            currentGames.sort((a, b) => Math.abs(now - new Date(a.gameDate)) - Math.abs(now - new Date(b.gameDate)));
+            const nearestGames = currentGames.filter(game => game.officialDate === currentGames[0].officialDate); // could be more than one game for double-headers.
+            if (globalCache.values.nearestGames === null || !nearestGames.every(g => globalCache.values.nearestGames
+                .find(previouslySavedGame => previouslySavedGame.gamePk === g.gamePk))) { // check if our cached set of current games is outdated
+                LOGGER.info('Refreshing nearest games in cache.');
+                globalCache.values.nearestGames = nearestGames;
+                globalCache.values.game.isDoubleHeader = nearestGames.length > 1;
             }
-            subscribe(bot, liveGame, nearestGames);
-        } else if (statusChecks.every(statusCheck => statusCheck.gameData.status.abstractGameState === 'Final')) {
-            LOGGER.info('Gameday: polling slowed: all games are final.');
-            setTimeout(pollingFunction, globals.SLOW_POLL_INTERVAL);
-        } else {
-            setTimeout(pollingFunction, globals.STATUS_POLLING_INTERVAL);
+            const statusChecks = await Promise.all(nearestGames.map(game => mlbAPIUtil.statusCheck(game.gamePk)));
+            LOGGER.trace('Gameday: statuses are: ' + JSON.stringify(statusChecks, null, 2));
+            if (statusChecks.find(statusCheck => statusCheck.gameData.status.statusCode === 'I'
+                || statusCheck.gameData.status.statusCode === 'PW')) {
+                const liveGame = statusChecks
+                    .find(statusCheck => statusCheck.gameData.status.statusCode === 'I' || statusCheck.gameData.status.statusCode === 'PW');
+                LOGGER.info('Gameday: polling stopped: a game is live.');
+                globalCache.resetGameCache();
+                globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(liveGame.gamePk);
+                globalCache.values.game.homeTeamColor = globals.TEAMS.find(
+                    team => team.id === globalCache.values.game.currentLiveFeed.gameData.teams.home.id
+                ).primaryColor;
+                const awayTeam = globals.TEAMS.find(
+                    team => team.id === globalCache.values.game.currentLiveFeed.gameData.teams.away.id
+                );
+                const colorContrastChecker = new ColorContrastChecker();
+                if (colorContrastChecker.isLevelCustom(globalCache.values.game.homeTeamColor, awayTeam.primaryColor, globals.TEAM_COLOR_CONTRAST_RATIO)) {
+                    globalCache.values.game.awayTeamColor = awayTeam.primaryColor;
+                } else {
+                    globalCache.values.game.awayTeamColor = awayTeam.secondaryColor;
+                }
+                subscribe(bot, liveGame, nearestGames);
+            }
+        } catch(e) {
+            LOGGER.error(e);
+            globalCache.values.nearestGames = e;
         }
+        setTimeout(pollingFunction, globals.SLOW_POLL_INTERVAL);
     };
     await pollingFunction();
 }
