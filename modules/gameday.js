@@ -50,12 +50,13 @@ async function statusPoll (bot) {
                     globalCache.values.game.awayTeamColor = awayTeam.secondaryColor;
                 }
                 subscribe(bot, liveGame, nearestGames);
+            } else {
+                setTimeout(pollingFunction, globals.SLOW_POLL_INTERVAL);
             }
         } catch(e) {
             LOGGER.error(e);
             globalCache.values.nearestGames = e;
         }
-        setTimeout(pollingFunction, globals.SLOW_POLL_INTERVAL);
     };
     await pollingFunction();
 }
@@ -70,7 +71,7 @@ function subscribe (bot, liveGame, games) {
             if (eventJSON.gameEvents.includes('game_finished') && !acknowledgedGameFinish) {
                 acknowledgedGameFinish = true;
                 globalCache.values.game.startReported = false;
-                LOGGER.trace('NOTIFIED OF GAME CONCLUSION: CLOSING...');
+                LOGGER.info('NOTIFIED OF GAME CONCLUSION: CLOSING...');
                 ws.close();
                 const linescore = await mlbAPIUtil.linescore(liveGame.gamePk);
                 const linescoreAttachment = new AttachmentBuilder(
