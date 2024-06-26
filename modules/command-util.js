@@ -27,8 +27,8 @@ module.exports = {
                 people[i]?.boxscoreName,
                 lineup[i]?.primaryPosition.abbreviation,
                 people[i].batSide.code,
-                (hittingStats?.homeRuns || hittingStats.homeRuns === 0 ? hittingStats.homeRuns : '-'),
-                (hittingStats?.rbi || hittingStats.rbi === 0 ? hittingStats.rbi : '-'),
+                (hittingStats?.homeRuns || hittingStats?.homeRuns === 0 ? hittingStats?.homeRuns : '-'),
+                (hittingStats?.rbi || hittingStats?.rbi === 0 ? hittingStats?.rbi : '-'),
                 hittingStats?.avg || '-',
                 hittingStats?.ops || '-'
             ]);
