@@ -73,19 +73,19 @@ function subscribe (bot, liveGame, games) {
                 globalCache.values.game.startReported = false;
                 LOGGER.info('NOTIFIED OF GAME CONCLUSION: CLOSING...');
                 ws.close();
-                const linescore = await mlbAPIUtil.linescore(liveGame.gamePk);
-                const linescoreAttachment = new AttachmentBuilder(
-                    await commandUtil.buildLineScoreTable(globalCache.values.game.currentLiveFeed.gameData, linescore)
-                    , { name: 'line_score.png' });
-                globalCache.values.subscribedChannels.forEach((channel) => {
-                    bot.channels.fetch(channel.channel_id).then((returnedChannel) => {
-                        LOGGER.trace('Sending!');
-                        returnedChannel.send({
-                            content: commandUtil.constructGameDisplayString(globalCache.values.game.currentLiveFeed.gameData) + ' - **Final**',
-                            files: [linescoreAttachment]
-                        });
-                    });
-                });
+                // const linescore = await mlbAPIUtil.linescore(liveGame.gamePk);
+                // const linescoreAttachment = new AttachmentBuilder(
+                //     await commandUtil.buildLineScoreTable(globalCache.values.game.currentLiveFeed.gameData, linescore)
+                //     , { name: 'line_score.png' });
+                // globalCache.values.subscribedChannels.forEach((channel) => {
+                //     bot.channels.fetch(channel.channel_id).then((returnedChannel) => {
+                //         LOGGER.trace('Sending!');
+                //         returnedChannel.send({
+                //             content: commandUtil.constructGameDisplayString(globalCache.values.game.currentLiveFeed.gameData) + ' - **Final**',
+                //             files: [linescoreAttachment]
+                //         });
+                //     });
+                // });
                 await statusPoll(bot, games);
                 return;
             }
