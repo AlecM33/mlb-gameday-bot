@@ -145,7 +145,7 @@ module.exports = {
                 ephemeral: false,
                 content: 'Subscribed this channel to the gameday feed.\n' +
                     'Events: ' + (scoringPlaysOnly ? '**Scoring Plays Only**' : '**All Plays**') + '\n' +
-                    'Reporting Delay: **' + reportingDelay + ' seconds**'
+                    'Reporting Delay: **' + (reportingDelay || 0) + ' seconds**'
             });
         }
     },
@@ -192,7 +192,7 @@ module.exports = {
                 ephemeral: false,
                 content: 'Updated this channel\'s Gameday play reporting preferences:\n' +
                     'Events: ' + (scoringPlaysOnly ? '**Scoring Plays Only**' : '**All Plays**') + '\n' +
-                    'Reporting Delay: **' + reportingDelay + ' seconds**'
+                    'Reporting Delay: **' + (reportingDelay || 0) + ' seconds**'
             });
         }
     },
