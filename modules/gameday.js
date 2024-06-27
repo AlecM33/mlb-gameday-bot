@@ -103,11 +103,11 @@ function subscribe (bot, liveGame, games) {
                         // catching something here means our game object could now be incorrect. reset the live feed.
                         globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(liveGame.gamePk);
                     }
+                    await reportPlays(bot, liveGame.gamePk);
                 }
-                await reportPlays(bot, liveGame.gamePk, eventJSON.updateId);
             } else {
                 globalCache.values.game.currentLiveFeed = update;
-                await reportPlays(bot, liveGame.gamePk, eventJSON.updateId);
+                await reportPlays(bot, liveGame.gamePk);
             }
         } catch (e) {
             LOGGER.error('There was a problem processing a gameday event!');
@@ -123,7 +123,7 @@ function subscribe (bot, liveGame, games) {
     so we have to look back a bit to make sure we didn't miss anything. Sometimes, for example, an at-bat is quickly overridden
     by a new at-bat before we had a chance to report its result.
  */
-async function reportPlays (bot, gamePk, updateId) {
+async function reportPlays (bot, gamePk) {
     const currentPlay = globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay;
     const lastAtBatIndex = currentPlay.about.atBatIndex - 1;
     if (lastAtBatIndex >= 0) {
@@ -164,35 +164,61 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex) {
                 : globalCache.values.game.homeTeamColor
             ));
         const messages = [];
-        for (const channel of globalCache.values.subscribedChannels) {
-            const returnedChannel = await bot.channels.fetch(channel.channel_id);
-            if (!play.isScoringPlay && channel.scoring_plays_only) {
+        for (const channelSubscription of globalCache.values.subscribedChannels) {
+            const returnedChannel = await bot.channels.fetch(channelSubscription.channel_id);
+            if (!play.isScoringPlay && channelSubscription.scoring_plays_only) {
                 LOGGER.debug('Skipping - against the channel\'s preference');
             } else {
-                LOGGER.debug('Sending!');
-                const message = await returnedChannel.send({
-                    embeds: [embed]
-                });
-                messages.push(message);
+                if (channelSubscription.delay === 0) {
+                    await sendMessage(returnedChannel, embed, messages);
+                } else {
+                    LOGGER.debug('Waiting ' + channelSubscription.delay + ' seconds for channel: ' + channelSubscription.channel_id);
+                    await sendDelayedMessage(play, gamePk, channelSubscription, returnedChannel, embed, messages);
+                }
             }
         }
-        if (play.isInPlay && messages.length > 0) {
-            if (play.playId) {
-                try {
-                    // xBA and HR/Park for balls in play is available on a delay via baseballsavant.
-                    await pollForSavantData(gamePk, play.playId, messages, play.hitDistance);
-                } catch (e) {
-                    LOGGER.error('There was a problem polling for savant data!');
-                    LOGGER.error(e);
-                    notifySavantDataUnavailable(messages);
-                }
-            } else {
-                LOGGER.info('Play has no play ID.');
+        if (messages.length > 0) {
+            await maybePopulateAdvancedStatcastMetrics(play, messages, gamePk);
+        }
+    }
+}
+
+async function sendMessage (returnedChannel, embed, messages) {
+    LOGGER.debug('Sending!');
+    const message = await returnedChannel.send({
+        embeds: [embed]
+    });
+    messages.push(message);
+}
+
+async function sendDelayedMessage (play, gamePk, channelSubscription, returnedChannel, embed, messages) {
+    setTimeout(async () => {
+        LOGGER.debug('Sending!');
+        const message = await returnedChannel.send({
+            embeds: [embed]
+        });
+        // savant polling will be done for each delayed message individually. Not ideal, but shouldn't be too bad.
+        await maybePopulateAdvancedStatcastMetrics(play, [message], gamePk);
+    }, channelSubscription.delay * 1000);
+}
+
+async function maybePopulateAdvancedStatcastMetrics (play, messages, gamePk) {
+    if (play.isInPlay) {
+        if (play.playId) {
+            try {
+                // xBA and HR/Park for balls in play is available on a delay via baseballsavant.
+                await pollForSavantData(gamePk, play.playId, messages, play.hitDistance);
+            } catch (e) {
+                LOGGER.error('There was a problem polling for savant data!');
+                LOGGER.error(e);
                 notifySavantDataUnavailable(messages);
             }
         } else {
-            LOGGER.debug('Skipping savant poll - no channels are subscribed to this play.');
+            LOGGER.info('Play has no play ID.');
+            notifySavantDataUnavailable(messages);
         }
+    } else {
+        LOGGER.debug('Skipping savant poll - not in play.');
     }
 }
 
@@ -213,6 +239,7 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance) {
     const messageTrackers = messages.map(message => { return { id: message.id, done: false }; });
     const pollingFunction = async () => {
         if (messageTrackers.every(messageTracker => messageTracker.done)) {
+            LOGGER.debug('Savant: all messages done.');
             return;
         }
         if (attempts < 10) {

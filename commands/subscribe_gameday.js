@@ -8,7 +8,14 @@ module.exports = {
         .addBooleanOption(option =>
             option.setName('scoring_plays_only')
                 .setDescription('If true, the bot will only report scoring plays. The default is false.')
-                .setRequired(false)),
+                .setRequired(false))
+        .addIntegerOption(option =>
+            option.setName("reporting_delay")
+                .setDescription("A number of seconds between 0 and 180")
+                .setRequired(false)
+                .setMinValue(0)
+                .setMaxValue(180)
+        ),
     async execute (interaction) {
         try {
             await interactionHandlers.subscribeGamedayHandler(interaction);

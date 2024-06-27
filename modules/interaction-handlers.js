@@ -115,8 +115,14 @@ module.exports = {
             return;
         }
         const scoringPlaysOnly = interaction.options.getBoolean('scoring_plays_only');
+        const reportingDelay = interaction.options.getInteger('reporting_delay');
         if (interaction.channel) {
-            await queries.addToSubscribedChannels(interaction.guild.id, interaction.channel.id, scoringPlaysOnly || false).catch(async (e) => {
+            await queries.addToSubscribedChannels(
+                interaction.guild.id,
+                interaction.channel.id,
+                scoringPlaysOnly || false,
+                reportingDelay || 0
+            ).catch(async (e) => {
                 if (e.message.includes('duplicate key')) {
                     await interaction.reply({
                         content: 'This channel is already subscribed to the gameday feed.',
@@ -137,10 +143,9 @@ module.exports = {
         if (!interaction.replied) {
             await interaction.reply({
                 ephemeral: false,
-                content: 'Subscribed this channel to the gameday feed! It will receive ' +
-                    (scoringPlaysOnly
-                        ? 'real-time updates on scoring plays.'
-                        : 'real-time info about at-bat results and other key events.')
+                content: 'Subscribed this channel to the gameday feed.\n' +
+                    'Events: ' + (scoringPlaysOnly ? '**Scoring Plays Only**' : '**All Plays**') + '\n' +
+                    'Reporting Delay: **' + reportingDelay + ' seconds**'
             });
         }
     },
@@ -155,8 +160,14 @@ module.exports = {
             return;
         }
         const scoringPlaysOnly = interaction.options.getBoolean('scoring_plays_only');
+        const reportingDelay = interaction.options.getInteger('reporting_delay');
         if (interaction.channel) {
-            await queries.updatePlayPreference(interaction.guild.id, interaction.channel.id, scoringPlaysOnly)
+            await queries.updatePlayPreference(
+                interaction.guild.id,
+                interaction.channel.id,
+                scoringPlaysOnly,
+                reportingDelay
+            )
                 .then(async (rows) => {
                     if (rows.length === 0) {
                         await interaction.reply({
@@ -179,10 +190,9 @@ module.exports = {
         if (!interaction.replied) {
             await interaction.reply({
                 ephemeral: false,
-                content: 'Updated the subscription preference. The bot will ' +
-                    (scoringPlaysOnly
-                        ? 'only report scoring plays.'
-                        : 'report the results of at-bats and other key events.')
+                content: 'Updated this channel\'s Gameday play reporting preferences:\n' +
+                    'Events: ' + (scoringPlaysOnly ? '**Scoring Plays Only**' : '**All Plays**') + '\n' +
+                    'Reporting Delay: **' + reportingDelay + ' seconds**'
             });
         }
     },
