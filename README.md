@@ -1,8 +1,9 @@
 # MLB Gameday Bot ⚾
 A bot that integrates with the MLB Stats API to track your team of choice. For me, it's the Cleveland Guardians.
 
-Upon startup, the bot looks for your team's games in a 48-hour window centered on the current date. Whichever game (or games, in the case of a doubleheader) is the closest to the current date is
-set as the "current" game, and will be the game for which a lot of the commands returns data. Slash Commands include:
+When running, the bot periodically polls for games in a 48-hour window centered on the current date. Whichever game is closest in time is considered
+the "current" game, and will be the game for which a lot of the commands returns data. If a game is live, the bot subscribes to its MLB.com Gameday live feed,
+and in turn reports events to any number of subscribed Discord channels. Slash Commands include:
 
 - **/starters** - look at the starting pitching matchup for the current game. Includes portraits of both starters, their W/L, ERA, and WHIP, and a list of the pitches they throw.
 - **/standings** - check the standings for your team's division. 
@@ -11,9 +12,9 @@ set as the "current" game, and will be the game for which a lot of the commands 
 - **/box_score** - view the box score for the current game, including hitting and pitching stats.
 - **/scoring_plays** - get a curated list of scoring plays, with direct links to the play on the Gameday page.
 - **/highlights** - get a curated list of direct links to key plays from the game. The links provide high quality videos.
-- **/gameday_subscribe** - subscribe a given Discord channel to receive real-time updates from the "Gameday" feed! This command is restricted to certain roles. The bot connects to Gameday via a WebSocket and pushes events to each subscribed channel. Depending on your preference, this will report either just scoring plays or the results of all at-bats and other key events. The message includes a description of the play, any change in score, and statcast metrics for balls in play.
+- **/gameday_subscribe** - subscribe a given Discord channel to receive real-time updates from the "Gameday" feed. This command is restricted to certain roles. Users can adjust which plays the bot reports and customize a reporting delay. The message includes a description of the play, any change in score, and statcast metrics for balls in play.
 - **/gameday_unsubscribe** - un-subscribe a given Discord channel from the above functionality.
-- **/gameday_preference** - change the preference for the gameday description. This can be either "scoring plays only" or "all plays".
+- **/gameday_preference** - change the preference for the gameday subscription. This includes which types of plays to report ("all plays" or "scoring plays only") and a reporting delay of 0-180 seconds.
 - **/schedule** - view the upcoming schedule for the next week of games.
 - **/batter** - view stats on the batter that is up right now. Only available when a game is live.
 - **/pitcher** - view stats on the pitcher that is pitching right now. Only available when a game is live.
@@ -24,13 +25,11 @@ set as the "current" game, and will be the game for which a lot of the commands 
 
 Examples:
 
-![image](https://github.com/AlecM33/gameday-bot/assets/24642328/231357e8-3f13-4713-8fb0-c6496435e012)
+![image](./images/screenshots/homer.png)
 
-![image](https://github.com/AlecM33/gameday-bot/assets/24642328/43a1a36c-d7d3-4d7c-9d6f-6c91616944eb)
+![image](./images/screenshots/pitcher.png)
 
-![image](https://github.com/AlecM33/gameday-bot/assets/24642328/4fe71d7e-04bc-48fa-98e4-f3c96ec14dc2)
-
-![image](https://github.com/AlecM33/gameday-bot/assets/24642328/a3e2538f-5516-4260-a319-ba18d6906e4a)
+![image](./images/screenshots/scoring_plays.png)
 
 
 # Tech Stack
@@ -60,38 +59,40 @@ The bot is dependent on a short list of environment variables. When these are po
 - TEAM_ID - the team you want to follow. These match those of the "teams" resource in the MLB stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1 . They are also stored statically in `config/globals.js`. Every command will be configured for that team.
 - TOKEN - your bot's authentication token. **Obligatory 'this is sensitive' - be careful where you store it**
 
-If the bot starts up successfully, the start-up logs look something like the following (subject to your log level). In this case, a game is live:
+If the bot starts up successfully, the start-up logs look something like the following (subject to your log level):
 ```
-LOG    Sun, 23 Jun 2024 01:34:31 GMT :  bot successfully logged in
-LOG    Sun, 23 Jun 2024 01:34:31 GMT :  Ready!
-DEBUG  Sun, 23 Jun 2024 01:34:31 GMT :  https://statsapi.mlb.com/api/v1/schedule?hydrate=team,lineups&sportId=1&startDate=2024-06-22&endDate=2024-06-24&teamId=114
-LOG    Sun, 23 Jun 2024 01:34:31 GMT :  Current game PKs: [
+LOG    Fri, 28 Jun 2024 20:34:39 GMT :  Ready!
+LOG    Fri, 28 Jun 2024 20:34:39 GMT :  bot successfully logged in
+LOG    Fri, 28 Jun 2024 20:34:39 GMT :  Subscribed channels: [
   {
-    "key": 745402,
-    "date": "2024-06-22"
+    "channel_id": "1255985809509584953",
+    "scoring_plays_only": false,
+    "delay": 0
   },
   {
-    "key": 745396,
-    "date": "2024-06-23"
+    "channel_id": "758959662631747595",
+    "scoring_plays_only": false,
+    "delay": 10
+  }
+]
+LOG    Fri, 28 Jun 2024 20:34:39 GMT :  Games: polling...
+DEBUG  Fri, 28 Jun 2024 20:34:39 GMT :  https://statsapi.mlb.com/api/v1/schedule?hydrate=team,lineups&sportId=1&startDate=2024-06-27&endDate=2024-06-29&teamId=114
+LOG    Fri, 28 Jun 2024 20:34:39 GMT :  Current game PKs: [
+  {
+    "key": 746288,
+    "date": "2024-06-27"
   },
   {
-    "key": 745974,
-    "date": "2024-06-24"
-  }
-]
-LOG    Sun, 23 Jun 2024 01:34:31 GMT :  Subscribed channels: 1
-LOG    Sun, 23 Jun 2024 01:34:31 GMT :  Gameday: polling...
-TRACE  Sun, 23 Jun 2024 01:34:31 GMT :  Gameday: statuses are: [
+    "key": 746292,
+    "date": "2024-06-28"
+  },
   {
-    "gamePk": 745402,
-    "gameData": {
-      "status": {
-        "abstractGameState": "Live"
-      }
-    }
+    "key": 746289,
+    "date": "2024-06-29"
   }
 ]
-LOG    Sun, 23 Jun 2024 01:34:31 GMT :  Gameday: polling stopped: a game is live.
-DEBUG  Sun, 23 Jun 2024 01:34:31 GMT :  https://statsapi.mlb.com/api/v1.1/game/745402/feed/live
-TRACE  Sun, 23 Jun 2024 01:34:31 GMT :  Gameday: subscribing...
+LOG    Fri, 28 Jun 2024 20:34:39 GMT :  Refreshing nearest games in cache.
+
 ```
+
+As for contributions, I welcome suggestions on new features, improvements, etc. I also welcome proposals for collaboration. Just let me know.
