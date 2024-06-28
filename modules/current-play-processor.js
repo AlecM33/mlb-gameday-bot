@@ -100,5 +100,10 @@ function getGuardiansHomeRunDescription (description) {
     const player = /(?<person>.+)( homers| hits a grand slam)/.exec(description)?.groups.person;
     const partOfField = /to (?<partOfField>[a-zA-Z ]+) field./.exec(description)?.groups.partOfField;
     const scorers = /field.[ ]+(?<scorers>.+)/.exec(description)?.groups.scorers;
-    return player.toUpperCase() + ' WITH A SWING AND A DRIVE! TO DEEP ' + partOfField.toUpperCase() + '! A-WAAAAY BACK! GONE!!!\n' + (scorers || '');
+    const hrNumber = /.+(?<hrNumber>([\d]+))/.exec(description)?.groups.hrNumber;
+    return player.toUpperCase() +
+        ' WITH A SWING AND A DRIVE! TO DEEP ' +
+        partOfField.toUpperCase() +
+        '! A-WAAAAY BACK! GONE!!! (' + hrNumber + ')\n' +
+        (scorers || '');
 }

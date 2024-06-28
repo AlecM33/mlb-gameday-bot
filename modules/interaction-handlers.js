@@ -29,7 +29,7 @@ module.exports = {
             const hydratedAwayProbable = await commandUtil.hydrateProbable(probables.awayProbable);
 
             joinImages([hydratedHomeProbable.spot, hydratedAwayProbable.spot],
-                { direction: 'horizontal', offset: 20, margin: 5 })
+                { direction: 'horizontal', offset: 10, margin: 0, color: 'transparent' })
                 .then(async (img) => {
                     const attachment = new AttachmentBuilder((await img.png().toBuffer()), { name: 'matchupSpots.png' });
                     const myEmbed = new EmbedBuilder()
@@ -115,8 +115,14 @@ module.exports = {
             return;
         }
         const scoringPlaysOnly = interaction.options.getBoolean('scoring_plays_only');
+        const reportingDelay = interaction.options.getInteger('reporting_delay');
         if (interaction.channel) {
-            await queries.addToSubscribedChannels(interaction.guild.id, interaction.channel.id, scoringPlaysOnly || false).catch(async (e) => {
+            await queries.addToSubscribedChannels(
+                interaction.guild.id,
+                interaction.channel.id,
+                scoringPlaysOnly || false,
+                reportingDelay || 0
+            ).catch(async (e) => {
                 if (e.message.includes('duplicate key')) {
                     await interaction.reply({
                         content: 'This channel is already subscribed to the gameday feed.',
@@ -137,10 +143,9 @@ module.exports = {
         if (!interaction.replied) {
             await interaction.reply({
                 ephemeral: false,
-                content: 'Subscribed this channel to the gameday feed! It will receive ' +
-                    (scoringPlaysOnly
-                        ? 'real-time updates on scoring plays.'
-                        : 'real-time info about at-bat results and other key events.')
+                content: 'Subscribed this channel to the gameday feed.\n' +
+                    'Events: ' + (scoringPlaysOnly ? '**Scoring Plays Only**' : '**All Plays**') + '\n' +
+                    'Reporting Delay: **' + (reportingDelay || 0) + ' seconds**'
             });
         }
     },
@@ -155,8 +160,14 @@ module.exports = {
             return;
         }
         const scoringPlaysOnly = interaction.options.getBoolean('scoring_plays_only');
+        const reportingDelay = interaction.options.getInteger('reporting_delay');
         if (interaction.channel) {
-            await queries.updatePlayPreference(interaction.guild.id, interaction.channel.id, scoringPlaysOnly)
+            await queries.updatePlayPreference(
+                interaction.guild.id,
+                interaction.channel.id,
+                scoringPlaysOnly,
+                reportingDelay
+            )
                 .then(async (rows) => {
                     if (rows.length === 0) {
                         await interaction.reply({
@@ -179,10 +190,9 @@ module.exports = {
         if (!interaction.replied) {
             await interaction.reply({
                 ephemeral: false,
-                content: 'Updated the subscription preference. The bot will ' +
-                    (scoringPlaysOnly
-                        ? 'only report scoring plays.'
-                        : 'report the results of at-bats and other key events.')
+                content: 'Updated this channel\'s Gameday play reporting preferences:\n' +
+                    'Events: ' + (scoringPlaysOnly ? '**Scoring Plays Only**' : '**All Plays**') + '\n' +
+                    'Reporting Delay: **' + (reportingDelay || 0) + ' seconds**'
             });
         }
     },
@@ -617,24 +627,24 @@ function buildPitchingStatsMarkdown (pitchingStats, pitchMix, includeExtra = fal
     if (!pitchingStats) {
         reply += 'W-L: -\n' +
             'ERA: -.--\n' +
-            'WHIP: -.--\n' +
+            'WHIP: -.--' +
             (includeExtra
-                ? 'K/9: -.--\n' +
+                ? '\nK/9: -.--\n' +
                     'BB/9: -.--\n' +
                     'H/9: -.--\n' +
                     'HR/9: -.--\n' +
-                    'Saves/Opps: -/-\n'
+                    'Saves/Opps: -/-'
                 : '');
     } else {
         reply += 'W-L: ' + pitchingStats.wins + '-' + pitchingStats.losses + '\n' +
             'ERA: ' + pitchingStats.era + '\n' +
-            'WHIP: ' + pitchingStats.whip + '\n' +
+            'WHIP: ' + pitchingStats.whip +
             (includeExtra
-                ? 'K/9: ' + pitchingStats.strikeoutsPer9Inn + '\n' +
+                ? '\nK/9: ' + pitchingStats.strikeoutsPer9Inn + '\n' +
                     'BB/9: ' + pitchingStats.walksPer9Inn + '\n' +
                     'H/9: ' + pitchingStats.hitsPer9Inn + '\n' +
                     'HR/9: ' + pitchingStats.homeRunsPer9 + '\n' +
-                    'Saves/Opps: ' + pitchingStats.saves + '/' + pitchingStats.saveOpportunities + '\n'
+                    'Saves/Opps: ' + pitchingStats.saves + '/' + pitchingStats.saveOpportunities
                 : '');
     }
     reply += '\n**Arsenal:**' + '\n';
@@ -643,7 +653,7 @@ function buildPitchingStatsMarkdown (pitchingStats, pitchMix, includeExtra = fal
             let arsenal = '';
             for (let i = 0; i < pitchMix[0].length; i ++) {
                 arsenal += pitchMix[0][i] + ' (' + pitchMix[1][i] + '%)' +
-                    (includeExtra ? ':\n' + pitchMix[2][i] + ' mph, ' + pitchMix[3][i] + ' BAA\n' : '') + '\n';
+                   ': ' + pitchMix[2][i] + ' mph, ' + pitchMix[3][i] + ' BAA' + '\n';
             }
             return arsenal;
         })();

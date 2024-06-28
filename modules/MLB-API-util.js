@@ -69,7 +69,7 @@ const endpoints = {
             '/feed/live?fields=liveData,scoringPlays,plays,allPlays,about,halfInning,atBatIndex,result,description,playEvents,about,details,description';
     },
     statusCheck: (gamePk) => {
-        return 'https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live?fields=gamePk,gameData,status,abstractGameState';
+        return 'https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live?fields=gamePk,gameData,status,abstractGameState,statusCode';
     },
     people: (personIds) => {
         LOGGER.debug('https://statsapi.mlb.com/api/v1/people?personIds=' + personIds.reduce((acc, value) => acc + ',' + value, '') + '&hydrate=stats(type=season,groups=hitting,pitching)');
@@ -106,7 +106,7 @@ module.exports = {
                 if (games.length > 0) {
                     return games;
                 } else {
-                    return new Error('There is no recent or upcoming game!');
+                    throw new Error('There is no recent or upcoming game!');
                 }
             })
             .catch(function (err) {

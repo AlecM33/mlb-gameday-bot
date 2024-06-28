@@ -2,6 +2,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, GatewayIntentBits } = require('discord.js');
 const gameday = require('./modules/gameday');
+const globalCache = require("./modules/global-cache");
+const queries = require("./database/queries");
 const { LOG_LEVEL } = require('./config/globals');
 const LOGGER = require('./modules/logger')(process.env.LOG_LEVEL || LOG_LEVEL.INFO);
 
@@ -24,7 +26,9 @@ for (const file of commandFiles) {
 
 BOT.once('ready', async () => {
     LOGGER.info('Ready!');
-    await gameday.checkForCurrentGames(BOT);
+    globalCache.values.subscribedChannels = await queries.getAllSubscribedChannels();
+    LOGGER.info('Subscribed channels: ' + JSON.stringify(globalCache.values.subscribedChannels, null, 2));
+    await gameday.statusPoll(BOT);
 });
 
 BOT.login(process.env.TOKEN?.trim()).then(() => {

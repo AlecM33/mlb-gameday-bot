@@ -4,10 +4,12 @@ const path = require('path');
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_STRING?.trim(),
-    ssl: {
-        rejectUnauthorized: true,
-        ca: fs.readFileSync(path.join(__dirname, '/certs/ca.pem')).toString()
-    }
+    ssl: process.env.NODE_ENV.trim() !== 'development'
+        ? {
+            rejectUnauthorized: true,
+            ca: fs.readFileSync(path.join(__dirname, '/certs/ca.pem')).toString()
+        }
+        : false
 });
 
 pool.on('error', (err, client) => {
