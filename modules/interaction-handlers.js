@@ -29,7 +29,7 @@ module.exports = {
             const hydratedAwayProbable = await commandUtil.hydrateProbable(probables.awayProbable);
 
             joinImages([hydratedHomeProbable.spot, hydratedAwayProbable.spot],
-                { direction: 'horizontal', offset: 20, margin: 5 })
+                { direction: 'horizontal', offset: 10, margin: 0, color: 'transparent' })
                 .then(async (img) => {
                     const attachment = new AttachmentBuilder((await img.png().toBuffer()), { name: 'matchupSpots.png' });
                     const myEmbed = new EmbedBuilder()
@@ -627,24 +627,24 @@ function buildPitchingStatsMarkdown (pitchingStats, pitchMix, includeExtra = fal
     if (!pitchingStats) {
         reply += 'W-L: -\n' +
             'ERA: -.--\n' +
-            'WHIP: -.--\n' +
+            'WHIP: -.--' +
             (includeExtra
-                ? 'K/9: -.--\n' +
+                ? '\nK/9: -.--\n' +
                     'BB/9: -.--\n' +
                     'H/9: -.--\n' +
                     'HR/9: -.--\n' +
-                    'Saves/Opps: -/-\n'
+                    'Saves/Opps: -/-'
                 : '');
     } else {
         reply += 'W-L: ' + pitchingStats.wins + '-' + pitchingStats.losses + '\n' +
             'ERA: ' + pitchingStats.era + '\n' +
-            'WHIP: ' + pitchingStats.whip + '\n' +
+            'WHIP: ' + pitchingStats.whip +
             (includeExtra
-                ? 'K/9: ' + pitchingStats.strikeoutsPer9Inn + '\n' +
+                ? '\nK/9: ' + pitchingStats.strikeoutsPer9Inn + '\n' +
                     'BB/9: ' + pitchingStats.walksPer9Inn + '\n' +
                     'H/9: ' + pitchingStats.hitsPer9Inn + '\n' +
                     'HR/9: ' + pitchingStats.homeRunsPer9 + '\n' +
-                    'Saves/Opps: ' + pitchingStats.saves + '/' + pitchingStats.saveOpportunities + '\n'
+                    'Saves/Opps: ' + pitchingStats.saves + '/' + pitchingStats.saveOpportunities
                 : '');
     }
     reply += '\n**Arsenal:**' + '\n';
@@ -653,7 +653,7 @@ function buildPitchingStatsMarkdown (pitchingStats, pitchMix, includeExtra = fal
             let arsenal = '';
             for (let i = 0; i < pitchMix[0].length; i ++) {
                 arsenal += pitchMix[0][i] + ' (' + pitchMix[1][i] + '%)' +
-                    (includeExtra ? ':\n' + pitchMix[2][i] + ' mph, ' + pitchMix[3][i] + ' BAA\n' : '') + '\n';
+                   ': ' + pitchMix[2][i] + ' mph, ' + pitchMix[3][i] + ' BAA' + '\n';
             }
             return arsenal;
         })();
