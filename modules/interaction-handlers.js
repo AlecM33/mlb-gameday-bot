@@ -347,48 +347,21 @@ module.exports = {
             const game = globalCache.values.game.isDoubleHeader
                 ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId)) // the user's choice between the two games of the double-header.
                 : globalCache.values.nearestGames[0];
-            const content = await mlbAPIUtil.content(game.gamePk);
-            const highlights = content.highlights?.highlights?.items
-                ?.filter(item => item.keywordsAll?.find(keyword => keyword.value === 'in-game-highlight'))
-                ?.sort((a, b) => new Date(b.date) - new Date(a.date))
-                || [];
-            // discord limits messages to 2,000 characters. We very well might need a couple messages to link everything.
-            const messagesNeeded = Math.ceil(highlights.length / globals.HIGHLIGHTS_PER_MESSAGE);
-            if (messagesNeeded > 1) {
-                for (let i = 0; i < messagesNeeded; i ++) {
-                    const highlightsForMessage = highlights.slice(
-                        globals.HIGHLIGHTS_PER_MESSAGE * i,
-                        Math.min((globals.HIGHLIGHTS_PER_MESSAGE * (i + 1)), highlights.length)
-                    );
-                    if (i === 0) {
-                        await commandUtil.giveFinalCommandResponse(toHandle, {
-                            content: 'Highlights (Most recent first): ' + commandUtil.constructGameDisplayString(game) + '\n\n' + highlightsForMessage.reduce((acc, value) =>
-                                acc + '[' + value.title + '](<' + value.playbacks.find((playback) => playback.name === 'mp4Avc')?.url + '>)\n\n',
-                            ''),
-                            ephemeral: false,
-                            components: []
-                        });
-                    } else {
-                        await interaction.channel.send('\n' + highlightsForMessage.reduce((acc, value) =>
-                            acc + '[' + value.title + '](<' + value.playbacks.find((playback) => playback.name === 'mp4Avc')?.url + '>)\n\n',
-                        'Continued...\n\n'));
-                    }
-                }
-            } else if (messagesNeeded === 0) {
+            const statusCheck = await mlbAPIUtil.statusCheck(game.gamePk);
+            if (statusCheck.gameData.status.abstractGameState === 'Preview') {
                 await commandUtil.giveFinalCommandResponse(toHandle, {
-                    content: commandUtil.constructGameDisplayString(game) + '\nThere are no highlights available for this game yet.',
+                    content: commandUtil.constructGameDisplayString(game) + ' - There are no highlights for this game yet, but here\'s a preview:\n'
+                        + "https://www.mlb.com/stories/game-preview/" + game.gamePk,
                     ephemeral: false,
                     components: []
                 });
-            } else {
-                await commandUtil.giveFinalCommandResponse(toHandle, {
-                    content: '### Highlights: ' + commandUtil.constructGameDisplayString(game) + '\n' + highlights.reduce((acc, value) =>
-                        acc + '[' + value.title + '](<' + value.playbacks.find((playback) => playback.name === 'mp4Avc')?.url + '>)\n\n',
-                    ''),
-                    ephemeral: false,
-                    components: []
-                });
+                return
             }
+            await commandUtil.giveFinalCommandResponse(toHandle, {
+                content: '### Highlights: ' + commandUtil.constructGameDisplayString(game) + '\n' + "https://www.mlb.com/stories/game/" + game.gamePk,
+                ephemeral: false,
+                components: []
+            });
         }
     },
 

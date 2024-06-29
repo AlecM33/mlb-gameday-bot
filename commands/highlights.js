@@ -4,7 +4,7 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('highlights')
-        .setDescription('View in-game highlights from the current game.'),
+        .setDescription('View key moments from the current game.'),
     async execute (interaction) {
         try {
             await interactionHandlers.highlightsHandler(interaction);
