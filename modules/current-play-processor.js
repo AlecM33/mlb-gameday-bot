@@ -15,9 +15,8 @@ module.exports = {
             LOGGER.debug('REVIEW DETAILS: ' + JSON.stringify(currentPlayJSON.reviewDetails, null, 2));
         }
         let lastEvent;
-        if ((currentPlayJSON.about?.isComplete || globals.EVENT_WHITELIST.includes((currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType)))
-            && ((!currentPlayJSON.reviewDetails?.inProgress) || currentPlayJSON.details?.description.includes('call on the field was')) // a play that has been challenged
-        ) {
+        if (currentPlayJSON.about?.isComplete
+            || globals.EVENT_WHITELIST.includes((currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType))) {
             reply += getDescription(currentPlayJSON);
             if (currentPlayJSON.result?.isOut || currentPlayJSON.details?.isOut) {
                 reply += ' **' + currentPlayJSON.count.outs + (currentPlayJSON.count.outs > 1 ? ' outs. **' : ' out. **');
@@ -100,10 +99,10 @@ function getGuardiansHomeRunDescription (description) {
     const player = /(?<person>.+)( homers| hits a grand slam)/.exec(description)?.groups.person;
     const partOfField = /to (?<partOfField>[a-zA-Z ]+) field./.exec(description)?.groups.partOfField;
     const scorers = /field.[ ]+(?<scorers>.+)/.exec(description)?.groups.scorers;
-    const hrNumber = /.+(?<hrNumber>([\d]+))/.exec(description)?.groups.hrNumber;
+    const hrNumber = /.+(?<hrNumber>\([\d]+\))/.exec(description)?.groups.hrNumber;
     return player.toUpperCase() +
         ' WITH A SWING AND A DRIVE! TO DEEP ' +
         partOfField.toUpperCase() +
-        '! A-WAAAAY BACK! GONE!!! (' + hrNumber + ')\n' +
+        '! A-WAAAAY BACK! GONE!!! ' + hrNumber + '\n' +
         (scorers || '');
 }

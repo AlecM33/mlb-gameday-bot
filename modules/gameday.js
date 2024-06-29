@@ -90,8 +90,8 @@ function subscribe (bot, liveGame, games) {
                         // catching something here means our game object could now be incorrect. reset the live feed.
                         globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(liveGame.gamePk);
                     }
-                    await reportPlays(bot, liveGame.gamePk);
                 }
+                await reportPlays(bot, liveGame.gamePk);
             } else {
                 globalCache.values.game.currentLiveFeed = update;
                 await reportPlays(bot, liveGame.gamePk);
@@ -105,22 +105,8 @@ function subscribe (bot, liveGame, games) {
     ws.addEventListener('close', (e) => LOGGER.info('Gameday socket closed: ' + JSON.stringify(e)));
 }
 
-/*
-    This will report any results from the current play and its events, as well as from the previous play. The data moves fast sometimes,
-    so we have to look back a bit to make sure we didn't miss anything. Sometimes, for example, an at-bat is quickly overridden
-    by a new at-bat before we had a chance to report its result.
- */
 async function reportPlays (bot, gamePk) {
     const currentPlay = globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay;
-    const lastAtBatIndex = currentPlay.about.atBatIndex - 1;
-    if (lastAtBatIndex >= 0) {
-        const lastAtBat = globalCache.values.game.currentLiveFeed.liveData.plays.allPlays
-            .find((play) => play.about.atBatIndex === lastAtBatIndex);
-        if (lastAtBat) {
-            await reportAnyMissedEvents(lastAtBat, bot, gamePk, lastAtBatIndex);
-            await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat), gamePk, lastAtBatIndex);
-        }
-    }
     await reportAnyMissedEvents(currentPlay, bot, gamePk, currentPlay.about.atBatIndex);
     await processAndPushPlay(bot, currentPlayProcessor.process(currentPlay), gamePk, currentPlay.about.atBatIndex);
 }
@@ -156,7 +142,7 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex) {
             if (!play.isScoringPlay && channelSubscription.scoring_plays_only) {
                 LOGGER.debug('Skipping - against the channel\'s preference');
             } else {
-                if (channelSubscription.delay === 0) {
+                if (channelSubscription.delay === 0 || play.description === 'A game is starting! Go Guards!') {
                     await sendMessage(returnedChannel, embed, messages);
                 } else {
                     LOGGER.debug('Waiting ' + channelSubscription.delay + ' seconds for channel: ' + channelSubscription.channel_id);
