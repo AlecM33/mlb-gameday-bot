@@ -350,15 +350,15 @@ module.exports = {
             const statusCheck = await mlbAPIUtil.statusCheck(game.gamePk);
             if (statusCheck.gameData.status.abstractGameState === 'Preview') {
                 await commandUtil.giveFinalCommandResponse(toHandle, {
-                    content: commandUtil.constructGameDisplayString(game) + ' - There are no highlights for this game yet, but here\'s a preview:\n'
-                        + "https://www.mlb.com/stories/game-preview/" + game.gamePk,
+                    content: commandUtil.constructGameDisplayString(game) + ' - There are no highlights for this game yet, but here\'s a preview:\n' +
+                        'https://www.mlb.com/stories/game-preview/' + game.gamePk,
                     ephemeral: false,
                     components: []
                 });
-                return
+                return;
             }
             await commandUtil.giveFinalCommandResponse(toHandle, {
-                content: '### Highlights: ' + commandUtil.constructGameDisplayString(game) + '\n' + "https://www.mlb.com/stories/game/" + game.gamePk,
+                content: '### Highlights: ' + commandUtil.constructGameDisplayString(game) + '\n' + 'https://www.mlb.com/stories/game/' + game.gamePk,
                 ephemeral: false,
                 components: []
             });

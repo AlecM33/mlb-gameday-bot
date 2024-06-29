@@ -2,9 +2,8 @@ const mlbAPIUtil = require('./MLB-API-util');
 const globalCache = require('./global-cache');
 const diffPatch = require('./diff-patch');
 const currentPlayProcessor = require('./current-play-processor');
-const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
+const { EmbedBuilder } = require('discord.js');
 const globals = require('../config/globals');
-const commandUtil = require('./command-util');
 const LOGGER = require('./logger')(process.env.LOG_LEVEL || globals.LOG_LEVEL.INFO);
 const ColorContrastChecker = require('color-contrast-checker');
 
@@ -53,7 +52,7 @@ async function statusPoll (bot) {
             } else {
                 setTimeout(pollingFunction, globals.SLOW_POLL_INTERVAL);
             }
-        } catch(e) {
+        } catch (e) {
             LOGGER.error(e);
             globalCache.values.nearestGames = e;
         }
@@ -62,39 +61,38 @@ async function statusPoll (bot) {
 }
 
 function subscribe (bot, liveGame, games) {
-    let acknowledgedGameFinish = false;
     LOGGER.trace('Gameday: subscribing...');
     const ws = mlbAPIUtil.websocketSubscribe(liveGame.gamePk);
     ws.addEventListener('message', async (e) => {
         try {
             const eventJSON = JSON.parse(e.data);
-            if (eventJSON.gameEvents.includes('game_finished') && !acknowledgedGameFinish) {
-                acknowledgedGameFinish = true;
+            if (eventJSON.gameEvents.includes('game_finished') && !globalCache.values.game.finished) {
+                globalCache.values.game.finished = true;
                 globalCache.values.game.startReported = false;
                 LOGGER.info('NOTIFIED OF GAME CONCLUSION: CLOSING...');
                 ws.close();
                 await statusPoll(bot, games);
-                return;
-            }
-            LOGGER.trace('RECEIVED: ' + eventJSON.updateId);
-            const update = await mlbAPIUtil.websocketQueryUpdateId(
-                eventJSON.gamePk,
-                eventJSON.updateId,
-                globalCache.values.game.currentLiveFeed.metaData.timeStamp
-            );
-            if (Array.isArray(update)) {
-                for (const patch of update) {
-                    try {
-                        diffPatch.hydrate(patch);
-                    } catch (e) {
-                        // catching something here means our game object could now be incorrect. reset the live feed.
-                        globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(liveGame.gamePk);
+            } else if (!globalCache.values.game.finished) {
+                LOGGER.trace('RECEIVED: ' + eventJSON.updateId);
+                const update = await mlbAPIUtil.websocketQueryUpdateId(
+                    eventJSON.gamePk,
+                    eventJSON.updateId,
+                    globalCache.values.game.currentLiveFeed.metaData.timeStamp
+                );
+                if (Array.isArray(update)) {
+                    for (const patch of update) {
+                        try {
+                            diffPatch.hydrate(patch);
+                        } catch (e) {
+                            // catching something here means our game object could now be incorrect. reset the live feed.
+                            globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(liveGame.gamePk);
+                        }
                     }
+                    await reportPlays(bot, liveGame.gamePk);
+                } else {
+                    globalCache.values.game.currentLiveFeed = update;
+                    await reportPlays(bot, liveGame.gamePk);
                 }
-                await reportPlays(bot, liveGame.gamePk);
-            } else {
-                globalCache.values.game.currentLiveFeed = update;
-                await reportPlays(bot, liveGame.gamePk);
             }
         } catch (e) {
             LOGGER.error('There was a problem processing a gameday event!');
@@ -105,8 +103,22 @@ function subscribe (bot, liveGame, games) {
     ws.addEventListener('close', (e) => LOGGER.info('Gameday socket closed: ' + JSON.stringify(e)));
 }
 
+/*
+    This will report any results from the current play and its events, as well as from the previous play. The data moves fast sometimes,
+    so we have to look back a bit to make sure we didn't miss anything. Sometimes, for example, an at-bat is quickly overridden
+    by a new at-bat before we had a chance to report its result.
+ */
 async function reportPlays (bot, gamePk) {
     const currentPlay = globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay;
+    const lastAtBatIndex = currentPlay.about.atBatIndex - 1;
+    if (lastAtBatIndex >= 0) {
+        const lastAtBat = globalCache.values.game.currentLiveFeed.liveData.plays.allPlays
+            .find((play) => play.about.atBatIndex === lastAtBatIndex);
+        if (lastAtBat) {
+            await reportAnyMissedEvents(lastAtBat, bot, gamePk, lastAtBatIndex);
+            await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat), gamePk, lastAtBatIndex);
+        }
+    }
     await reportAnyMissedEvents(currentPlay, bot, gamePk, currentPlay.about.atBatIndex);
     await processAndPushPlay(bot, currentPlayProcessor.process(currentPlay), gamePk, currentPlay.about.atBatIndex);
 }

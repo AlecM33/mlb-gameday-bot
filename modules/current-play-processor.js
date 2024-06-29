@@ -63,7 +63,7 @@ function addMetrics (lastEvent, reply) {
     if (lastEvent.hitData.launchSpeed) { // this data can be randomly unavailable
         reply += '\n\n**Statcast Metrics:**\n';
         reply += 'Exit Velo: ' + lastEvent.hitData.launchSpeed + ' mph' +
-            (lastEvent.hitData.launchSpeed > 95.0 ? ' \uD83D\uDD25\uD83D\uDD25' : '') + '\n';
+            getFireEmojis(lastEvent.hitData.launchSpeed) + '\n';
         reply += 'Launch Angle: ' + lastEvent.hitData.launchAngle + '° \n';
         reply += 'Distance: ' + lastEvent.hitData.totalDistance + ' ft.\n';
         reply += 'xBA: Pending...\n';
@@ -78,6 +78,18 @@ function addMetrics (lastEvent, reply) {
     }
 
     return reply;
+}
+
+function getFireEmojis (launchSpeed) {
+    if (launchSpeed >= 95.0 && launchSpeed < 100.0) {
+        return ' \uD83D\uDD25';
+    } else if (launchSpeed >= 100.0 && launchSpeed < 110.0) {
+        return ' \uD83D\uDD25\uD83D\uDD25';
+    } else if (launchSpeed >= 110.0) {
+        return ' \uD83D\uDD25\uD83D\uDD25\uD83D\uDD25';
+    } else {
+        return '';
+    }
 }
 
 function getDescription (currentPlayJSON) {
@@ -100,9 +112,27 @@ function getGuardiansHomeRunDescription (description) {
     const partOfField = /to (?<partOfField>[a-zA-Z ]+) field./.exec(description)?.groups.partOfField;
     const scorers = /field.[ ]+(?<scorers>.+)/.exec(description)?.groups.scorers;
     const hrNumber = /.+(?<hrNumber>\([\d]+\))/.exec(description)?.groups.hrNumber;
-    return player.toUpperCase() +
+    return getHomeRunCall(player, partOfField, scorers, hrNumber);
+}
+
+function getHomeRunCall (player, partOfField, scorers, hrNumber) {
+    const calls = [
+        player.toUpperCase() +
         ' WITH A SWING AND A DRIVE! TO DEEP ' +
         partOfField.toUpperCase() +
         '! A-WAAAAY BACK! GONE!!! ' + hrNumber + '\n' +
-        (scorers || '');
+        (scorers || ''),
+        player +
+        ' is ready...the pitch...SWUNG ON AND BLASTED. DEEP ' +
+        partOfField.toUpperCase() +
+        ' FIELD! THIS BALL: GONE!! ' + hrNumber + '\n' +
+        (scorers || ''),
+        'The next pitch to ' + player +
+        '...SWUNG ON! HIT HIGH! HIT DEEP TO ' +
+        partOfField.toUpperCase() +
+        '! A-WAAAAY BACK! GONE!!! ' + hrNumber + '\n' +
+        (scorers || '')
+    ];
+
+    return calls[Math.floor(Math.random() * calls.length)];
 }
