@@ -87,8 +87,8 @@ function subscribe (bot, liveGame, games) {
                             // catching something here means our game object could now be incorrect. reset the live feed.
                             globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(liveGame.gamePk);
                         }
+                        await reportPlays(bot, liveGame.gamePk);
                     }
-                    await reportPlays(bot, liveGame.gamePk);
                 } else {
                     globalCache.values.game.currentLiveFeed = update;
                     await reportPlays(bot, liveGame.gamePk);
@@ -103,24 +103,23 @@ function subscribe (bot, liveGame, games) {
     ws.addEventListener('close', (e) => LOGGER.info('Gameday socket closed: ' + JSON.stringify(e)));
 }
 
-/*
-    This will report any results from the current play and its events, as well as from the previous play. The data moves fast sometimes,
-    so we have to look back a bit to make sure we didn't miss anything. Sometimes, for example, an at-bat is quickly overridden
-    by a new at-bat before we had a chance to report its result.
- */
 async function reportPlays (bot, gamePk) {
     const currentPlay = globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay;
-    const lastAtBatIndex = currentPlay.about.atBatIndex - 1;
-    if (lastAtBatIndex >= 0) {
+    const atBatIndex = currentPlay.atBatIndex;
+    const lastReportedAtBatIndex = globalCache.values.game.lastReportedAtBatIndex;
+    if (!currentPlay.about.isComplete
+        && lastReportedAtBatIndex !== null
+        && (atBatIndex - lastReportedAtBatIndex > 1)) { // indicates we missed the result of an at-bat. happens sometimes when the data moves quickly to the next at-bat.
+        LOGGER.trace('Missed at-bat index: ' + atBatIndex - 1);
         const lastAtBat = globalCache.values.game.currentLiveFeed.liveData.plays.allPlays
-            .find((play) => play.about.atBatIndex === lastAtBatIndex);
+            .find((play) => play.about.atBatIndex === atBatIndex - 1);
         if (lastAtBat) {
-            await reportAnyMissedEvents(lastAtBat, bot, gamePk, lastAtBatIndex);
-            await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat), gamePk, lastAtBatIndex);
+            await reportAnyMissedEvents(lastAtBat, bot, gamePk, atBatIndex - 1);
+            await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat), gamePk, atBatIndex - 1);
         }
     }
-    await reportAnyMissedEvents(currentPlay, bot, gamePk, currentPlay.about.atBatIndex);
-    await processAndPushPlay(bot, currentPlayProcessor.process(currentPlay), gamePk, currentPlay.about.atBatIndex);
+    await reportAnyMissedEvents(currentPlay, bot, gamePk, atBatIndex);
+    await processAndPushPlay(bot, currentPlayProcessor.process(currentPlay), gamePk, atBatIndex);
 }
 
 async function reportAnyMissedEvents (atBat, bot, gamePk, atBatIndex) {
@@ -138,6 +137,7 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex) {
         && !globalCache.values.game.reportedDescriptions
             .find(reportedDescription => reportedDescription.description === play.description && reportedDescription.atBatIndex === atBatIndex)) {
         globalCache.values.game.reportedDescriptions.push({ description: play.description, atBatIndex });
+        globalCache.values.game.lastReportedAtBatIndex = atBatIndex;
         const embed = new EmbedBuilder()
             .setTitle(deriveHalfInning(globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.halfInning) + ' ' +
                 globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.inning + ', ' +
@@ -158,7 +158,7 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex) {
                     await sendMessage(returnedChannel, embed, messages);
                 } else {
                     LOGGER.debug('Waiting ' + channelSubscription.delay + ' seconds for channel: ' + channelSubscription.channel_id);
-                    await sendDelayedMessage(play, gamePk, channelSubscription, returnedChannel, embed, messages);
+                    await sendDelayedMessage(play, gamePk, channelSubscription, returnedChannel, embed);
                 }
             }
         }
@@ -176,7 +176,7 @@ async function sendMessage (returnedChannel, embed, messages) {
     messages.push(message);
 }
 
-async function sendDelayedMessage (play, gamePk, channelSubscription, returnedChannel, embed, messages) {
+async function sendDelayedMessage (play, gamePk, channelSubscription, returnedChannel, embed) {
     setTimeout(async () => {
         LOGGER.debug('Sending!');
         const message = await returnedChannel.send({

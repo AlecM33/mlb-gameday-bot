@@ -4,7 +4,7 @@ const values = {
     game: {
         currentLiveFeed: null,
         isDoubleHeader: null,
-        lastCompleteAtBatIndex: null,
+        lastReportedAtBatIndex: null,
         lastReportedPlayDescription: null,
         startReported: false,
         reportedDescriptions: [],
@@ -17,7 +17,7 @@ const values = {
 function resetGameCache () {
     values.game.currentLiveFeed = null;
     values.game.isDoubleHeader = null;
-    values.game.lastCompleteAtBatIndex = null;
+    values.game.lastReportedAtBatIndex = null;
     values.game.lastReportedPlayDescription = null;
     values.game.startReported = false;
     values.game.reportedDescriptions = [];
