@@ -110,6 +110,7 @@ async function reportPlays (bot, gamePk) {
     if (!currentPlay.about.isComplete
         && lastReportedAtBatIndex !== null
         && (atBatIndex - lastReportedAtBatIndex > 1)) { // indicates we missed the result of an at-bat. happens sometimes when the data moves quickly to the next at-bat.
+        LOGGER.trace('Missed at-bat index: ' + atBatIndex - 1);
         const lastAtBat = globalCache.values.game.currentLiveFeed.liveData.plays.allPlays
             .find((play) => play.about.atBatIndex === atBatIndex - 1);
         if (lastAtBat) {
