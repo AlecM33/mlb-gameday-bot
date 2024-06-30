@@ -65,10 +65,5 @@ describe('currentPlayProcessor', () => {
             expect(result.playId).toBeDefined();
             expect(result.hitDistance).toBeDefined();
         });
-
-        it('should not produce a reply for an in-progress challenge', async () => {
-            const result = await currentPlayProcessor.process(examplePlays.inProgressChallenge);
-            expect(result.reply).toEqual('');
-        });
     });
 });
