@@ -15,50 +15,51 @@ module.exports = {
 
     startersHandler: async (interaction) => {
         console.info(`STARTERS command invoked by guild: ${interaction.guildId}`);
-        if (!globalCache.values.game.isDoubleHeader) {
-            await interaction.deferReply();
+        await interaction.deferReply();
+        // as opposed to other commands, this one will look for the nearest game that is not finished (AKA in "Live" or "Preview" status).
+        const game = globalCache.values.currentGames.find(game => game.status.abstractGameState !== 'Final')
+        if (!game) {
+            await interaction.followUp({
+                content: 'No game found that isn\'t Final. Is today/tomorrow an off day?',
+                ephemeral: false
+            });
+            return
         }
-        const toHandle = await commandUtil.screenInteraction(interaction);
-        if (toHandle) {
-            const game = globalCache.values.game.isDoubleHeader
-                ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId)) // the user's choice between the two games of the double-header.
-                : globalCache.values.nearestGames[0];
-            const matchup = await mlbAPIUtil.matchup(game.gamePk);
-            const probables = matchup.probables;
-            const hydratedHomeProbable = await commandUtil.hydrateProbable(probables.homeProbable);
-            const hydratedAwayProbable = await commandUtil.hydrateProbable(probables.awayProbable);
+        const matchup = await mlbAPIUtil.matchup(game.gamePk);
+        const probables = matchup.probables;
+        const hydratedHomeProbable = await commandUtil.hydrateProbable(probables.homeProbable);
+        const hydratedAwayProbable = await commandUtil.hydrateProbable(probables.awayProbable);
 
-            joinImages([hydratedHomeProbable.spot, hydratedAwayProbable.spot],
-                { direction: 'horizontal', offset: 10, margin: 0, color: 'transparent' })
-                .then(async (img) => {
-                    const attachment = new AttachmentBuilder((await img.png().toBuffer()), { name: 'matchupSpots.png' });
-                    const myEmbed = new EmbedBuilder()
-                        .setTitle('Pitching Matchup - ' + commandUtil.constructGameDisplayString(game))
-                        .setImage('attachment://matchupSpots.png')
-                        .addFields({
-                            name: (hydratedHomeProbable.handedness
-                                ? hydratedHomeProbable.handedness + 'HP **'
-                                : '**') + (probables.homeProbableLastName || 'TBD') + '** (' + probables.homeAbbreviation + ')',
-                            value: buildPitchingStatsMarkdown(hydratedHomeProbable.pitchingStats, hydratedHomeProbable.pitchMix),
-                            inline: true
-                        })
-                        .addFields({
-                            name: (hydratedAwayProbable.handedness
-                                ? hydratedAwayProbable.handedness + 'HP **'
-                                : '**') + (probables.awayProbableLastName || 'TBD') + '** (' + probables.awayAbbreviation + ')',
-                            value: buildPitchingStatsMarkdown(hydratedAwayProbable.pitchingStats, hydratedAwayProbable.pitchMix),
-                            inline: true
-                        });
-
-                    await commandUtil.giveFinalCommandResponse(toHandle, {
-                        ephemeral: false,
-                        files: [attachment],
-                        embeds: [myEmbed],
-                        components: [],
-                        content: ''
+        joinImages([hydratedHomeProbable.spot, hydratedAwayProbable.spot],
+            { direction: 'horizontal', offset: 10, margin: 0, color: 'transparent' })
+            .then(async (img) => {
+                const attachment = new AttachmentBuilder((await img.png().toBuffer()), { name: 'matchupSpots.png' });
+                const myEmbed = new EmbedBuilder()
+                    .setTitle('Pitching Matchup - ' + commandUtil.constructGameDisplayString(game))
+                    .setImage('attachment://matchupSpots.png')
+                    .addFields({
+                        name: (hydratedHomeProbable.handedness
+                            ? hydratedHomeProbable.handedness + 'HP **'
+                            : '**') + (probables.homeProbableLastName || 'TBD') + '** (' + probables.homeAbbreviation + ')',
+                        value: buildPitchingStatsMarkdown(hydratedHomeProbable.pitchingStats, hydratedHomeProbable.pitchMix),
+                        inline: true
+                    })
+                    .addFields({
+                        name: (hydratedAwayProbable.handedness
+                            ? hydratedAwayProbable.handedness + 'HP **'
+                            : '**') + (probables.awayProbableLastName || 'TBD') + '** (' + probables.awayAbbreviation + ')',
+                        value: buildPitchingStatsMarkdown(hydratedAwayProbable.pitchingStats, hydratedAwayProbable.pitchMix),
+                        inline: true
                     });
+
+                await commandUtil.giveFinalCommandResponse(interaction, {
+                    ephemeral: false,
+                    files: [attachment],
+                    embeds: [myEmbed],
+                    components: [],
+                    content: ''
                 });
-        }
+            });
     },
 
     scheduleHandler: async (interaction) => {
@@ -526,7 +527,7 @@ module.exports = {
                 content: commandUtil.constructGameDisplayString(game) + ': ' + currentLiveFeed.gameData.venue.name + ' attendance: ' +
                     (attendance && capacity
                         ? attendance.toLocaleString() + ' (' + Math.round((attendance / capacity) * 100) + '% capacity)'
-                        : 'Not Available (yet).')
+                        : 'Not Available (yet). This data is usually available near/just after the end of the game.')
             });
         }
     },
@@ -621,6 +622,10 @@ function buildPitchingStatsMarkdown (pitchingStats, pitchMix, includeExtra = fal
                 : '');
     }
     reply += '\n**Arsenal:**' + '\n';
+    if (pitchMix instanceof Error) {
+        reply += pitchMix.message;
+        return reply;
+    }
     if (pitchMix && pitchMix.length > 0 && pitchMix[0].length > 0) {
         reply += (() => {
             let arsenal = '';
