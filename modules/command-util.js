@@ -15,11 +15,15 @@ module.exports = {
             : game.lineups.awayPlayers;
         const people = (await mlbAPIUtil.people(lineup.map(lineupPlayer => lineupPlayer.id))).people;
         table.setHeading(['', '', '', 'B', 'HR', 'RBI', 'AVG', 'OPS']);
-        table.setHeadingAlign(AsciiTable.CENTER);
-        table.setAlign(4, AsciiTable.CENTER);
-        table.setAlign(5, AsciiTable.CENTER);
-        table.setAlign(6, AsciiTable.CENTER);
-        table.setAlign(7, AsciiTable.CENTER);
+        table.setHeadingAlign(AsciiTable.RIGHT);
+        table.setAlign(0, AsciiTable.RIGHT);
+        table.setAlign(1, AsciiTable.LEFT);
+        table.setAlign(2, AsciiTable.RIGHT);
+        table.setAlign(3, AsciiTable.RIGHT);
+        table.setAlign(4, AsciiTable.RIGHT);
+        table.setAlign(5, AsciiTable.RIGHT);
+        table.setAlign(6, AsciiTable.RIGHT);
+        table.setAlign(7, AsciiTable.RIGHT);
         for (let i = 0; i < lineup.length; i ++) {
             const hittingStats = people[i]?.stats?.find(stat => stat.group.displayName === 'hitting')?.splits[0]?.stat;
             table.addRow([
@@ -62,7 +66,7 @@ module.exports = {
         ]);
         return {
             spot,
-            pitchMix: getPitchCollections(new jsdom.JSDOM(savant)),
+            pitchMix: savant instanceof Error ? savant : getPitchCollections(new jsdom.JSDOM(savant)),
             pitchingStats: parsePitchingStats(people),
             handedness: people?.people[0].pitchHand?.code
         };

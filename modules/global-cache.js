@@ -1,5 +1,6 @@
 const values = {
     nearestGames: null,
+    currentGames: null,
     subscribedChannels: [],
     game: {
         currentLiveFeed: null,

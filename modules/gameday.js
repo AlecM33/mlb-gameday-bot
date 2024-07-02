@@ -20,13 +20,10 @@ async function statusPoll (bot) {
             LOGGER.info('Current game PKs: ' + JSON.stringify(currentGames
                 .map(game => { return { key: game.gamePk, date: game.officialDate }; }), null, 2));
             currentGames.sort((a, b) => Math.abs(now - new Date(a.gameDate)) - Math.abs(now - new Date(b.gameDate)));
+            globalCache.values.currentGames = currentGames;
             const nearestGames = currentGames.filter(game => game.officialDate === currentGames[0].officialDate); // could be more than one game for double-headers.
-            if (globalCache.values.nearestGames === null || !nearestGames.every(g => globalCache.values.nearestGames
-                .find(previouslySavedGame => previouslySavedGame.gamePk === g.gamePk))) { // check if our cached set of current games is outdated
-                LOGGER.info('Refreshing nearest games in cache.');
-                globalCache.values.nearestGames = nearestGames;
-                globalCache.values.game.isDoubleHeader = nearestGames.length > 1;
-            }
+            globalCache.values.nearestGames = nearestGames;
+            globalCache.values.game.isDoubleHeader = nearestGames.length > 1;
             const statusChecks = await Promise.all(nearestGames.map(game => mlbAPIUtil.statusCheck(game.gamePk)));
             LOGGER.trace('Gameday: statuses are: ' + JSON.stringify(statusChecks, null, 2));
             if (statusChecks.find(statusCheck => statusCheck.gameData.status.statusCode === 'I'
@@ -54,7 +51,6 @@ async function statusPoll (bot) {
             }
         } catch (e) {
             LOGGER.error(e);
-            globalCache.values.nearestGames = e;
         }
     };
     await pollingFunction();
