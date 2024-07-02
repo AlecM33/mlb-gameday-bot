@@ -33,7 +33,7 @@ module.exports = {
                 people[i].batSide.code,
                 (hittingStats?.homeRuns || hittingStats?.homeRuns === 0 ? hittingStats?.homeRuns : '-'),
                 (hittingStats?.rbi || hittingStats?.rbi === 0 ? hittingStats?.rbi : '-'),
-                hittingStats?.avg?.trim() || '-',
+                hittingStats?.avg || '-',
                 hittingStats?.ops || '-'
             ]);
         }
