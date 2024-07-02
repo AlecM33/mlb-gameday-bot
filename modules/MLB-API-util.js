@@ -54,9 +54,9 @@ const endpoints = {
     },
     savantPitchData: (personId) => {
         LOGGER.debug('https://baseballsavant.mlb.com/player-services/statcast-pitches-breakdown?playerId=' + personId +
-            '&position=1&pitchBreakdown=pitches&timeFrame=yearly&season=' + new Date().getFullYear() + '&updatePitches=true');
+            '&position=1&hand=&pitchBreakdown=pitches&timeFrame=yearly&season=' + new Date().getFullYear() + '&pitchType=&count=&updatePitches=true');
         return 'https://baseballsavant.mlb.com/player-services/statcast-pitches-breakdown?playerId=' + personId +
-            '&position=1&pitchBreakdown=pitches&timeFrame=yearly&season=' + new Date().getFullYear() + '&updatePitches=true';
+            '&position=1&hand=&pitchBreakdown=pitches&timeFrame=yearly&season=' + new Date().getFullYear() + '&pitchType=&count=&updatePitches=true';
     },
     xParks: (gamePk, playId) => {
         return 'https://baseballsavant.mlb.com/gamefeed/x-parks/' + gamePk + '/' + playId;
