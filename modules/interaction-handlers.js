@@ -527,7 +527,7 @@ module.exports = {
                 content: commandUtil.constructGameDisplayString(game) + ': ' + currentLiveFeed.gameData.venue.name + ' attendance: ' +
                     (attendance && capacity
                         ? attendance.toLocaleString() + ' (' + Math.round((attendance / capacity) * 100) + '% capacity)'
-                        : 'Not Available (yet). This data is usually available near/just after the end of the game.')
+                        : 'Not Available (yet). This data is usually available around the end of the game.')
             });
         }
     },

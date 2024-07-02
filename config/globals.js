@@ -94,7 +94,7 @@ module.exports = {
     SLOW_POLL_INTERVAL: 300000,
     HIGHLIGHTS_PER_MESSAGE: 8,
     SCORING_PLAYS_PER_MESSAGE: 8,
-    DATE: null,
+    DATE: "2024-07-01",
     ADMIN_ROLES: [ "Mod" ],
     TEAM_COLOR_CONTRAST_RATIO: 1.5,
     EVENTS: [
