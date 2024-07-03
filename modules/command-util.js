@@ -335,7 +335,7 @@ async function resolveDoubleHeaderSelection (interaction) {
 }
 
 function parsePitchingStats (people) {
-    return people?.people[0]?.stats.find(stat => stat.group.displayName === 'pitching')?.splits[0]?.stat;
+    return people?.people[0]?.stats?.find(stat => stat?.group?.displayName === 'pitching')?.splits[0]?.stat;
 }
 
 /* This is not the best solution, admittedly. We are building an HTML version of the table in a headless browser, styling
