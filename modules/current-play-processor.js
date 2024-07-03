@@ -8,7 +8,9 @@ module.exports = {
         if (!globalCache.values.game.startReported
             && currentPlayJSON.playEvents?.find(event => event?.details?.description === 'Status Change - In Progress')) {
             globalCache.values.game.startReported = true;
-            reply += 'A game is starting! Go Guards!';
+            reply += (globalCache.values.game.currentLiveFeed.gameData.teams.home.id === globals.GUARDIANS
+                ? 'And we\'re underway at the corner of Carnegie and Ontario.'
+                : 'A game is starting! Go Guards!')
         }
         if (currentPlayJSON.details?.hasReview) {
             LOGGER.debug('REVIEW DESCRIPTION: ' + JSON.stringify(currentPlayJSON.details?.description, null, 2));
