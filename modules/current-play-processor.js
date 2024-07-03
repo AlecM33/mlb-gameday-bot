@@ -42,7 +42,7 @@ module.exports = {
                 if (lastEvent?.details?.isInPlay) {
                     reply = addMetrics(lastEvent, reply);
                 }
-            } else if (currentPlayJSON.details?.isInPlay) {
+            } else if (currentPlayJSON.details?.isInPlay && !currentPlayJSON.about?.hasReview) {
                 reply = addMetrics(currentPlayJSON, reply);
             }
         }

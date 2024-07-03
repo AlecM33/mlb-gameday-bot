@@ -107,13 +107,15 @@ async function reportPlays (bot, gamePk) {
     const currentPlay = globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay;
     const atBatIndex = currentPlay.atBatIndex;
     const lastReportedAtBatIndex = globalCache.values.game.lastReportedAtBatIndex;
-    if (!currentPlay.about.isComplete
-        && lastReportedAtBatIndex !== null
-        && (atBatIndex - lastReportedAtBatIndex > 1)) { // indicates we missed the result of an at-bat. happens sometimes when the data moves quickly to the next at-bat.
-        LOGGER.trace('Missed at-bat index: ' + atBatIndex - 1);
+    if (atBatIndex > 0) {
         const lastAtBat = globalCache.values.game.currentLiveFeed.liveData.plays.allPlays
             .find((play) => play.about.atBatIndex === atBatIndex - 1);
-        if (lastAtBat) {
+        if (lastAtBat && lastAtBat.about.hasReview) {
+            await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat), gamePk, atBatIndex - 1);
+        } else if (!currentPlay.about.isComplete
+            && lastReportedAtBatIndex !== null
+            && (atBatIndex - lastReportedAtBatIndex > 1)) { // indicates we missed the result of an at-bat. happens rarely when the data moves quickly to the next at-bat.
+            LOGGER.trace('Missed at-bat index: ' + atBatIndex - 1);
             await reportAnyMissedEvents(lastAtBat, bot, gamePk, atBatIndex - 1);
             await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat), gamePk, atBatIndex - 1);
         }
