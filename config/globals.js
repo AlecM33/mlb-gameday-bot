@@ -305,13 +305,13 @@ module.exports = {
             secondaryColor: "#FF5910"
         }
     ],
-    HELP_MESSAGE: '`/starters` - examine the starting pitching matchup for the current game.\n'
+    HELP_MESSAGE: '`/starters` - examine the starting pitching matchup for the upcoming game.\n'
     +    '`/standings` - check the standings for your team\'s division.\n'
     +    '`/lineup` - view the lineup card for the current game.\n'
     +    '`/line_score` - view the line score for the current game.\n'
     +    '`/box_score` - view the box score for the current game, including hitting and pitching stats.\n'
     +    '`/scoring_plays` - get a curated list of scoring plays, with direct links to the play on the Gameday page.\n'
-    +    '`/highlights` - get a curated list of direct links to key plays from the game. The links provide high quality videos.\n'
+    +    '`/highlights` - get a link to key moments from the game.\n'
     +    '`/gameday_subscribe` - subscribe a given Discord channel to receive real-time updates from the "Gameday" feed! This command is restricted to certain roles. Messages include a description of the play, any change in score, and statcast metrics for balls in play.\n'
     +    '`/gameday_unsubscribe` - un-subscribe a given Discord channel from the above functionality.\n'
     +    '`/schedule` - view the upcoming schedule for the next week of games.\n'
