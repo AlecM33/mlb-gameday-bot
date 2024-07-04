@@ -89,25 +89,21 @@ const endpoints = {
 
 module.exports = {
     currentGames: async () => {
-        const twelveHoursFromNow = globals.DATE || new Date();
-        const twelveHoursInThePast = globals.DATE || new Date();
-        twelveHoursFromNow.setHours(twelveHoursFromNow.getHours() + 24);
-        twelveHoursInThePast.setHours(twelveHoursInThePast.getHours() - 24);
+        const twentyFourHoursFromNow = globals.DATE ? new Date(globals.DATE) : new Date();
+        const twentyFourHoursInThePast = globals.DATE ? new Date(globals.DATE) : new Date();
+        twentyFourHoursFromNow.setHours(twentyFourHoursFromNow.getHours() + 24);
+        twentyFourHoursInThePast.setHours(twentyFourHoursInThePast.getHours() - 24);
         // get games within a 48-hour window centered on now. The game(s) that have a start time closest to now will be treated as the "current" game(s).
         return fetch(endpoints.schedule(
-            twelveHoursInThePast.toISOString().split('T')[0],
-            twelveHoursFromNow.toISOString().split('T')[0],
+            twentyFourHoursInThePast.toISOString().split('T')[0],
+            twentyFourHoursFromNow.toISOString().split('T')[0],
             parseInt(process.env.TEAM_ID))
         )
             .then(async (scheduleResponse) => {
                 const dates = (await scheduleResponse.json()).dates;
                 const games = [];
                 dates.forEach((date) => date.games?.forEach(game => games.push(game)));
-                if (games.length > 0) {
-                    return games;
-                } else {
-                    throw new Error('There is no recent or upcoming game!');
-                }
+                return games;
             })
             .catch(function (err) {
                 throw err;
@@ -151,7 +147,17 @@ module.exports = {
         return (await fetch(endpoints.linescore(gamePk))).json();
     },
     savantPitchData: async (personId) => {
-        return (await fetch(endpoints.savantPitchData(personId))).text();
+        try {
+            return (await fetch(endpoints.savantPitchData(personId),
+                {
+                    signal: AbortSignal.timeout(3000)
+                }
+            )).text();
+        } catch(e) {
+            if (e.name === "TimeoutError") {
+                return new Error("Timed out trying to retrieve pitch data from Baseball Savant. :(")
+            }
+        }
     },
     content: async (gamePk) => {
         return (await fetch(endpoints.content(gamePk))).json();
@@ -178,7 +184,16 @@ module.exports = {
         return (await fetch(endpoints.xParks(gamePk, playId))).json();
     },
     savantGameFeed: async (gamePk) => {
-        return (await fetch(endpoints.savantGameFeed(gamePk))).json();
+        try {
+            return (await fetch(endpoints.savantGameFeed(gamePk),
+                {
+                    signal: AbortSignal.timeout(3000)
+                }
+            )).json();
+        } catch(e) {
+            LOGGER.error(e);
+            return {};
+        }
     },
     hitter: async (personId) => {
         return (await fetch(endpoints.hitter(personId))).json();

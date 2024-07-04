@@ -4,7 +4,7 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('starters')
-        .setDescription('Preview today\'s starting pitching matchup.'),
+        .setDescription('Preview the starting pitching matchup for an upcoming game.'),
     async execute (interaction) {
         try {
             await interactionHandlers.startersHandler(interaction);
