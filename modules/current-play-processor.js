@@ -1,6 +1,5 @@
 const globalCache = require('./global-cache');
 const globals = require('../config/globals');
-const LOGGER = require('./logger')(process.env.LOG_LEVEL || globals.LOG_LEVEL.INFO);
 
 module.exports = {
     process: (currentPlayJSON) => {
@@ -10,11 +9,7 @@ module.exports = {
             globalCache.values.game.startReported = true;
             reply += (globalCache.values.game.currentLiveFeed.gameData.teams.home.id === globals.GUARDIANS
                 ? 'And we\'re underway at the corner of Carnegie and Ontario.'
-                : 'A game is starting! Go Guards!')
-        }
-        if (currentPlayJSON.details?.hasReview) {
-            LOGGER.debug('REVIEW DESCRIPTION: ' + JSON.stringify(currentPlayJSON.details?.description, null, 2));
-            LOGGER.debug('REVIEW DETAILS: ' + JSON.stringify(currentPlayJSON.reviewDetails, null, 2));
+                : 'A game is starting! Go Guards!');
         }
         let lastEvent;
         if (currentPlayJSON.about?.isComplete
@@ -23,29 +18,18 @@ module.exports = {
             if (currentPlayJSON.result?.isOut || currentPlayJSON.details?.isOut) {
                 reply += ' **' + currentPlayJSON.count.outs + (currentPlayJSON.count.outs > 1 ? ' outs. **' : ' out. **');
             }
-            if (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details?.isScoringPlay) {
-                reply += '\n';
-                let homeScore, awayScore;
-                if (currentPlayJSON.result) {
-                    homeScore = currentPlayJSON.result.homeScore;
-                    awayScore = currentPlayJSON.result.awayScore;
-                } else if (currentPlayJSON.details) {
-                    homeScore = currentPlayJSON.details.homeScore;
-                    awayScore = currentPlayJSON.details.awayScore;
+            if (!currentPlayJSON.reviewDetails?.inProgress) {
+                if (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details?.isScoringPlay) {
+                    reply = addScore(reply, currentPlayJSON);
                 }
-                reply += (globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.halfInning === 'top'
-                    ? '# _' + globalCache.values.game.currentLiveFeed.gameData.teams.away.abbreviation + ' ' + awayScore + '_, ' +
-                        globalCache.values.game.currentLiveFeed.gameData.teams.home.abbreviation + ' ' + homeScore
-                    : '# ' + globalCache.values.game.currentLiveFeed.gameData.teams.away.abbreviation + ' ' + awayScore + ', _' +
-                        globalCache.values.game.currentLiveFeed.gameData.teams.home.abbreviation + ' ' + homeScore + '_');
-            }
-            if (currentPlayJSON.playEvents) {
-                lastEvent = currentPlayJSON.playEvents[currentPlayJSON.playEvents.length - 1];
-                if (lastEvent?.details?.isInPlay) {
-                    reply = addMetrics(lastEvent, reply);
+                if (currentPlayJSON.playEvents) {
+                    lastEvent = currentPlayJSON.playEvents[currentPlayJSON.playEvents.length - 1];
+                    if (lastEvent?.details?.isInPlay) {
+                        reply = addMetrics(lastEvent, reply);
+                    }
+                } else if (currentPlayJSON.details?.isInPlay) {
+                    reply = addMetrics(currentPlayJSON, reply);
                 }
-            } else if (currentPlayJSON.details?.isInPlay && !currentPlayJSON.about?.hasReview) {
-                reply = addMetrics(currentPlayJSON, reply);
             }
         }
         return {
@@ -60,6 +44,25 @@ module.exports = {
         };
     }
 };
+
+function addScore (reply, currentPlayJSON) {
+    reply += '\n';
+    let homeScore, awayScore;
+    if (currentPlayJSON.result) {
+        homeScore = currentPlayJSON.result.homeScore;
+        awayScore = currentPlayJSON.result.awayScore;
+    } else if (currentPlayJSON.details) {
+        homeScore = currentPlayJSON.details.homeScore;
+        awayScore = currentPlayJSON.details.awayScore;
+    }
+    reply += (globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.halfInning === 'top'
+        ? '# _' + globalCache.values.game.currentLiveFeed.gameData.teams.away.abbreviation + ' ' + awayScore + '_, ' +
+        globalCache.values.game.currentLiveFeed.gameData.teams.home.abbreviation + ' ' + homeScore
+        : '# ' + globalCache.values.game.currentLiveFeed.gameData.teams.away.abbreviation + ' ' + awayScore + ', _' +
+        globalCache.values.game.currentLiveFeed.gameData.teams.home.abbreviation + ' ' + homeScore + '_');
+
+    return reply;
+}
 
 function addMetrics (lastEvent, reply) {
     if (lastEvent.hitData.launchSpeed) { // this data can be randomly unavailable

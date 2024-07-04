@@ -153,9 +153,9 @@ module.exports = {
                     signal: AbortSignal.timeout(3000)
                 }
             )).text();
-        } catch(e) {
-            if (e.name === "TimeoutError") {
-                return new Error("Timed out trying to retrieve pitch data from Baseball Savant. :(")
+        } catch (e) {
+            if (e.name === 'TimeoutError') {
+                return new Error('Timed out trying to retrieve pitch data from Baseball Savant. :(');
             }
         }
     },
@@ -190,7 +190,7 @@ module.exports = {
                     signal: AbortSignal.timeout(3000)
                 }
             )).json();
-        } catch(e) {
+        } catch (e) {
             LOGGER.error(e);
             return {};
         }
