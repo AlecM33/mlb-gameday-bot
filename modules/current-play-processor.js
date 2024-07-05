@@ -18,10 +18,11 @@ module.exports = {
             if (currentPlayJSON.result?.isOut || currentPlayJSON.details?.isOut) {
                 reply += ' **' + currentPlayJSON.count.outs + (currentPlayJSON.count.outs > 1 ? ' outs. **' : ' out. **');
             }
-            if (!currentPlayJSON.reviewDetails?.inProgress) {
-                if (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details?.isScoringPlay) {
-                    reply = addScore(reply, currentPlayJSON);
-                }
+            if (!currentPlayJSON.reviewDetails?.inProgress
+                && (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details?.isScoringPlay)) {
+                reply = addScore(reply, currentPlayJSON);
+            }
+            if (!currentPlayJSON.about?.hasReview) {
                 if (currentPlayJSON.playEvents) {
                     lastEvent = currentPlayJSON.playEvents[currentPlayJSON.playEvents.length - 1];
                     if (lastEvent?.details?.isInPlay) {
@@ -34,6 +35,7 @@ module.exports = {
         }
         return {
             reply,
+            isComplete: currentPlayJSON.about?.isComplete,
             description: (currentPlayJSON.result?.description || currentPlayJSON.details?.description),
             event: (currentPlayJSON.result?.event || currentPlayJSON.details?.event),
             eventType: (currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType),
