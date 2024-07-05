@@ -154,8 +154,8 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex) {
         const embed = new EmbedBuilder()
             .setTitle(deriveHalfInning(globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.halfInning) + ' ' +
                 globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.inning + ', ' +
-                globalCache.values.game.currentLiveFeed.gameData.teams.home.abbreviation + ' vs. ' +
-                globalCache.values.game.currentLiveFeed.gameData.teams.away.abbreviation + (play.isScoringPlay ? ' - Scoring Play \u2757' : ''))
+                globalCache.values.game.currentLiveFeed.gameData.teams.away.abbreviation + ' vs. ' +
+                globalCache.values.game.currentLiveFeed.gameData.teams.home.abbreviation + (play.isScoringPlay ? ' - Scoring Play \u2757' : ''))
             .setDescription(play.reply)
             .setColor((globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.halfInning === 'top'
                 ? globalCache.values.game.awayTeamColor
