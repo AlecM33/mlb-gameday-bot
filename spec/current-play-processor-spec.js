@@ -50,20 +50,20 @@ describe('currentPlayProcessor', () => {
         });
 
         it('should correctly process a challenged play', async () => {
-            const result = await currentPlayProcessor.process(examplePlays.resolvedChallenge);
+            const result = currentPlayProcessor.process(examplePlays.resolvedChallenge);
             expect(result.reply).toMatch(/Brewers challenged \(tag play\), call on the field was upheld: Blake Perkins reaches on a fielder's choice out, shortstop Zach Neto to third baseman Luis Guillorme\. {3}Gary Sánchez out at 3rd\./);
-            expect(result.reply).toMatch(/Exit Velo/);
-            expect(result.reply).toMatch(/Launch Angle/);
-            expect(result.reply).toMatch(/Distance/);
-            expect(result.reply).toMatch(/xBA/);
+            expect(result.reply).not.toMatch(/Exit Velo/);
+            expect(result.reply).not.toMatch(/Launch Angle/);
+            expect(result.reply).not.toMatch(/Distance/);
+            expect(result.reply).not.toMatch(/xBA/);
             expect(result.reply).not.toMatch(/HR\/Park/);
             expect(result.description).toEqual('Brewers challenged (tag play), call on the field was upheld: Blake Perkins reaches on a fielder\'s choice out, shortstop Zach Neto to third baseman Luis Guillorme.   Gary Sánchez out at 3rd.');
             expect(result.event).toEqual('Fielders Choice Out');
             expect(result.eventType).toEqual('fielders_choice_out');
             expect(result.isScoringPlay).not.toBeDefined();
-            expect(result.isInPlay).toBeTrue();
-            expect(result.playId).toBeDefined();
-            expect(result.hitDistance).toBeDefined();
+            expect(result.isInPlay).not.toBeDefined();
+            expect(result.playId).not.toBeDefined();
+            expect(result.hitDistance).not.toBeDefined();
         });
     });
 });

@@ -1,7 +1,7 @@
 const globals = require('../config/globals');
 const ReconnectingWebSocket = require('reconnecting-websocket');
 const { LOG_LEVEL } = require('../config/globals');
-const LOGGER = require('./logger')(process.env.LOG_LEVEL || LOG_LEVEL.INFO);
+const LOGGER = require('./logger').init(process.env.LOG_LEVEL || LOG_LEVEL.INFO);
 
 const endpoints = {
     schedule: (startDate = '', endDate = '', teamId = parseInt(process.env.TEAM_ID)) => {
@@ -17,6 +17,9 @@ const endpoints = {
     liveFeed: (gamePk, fields = []) => {
         LOGGER.debug('https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live' + (fields.length > 0 ? '?fields=' + fields.join() : ''));
         return 'https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live' + (fields.length > 0 ? '?fields=' + fields.join() : '');
+    },
+    wsLiveFeed: (gamePk, updateId) => {
+        return 'https://ws.statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live?language=en&pushUpdateId=' + updateId;
     },
     liveFeedAtTimestamp: (gamePk, timestamp) => {
         return 'https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live?timecode=' + timestamp;
@@ -112,6 +115,9 @@ module.exports = {
     liveFeed: async (gamePk, fields) => {
         return (await fetch(endpoints.liveFeed(gamePk, fields))).json();
     },
+    wsLiveFeed: async (gamePk, updateId) => {
+        return (await fetch(endpoints.wsLiveFeed(gamePk, updateId))).json();
+    },
     liveFeedAtTimestamp: async (gamePk, timestamp) => {
         return (await fetch(endpoints.liveFeedAtTimestamp(gamePk, timestamp))).json();
     },
@@ -153,9 +159,9 @@ module.exports = {
                     signal: AbortSignal.timeout(3000)
                 }
             )).text();
-        } catch(e) {
-            if (e.name === "TimeoutError") {
-                return new Error("Timed out trying to retrieve pitch data from Baseball Savant. :(")
+        } catch (e) {
+            if (e.name === 'TimeoutError') {
+                return new Error('Timed out trying to retrieve pitch data from Baseball Savant. :(');
             }
         }
     },
@@ -190,7 +196,7 @@ module.exports = {
                     signal: AbortSignal.timeout(3000)
                 }
             )).json();
-        } catch(e) {
+        } catch (e) {
             LOGGER.error(e);
             return {};
         }

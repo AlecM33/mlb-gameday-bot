@@ -1,6 +1,6 @@
 const globalCache = require('./global-cache');
 const globals = require('../config/globals');
-const LOGGER = require('./logger')(process.env.LOG_LEVEL || globals.LOG_LEVEL.INFO);
+const LOGGER = require('./logger').init(process.env.LOG_LEVEL || globals.LOG_LEVEL.INFO);
 
 /*
     This module concerns updating the base MLB gameday object (AKA "GUMBO") with changes derived from the "diffPatch" resource

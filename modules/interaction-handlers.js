@@ -17,13 +17,13 @@ module.exports = {
         console.info(`STARTERS command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
         // as opposed to other commands, this one will look for the nearest game that is not finished (AKA in "Live" or "Preview" status).
-        const game = globalCache.values.currentGames.find(game => game.status.abstractGameState !== 'Final')
+        const game = globalCache.values.currentGames.find(game => game.status.abstractGameState !== 'Final');
         if (!game) {
             await interaction.followUp({
                 content: 'No game found that isn\'t Final. Is today/tomorrow an off day?',
                 ephemeral: false
             });
-            return
+            return;
         }
         const matchup = await mlbAPIUtil.matchup(game.gamePk);
         const probables = matchup.probables;

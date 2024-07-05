@@ -4,11 +4,11 @@ const diffPatch = require('./diff-patch');
 const currentPlayProcessor = require('./current-play-processor');
 const { EmbedBuilder } = require('discord.js');
 const globals = require('../config/globals');
-const LOGGER = require('./logger')(process.env.LOG_LEVEL || globals.LOG_LEVEL.INFO);
+const LOGGER = require('./logger').init(process.env.LOG_LEVEL || globals.LOG_LEVEL.INFO);
 const ColorContrastChecker = require('color-contrast-checker');
 
 module.exports = {
-    statusPoll
+    statusPoll, subscribe, getConstrastingEmbedColors, processAndPushPlay, pollForSavantData, processMatchingPlay
 };
 
 async function statusPoll (bot) {
@@ -18,34 +18,19 @@ async function statusPoll (bot) {
         try {
             const currentGames = await mlbAPIUtil.currentGames();
             LOGGER.info('Current game PKs: ' + JSON.stringify(currentGames
-                .map(game => { return { key: game.gamePk, date: game.officialDate }; }), null, 2));
+                .map(game => { return { key: game.gamePk, date: game.officialDate, status: game.status.statusCode }; }), null, 2));
             currentGames.sort((a, b) => Math.abs(now - new Date(a.gameDate)) - Math.abs(now - new Date(b.gameDate)));
             globalCache.values.currentGames = currentGames;
             const nearestGames = currentGames.filter(game => game.officialDate === currentGames[0].officialDate); // could be more than one game for double-headers.
             globalCache.values.nearestGames = nearestGames;
             globalCache.values.game.isDoubleHeader = nearestGames.length > 1;
-            const statusChecks = await Promise.all(nearestGames.map(game => mlbAPIUtil.statusCheck(game.gamePk)));
-            LOGGER.trace('Gameday: statuses are: ' + JSON.stringify(statusChecks, null, 2));
-            if (statusChecks.find(statusCheck => statusCheck.gameData.status.statusCode === 'I'
-                || statusCheck.gameData.status.statusCode === 'PW')) {
-                const liveGame = statusChecks
-                    .find(statusCheck => statusCheck.gameData.status.statusCode === 'I' || statusCheck.gameData.status.statusCode === 'PW');
+            const inProgressGame = nearestGames.find(nearestGame => nearestGame.status.statusCode === 'I' || nearestGame.status.statusCode === 'PW');
+            if (inProgressGame) {
                 LOGGER.info('Gameday: polling stopped: a game is live.');
                 globalCache.resetGameCache();
-                globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(liveGame.gamePk);
-                globalCache.values.game.homeTeamColor = globals.TEAMS.find(
-                    team => team.id === globalCache.values.game.currentLiveFeed.gameData.teams.home.id
-                ).primaryColor;
-                const awayTeam = globals.TEAMS.find(
-                    team => team.id === globalCache.values.game.currentLiveFeed.gameData.teams.away.id
-                );
-                const colorContrastChecker = new ColorContrastChecker();
-                if (colorContrastChecker.isLevelCustom(globalCache.values.game.homeTeamColor, awayTeam.primaryColor, globals.TEAM_COLOR_CONTRAST_RATIO)) {
-                    globalCache.values.game.awayTeamColor = awayTeam.primaryColor;
-                } else {
-                    globalCache.values.game.awayTeamColor = awayTeam.secondaryColor;
-                }
-                subscribe(bot, liveGame, nearestGames);
+                globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(inProgressGame.gamePk);
+                module.exports.getConstrastingEmbedColors();
+                module.exports.subscribe(bot, inProgressGame, nearestGames);
             } else {
                 setTimeout(pollingFunction, globals.SLOW_POLL_INTERVAL);
             }
@@ -62,6 +47,19 @@ function subscribe (bot, liveGame, games) {
     ws.addEventListener('message', async (e) => {
         try {
             const eventJSON = JSON.parse(e.data);
+            /*
+                Once in a while, Gameday will send us duplicate messages. They have different updateIds, but the exact
+                same information otherwise, and they arrive at virtually the same instant. This is our way of detecting those
+                and disregarding one of them up front. Otherwise the heavily asynchronous code that follows can end up
+                reporting both events incidentally.
+             */
+            if (globalCache.values.game.lastSocketMessageTimestamp === eventJSON.timeStamp
+                && globalCache.values.game.lastSocketMessageLength === e.data.length) {
+                LOGGER.trace('DUPLICATE MESSAGE: ' + eventJSON.updateId + ' - DISREGARDING');
+                return;
+            }
+            globalCache.values.game.lastSocketMessageTimestamp = eventJSON.timeStamp;
+            globalCache.values.game.lastSocketMessageLength = e.data.length;
             if (eventJSON.gameEvents.includes('game_finished') && !globalCache.values.game.finished) {
                 globalCache.values.game.finished = true;
                 globalCache.values.game.startReported = false;
@@ -70,11 +68,16 @@ function subscribe (bot, liveGame, games) {
                 await statusPoll(bot, games);
             } else if (!globalCache.values.game.finished) {
                 LOGGER.trace('RECEIVED: ' + eventJSON.updateId);
-                const update = await mlbAPIUtil.websocketQueryUpdateId(
-                    eventJSON.gamePk,
-                    eventJSON.updateId,
-                    globalCache.values.game.currentLiveFeed.metaData.timeStamp
-                );
+                if (eventJSON.changeEvent?.type === 'full_refresh') {
+                    LOGGER.trace('FULL REFRESH FOR: ' + eventJSON.updateId);
+                }
+                const update = eventJSON.changeEvent?.type === 'full_refresh'
+                    ? await mlbAPIUtil.wsLiveFeed(eventJSON.gamePk, eventJSON.updateId)
+                    : await mlbAPIUtil.websocketQueryUpdateId(
+                        eventJSON.gamePk,
+                        eventJSON.updateId,
+                        globalCache.values.game.currentLiveFeed.metaData.timeStamp
+                    );
                 if (Array.isArray(update)) {
                     for (const patch of update) {
                         try {
@@ -99,17 +102,33 @@ function subscribe (bot, liveGame, games) {
     ws.addEventListener('close', (e) => LOGGER.info('Gameday socket closed: ' + JSON.stringify(e)));
 }
 
+function getConstrastingEmbedColors () {
+    globalCache.values.game.homeTeamColor = globals.TEAMS.find(
+        team => team.id === globalCache.values.game.currentLiveFeed.gameData.teams.home.id
+    ).primaryColor;
+    const awayTeam = globals.TEAMS.find(
+        team => team.id === globalCache.values.game.currentLiveFeed.gameData.teams.away.id
+    );
+    const colorContrastChecker = new ColorContrastChecker();
+    if (colorContrastChecker.isLevelCustom(globalCache.values.game.homeTeamColor, awayTeam.primaryColor, globals.TEAM_COLOR_CONTRAST_RATIO)) {
+        globalCache.values.game.awayTeamColor = awayTeam.primaryColor;
+    } else {
+        globalCache.values.game.awayTeamColor = awayTeam.secondaryColor;
+    }
+}
+
 async function reportPlays (bot, gamePk) {
     const currentPlay = globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay;
     const atBatIndex = currentPlay.atBatIndex;
-    const lastReportedAtBatIndex = globalCache.values.game.lastReportedAtBatIndex;
-    if (!currentPlay.about.isComplete
-        && lastReportedAtBatIndex !== null
-        && (atBatIndex - lastReportedAtBatIndex > 1)) { // indicates we missed the result of an at-bat. happens sometimes when the data moves quickly to the next at-bat.
-        LOGGER.trace('Missed at-bat index: ' + atBatIndex - 1);
+    const lastReportedCompleteAtBatIndex = globalCache.values.game.lastReportedCompleteAtBatIndex;
+    if (atBatIndex > 0) {
         const lastAtBat = globalCache.values.game.currentLiveFeed.liveData.plays.allPlays
             .find((play) => play.about.atBatIndex === atBatIndex - 1);
-        if (lastAtBat) {
+        if (lastAtBat && lastAtBat.about.hasReview) { // a play that's been challenged. We should report updates on it.
+            await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat), gamePk, atBatIndex - 1);
+        } else if (lastReportedCompleteAtBatIndex !== null
+            && (atBatIndex - lastReportedCompleteAtBatIndex > 1)) { // indicates we missed the result of an at-bat. happens rarely when the data moves quickly to the next at-bat.
+            LOGGER.trace('Missed at-bat index: ' + atBatIndex - 1);
             await reportAnyMissedEvents(lastAtBat, bot, gamePk, atBatIndex - 1);
             await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat), gamePk, atBatIndex - 1);
         }
@@ -133,7 +152,9 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex) {
         && !globalCache.values.game.reportedDescriptions
             .find(reportedDescription => reportedDescription.description === play.description && reportedDescription.atBatIndex === atBatIndex)) {
         globalCache.values.game.reportedDescriptions.push({ description: play.description, atBatIndex });
-        globalCache.values.game.lastReportedAtBatIndex = atBatIndex;
+        if (play.isComplete) {
+            globalCache.values.game.lastReportedCompleteAtBatIndex = atBatIndex;
+        }
         const embed = new EmbedBuilder()
             .setTitle(deriveHalfInning(globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.halfInning) + ' ' +
                 globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.inning + ', ' +
@@ -229,39 +250,7 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance) {
             const matchingPlay = gameFeed?.team_away?.find(play => play?.play_id === playId)
                 || gameFeed?.team_home?.find(play => play?.play_id === playId);
             if (matchingPlay && (matchingPlay.xba || matchingPlay.contextMetrics?.homeRunBallparks !== undefined)) {
-                for (let i = 0; i < messages.length; i ++) {
-                    const receivedEmbed = EmbedBuilder.from(messages[i].embeds[0]);
-                    let description = messages[i].embeds[0].description;
-                    if (matchingPlay.xba && description.includes('xBA: Pending...')) {
-                        LOGGER.debug('Editing with xba: ' + playId);
-                        description = description.replaceAll('xBA: Pending...', 'xBA: ' + matchingPlay.xba +
-                            (parseFloat(matchingPlay.xba) > 0.5 ? ' \uD83D\uDFE2' : ''));
-                        receivedEmbed.setDescription(description);
-                        messages[i].edit({
-                            embeds: [receivedEmbed]
-                        });
-                        if (hitDistance && hitDistance < 300) {
-                            LOGGER.debug('Found xba, done polling for: ' + playId);
-                            messageTrackers.find(tracker => tracker.id === messages[i].id).done = true;
-                        }
-                    }
-                    if (hitDistance && hitDistance >= 300
-                        && matchingPlay.contextMetrics.homeRunBallparks !== undefined
-                        && description.includes('HR/Park: Pending...')) {
-                        LOGGER.debug('Editing with HR/Park: ' + playId);
-                        description = description.replaceAll('HR/Park: Pending...', 'HR/Park: ' +
-                            matchingPlay.contextMetrics.homeRunBallparks + '/30' +
-                            (matchingPlay.contextMetrics.homeRunBallparks === 30 ? '\u203C\uFE0F' : ''));
-                        receivedEmbed.setDescription(description);
-                        messages[i].edit({
-                            embeds: [receivedEmbed]
-                        });
-                        if (matchingPlay.xba) {
-                            LOGGER.debug('Found all metrics: done polling for: ' + playId);
-                            messageTrackers.find(tracker => tracker.id === messages[i].id).done = true;
-                        }
-                    }
-                }
+                module.exports.processMatchingPlay(matchingPlay, messages, messageTrackers, playId, hitDistance);
             }
             attempts ++;
             setTimeout(async () => { await pollingFunction(); }, globals.SAVANT_POLLING_INTERVAL);
@@ -270,7 +259,43 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance) {
             notifySavantDataUnavailable(messages);
         }
     };
-    setTimeout(async () => { await pollingFunction(); }, globals.SAVANT_POLLING_INTERVAL);
+    await pollingFunction();
+}
+
+function processMatchingPlay (matchingPlay, messages, messageTrackers, playId, hitDistance) {
+    for (let i = 0; i < messages.length; i ++) {
+        const receivedEmbed = EmbedBuilder.from(messages[i].embeds[0]);
+        let description = messages[i].embeds[0].description;
+        if (matchingPlay.xba && description.includes('xBA: Pending...')) {
+            LOGGER.debug('Editing with xba: ' + playId);
+            description = description.replaceAll('xBA: Pending...', 'xBA: ' + matchingPlay.xba +
+                (parseFloat(matchingPlay.xba) > 0.5 ? ' \uD83D\uDFE2' : ''));
+            receivedEmbed.setDescription(description);
+            messages[i].edit({
+                embeds: [receivedEmbed]
+            }).then((m) => LOGGER.trace('Edited: ' + m.id)).catch((e) => console.error(e));
+            if (hitDistance && hitDistance < 300) {
+                LOGGER.debug('Found xba, done polling for: ' + playId);
+                messageTrackers.find(tracker => tracker.id === messages[i].id).done = true;
+            }
+        }
+        if (hitDistance && hitDistance >= 300
+            && matchingPlay.contextMetrics.homeRunBallparks !== undefined
+            && description.includes('HR/Park: Pending...')) {
+            LOGGER.debug('Editing with HR/Park: ' + playId);
+            description = description.replaceAll('HR/Park: Pending...', 'HR/Park: ' +
+                matchingPlay.contextMetrics.homeRunBallparks + '/30' +
+                (matchingPlay.contextMetrics.homeRunBallparks === 30 ? '\u203C\uFE0F' : ''));
+            receivedEmbed.setDescription(description);
+            messages[i].edit({
+                embeds: [receivedEmbed]
+            }).then((m) => LOGGER.trace('Edited: ' + m.id)).catch((e) => console.error(e));
+            if (matchingPlay.xba) {
+                LOGGER.debug('Found all metrics: done polling for: ' + playId);
+                messageTrackers.find(tracker => tracker.id === messages[i].id).done = true;
+            }
+        }
+    }
 }
 
 function deriveHalfInning (halfInningFull) {
