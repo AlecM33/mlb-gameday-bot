@@ -5,7 +5,7 @@ const gameday = require('./modules/gameday');
 const globalCache = require("./modules/global-cache");
 const queries = require("./database/queries");
 const { LOG_LEVEL } = require('./config/globals');
-const LOGGER = require('./modules/logger')(process.env.LOG_LEVEL || LOG_LEVEL.INFO);
+const LOGGER = require('./modules/logger').init(process.env.LOG_LEVEL || LOG_LEVEL.INFO);
 
 const BOT = new Client({
     intents: [
