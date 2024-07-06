@@ -1,6 +1,8 @@
 # MLB Gameday Bot ⚾
 For demos of the bot's commands, view its github pages site here: https://alecm33.github.io/gameday-bot/
 
+This bot and its author are not affiliated with the MLB. The bot uses the MLB Stats API, which is subject to the notice posted at http://gdx.mlb.com/components/copyright.txt
+
 A Discord bot that integrates with the MLB Stats API to track your team of choice. For me, it's the Cleveland Guardians.
 
 When running, the bot periodically polls for games in a 48-hour window centered on the current date. Whichever game is closest in time is considered
