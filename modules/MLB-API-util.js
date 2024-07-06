@@ -174,7 +174,7 @@ module.exports = {
         try {
             return (await fetch(endpoints.savantPitchData(personId),
                 {
-                    signal: AbortSignal.timeout(3000)
+                    signal: AbortSignal.timeout(5000)
                 }
             )).text();
         } catch (e) {
