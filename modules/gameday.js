@@ -4,7 +4,7 @@ const diffPatch = require('./diff-patch');
 const currentPlayProcessor = require('./current-play-processor');
 const { EmbedBuilder } = require('discord.js');
 const globals = require('../config/globals');
-const LOGGER = require('./logger').init(process.env.LOG_LEVEL || globals.LOG_LEVEL.INFO);
+const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_LEVEL.INFO);
 const ColorContrastChecker = require('color-contrast-checker');
 
 module.exports = {

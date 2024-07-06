@@ -1,7 +1,7 @@
 const globals = require('../config/globals');
 const ReconnectingWebSocket = require('reconnecting-websocket');
 const { LOG_LEVEL } = require('../config/globals');
-const LOGGER = require('./logger').init(process.env.LOG_LEVEL || LOG_LEVEL.INFO);
+const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || LOG_LEVEL.INFO);
 
 const endpoints = {
     schedule: (startDate = '', endDate = '', teamId = parseInt(process.env.TEAM_ID)) => {

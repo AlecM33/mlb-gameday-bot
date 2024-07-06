@@ -5,7 +5,7 @@ const mlbAPIUtil = require('./MLB-API-util');
 const jsdom = require('jsdom');
 const globals = require('../config/globals');
 const puppeteer = require('puppeteer');
-const LOGGER = require('./logger').init(process.env.LOG_LEVEL || globals.LOG_LEVEL.INFO);
+const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_LEVEL.INFO);
 
 module.exports = {
     getLineupCardTable: async (game) => {

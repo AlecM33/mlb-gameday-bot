@@ -1,7 +1,6 @@
 const { LOG_LEVEL } = require('../config/globals');
 
-module.exports = {
-    init: (logLevel = LOG_LEVEL.INFO) => {
+module.exports = function (logLevel = LOG_LEVEL.INFO) {
         return {
             logLevel,
             info (message = '') {
@@ -44,5 +43,4 @@ module.exports = {
                 console.error('TRACE ', now.toGMTString(), ': ', message);
             }
         };
-    }
 };
