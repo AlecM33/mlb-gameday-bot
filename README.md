@@ -38,7 +38,7 @@ Examples:
 
 # Tech Stack
 
-Written in JavaScript using [Discord.js](https://discord.js.org/).
+Written in JavaScript using [Discord.js](https://discord.js.org/). Running on the Heroku platform.
 
 The bot uses a PostgreSQL database hosted for free on the [Aiven Platform](https://aiven.io/) to keep track of the Discord channels that have subscribed to the real-time gameday feature.
 
