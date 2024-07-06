@@ -138,10 +138,24 @@ module.exports = {
     },
     websocketSubscribe: (gamePk) => {
         const { WebSocket } = require('ws');
-        return new ReconnectingWebSocket(endpoints.websocketSubscribe(gamePk),
+        const socket = new ReconnectingWebSocket(endpoints.websocketSubscribe(gamePk),
             [],
-            { WebSocket, maxRetries: 5 }
+            { WebSocket, maxRetries: 3 }
         );
+        let heartbeatInterval;
+        const heartbeat = () => {
+            LOGGER.debug('ping: Gameday5');
+            socket.send('Gameday5');
+        };
+        socket.addEventListener('open', () => {
+            LOGGER.info('Gameday socket opened.');
+            heartbeatInterval = setInterval(heartbeat, globals.GAMEDAY_PING_INTERVAL);
+        });
+        socket.addEventListener('close', () => {
+            clearInterval(heartbeatInterval);
+        });
+
+        return socket;
     },
     websocketQueryUpdateId: async (gamePk, updateId, timestamp) => {
         return (await fetch(endpoints.websocketQueryUpdateId(gamePk, updateId, timestamp))).json();

@@ -7,9 +7,13 @@ module.exports = {
         if (!globalCache.values.game.startReported
             && currentPlayJSON.playEvents?.find(event => event?.details?.description === 'Status Change - In Progress')) {
             globalCache.values.game.startReported = true;
-            reply += (globalCache.values.game.currentLiveFeed.gameData.teams.home.id === globals.GUARDIANS
-                ? 'And we\'re underway at the corner of Carnegie and Ontario.'
-                : 'A game is starting! Go Guards!');
+            if (parseInt(process.env.TEAM_ID) === globals.GUARDIANS) {
+                reply += (globalCache.values.game.currentLiveFeed.gameData.teams.home.id === globals.GUARDIANS
+                    ? 'And we\'re underway at the corner of Carnegie and Ontario.'
+                    : 'A game is starting! Go Guards!');
+            } else {
+                reply += 'A game is starting!';
+            }
         }
         let lastEvent;
         if (currentPlayJSON.about?.isComplete
