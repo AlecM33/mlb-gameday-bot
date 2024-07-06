@@ -126,8 +126,10 @@ async function reportPlays (bot, gamePk) {
             .find((play) => play.about.atBatIndex === atBatIndex - 1);
         if (lastAtBat && lastAtBat.about.hasReview) { // a play that's been challenged. We should report updates on it.
             await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat), gamePk, atBatIndex - 1);
+        /* TODO: the below block detects and handles if we missed the result of an at-bat due to the data moving too fast. I
+        *   haven't witnessed this code being hit during testing or production monitoring, so it can probably be removed.  */
         } else if (lastReportedCompleteAtBatIndex !== null
-            && (atBatIndex - lastReportedCompleteAtBatIndex > 1)) { // indicates we missed the result of an at-bat. happens rarely when the data moves quickly to the next at-bat.
+            && (atBatIndex - lastReportedCompleteAtBatIndex > 1)) {
             LOGGER.debug('Missed at-bat index: ' + atBatIndex - 1);
             await reportAnyMissedEvents(lastAtBat, bot, gamePk, atBatIndex - 1);
             await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat), gamePk, atBatIndex - 1);
@@ -199,7 +201,9 @@ async function sendDelayedMessage (play, gamePk, channelSubscription, returnedCh
         const message = await returnedChannel.send({
             embeds: [embed]
         });
-        // savant polling will be done for each delayed message individually. Not ideal, but shouldn't be too bad.
+        /* TODO: savant polling will be done for each delayed message individually. Not ideal, but shouldn't be too bad.
+            In any case, there's an opportunity for non-delayed messages to cache the info for delayed messages.
+         */
         await maybePopulateAdvancedStatcastMetrics(play, [message], gamePk);
     }, channelSubscription.delay * 1000);
 }

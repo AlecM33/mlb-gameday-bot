@@ -143,6 +143,10 @@ module.exports = {
             { WebSocket, maxRetries: 3 }
         );
         let heartbeatInterval;
+        /*
+            This is the same ping that Gameday web clients send to the socket server. If you observe the network traffic
+            in the browser, you can see the socket transmits "Gameday5" every 10 seconds or so.
+         */
         const heartbeat = () => {
             LOGGER.trace('ping: Gameday5');
             socket.send('Gameday5');
