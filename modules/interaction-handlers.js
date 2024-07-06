@@ -552,7 +552,7 @@ module.exports = {
                 embeds: [],
                 components: [],
                 content: weather && Object.keys(weather).length > 0
-                    ? 'Weather for game time at ' + currentLiveFeed.gameData.venue.name + ':\n' +
+                    ? 'Weather at ' + currentLiveFeed.gameData.venue.name + ':\n' +
                         getWeatherEmoji(weather.condition) + ' ' + weather.condition + '\n' +
                         '\uD83C\uDF21 ' + weather.temp + '°\n' +
                         '\uD83C\uDF43 ' + weather.wind

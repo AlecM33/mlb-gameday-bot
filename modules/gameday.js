@@ -17,7 +17,7 @@ async function statusPoll (bot) {
         const now = globals.DATE || new Date();
         try {
             const currentGames = await mlbAPIUtil.currentGames();
-            LOGGER.info('Current game PKs: ' + JSON.stringify(currentGames
+            LOGGER.trace('Current game PKs: ' + JSON.stringify(currentGames
                 .map(game => { return { key: game.gamePk, date: game.officialDate, status: game.status.statusCode }; }), null, 2));
             currentGames.sort((a, b) => Math.abs(now - new Date(a.gameDate)) - Math.abs(now - new Date(b.gameDate)));
             globalCache.values.currentGames = currentGames;
@@ -55,7 +55,7 @@ function subscribe (bot, liveGame, games) {
              */
             if (globalCache.values.game.lastSocketMessageTimestamp === eventJSON.timeStamp
                 && globalCache.values.game.lastSocketMessageLength === e.data.length) {
-                LOGGER.trace('DUPLICATE MESSAGE: ' + eventJSON.updateId + ' - DISREGARDING');
+                LOGGER.debug('DUPLICATE MESSAGE: ' + eventJSON.updateId + ' - DISREGARDING');
                 return;
             }
             globalCache.values.game.lastSocketMessageTimestamp = eventJSON.timeStamp;
@@ -128,7 +128,7 @@ async function reportPlays (bot, gamePk) {
             await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat), gamePk, atBatIndex - 1);
         } else if (lastReportedCompleteAtBatIndex !== null
             && (atBatIndex - lastReportedCompleteAtBatIndex > 1)) { // indicates we missed the result of an at-bat. happens rarely when the data moves quickly to the next at-bat.
-            LOGGER.trace('Missed at-bat index: ' + atBatIndex - 1);
+            LOGGER.debug('Missed at-bat index: ' + atBatIndex - 1);
             await reportAnyMissedEvents(lastAtBat, bot, gamePk, atBatIndex - 1);
             await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat), gamePk, atBatIndex - 1);
         }
