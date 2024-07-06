@@ -45,7 +45,7 @@ const endpoints = {
         return 'https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live/timestamps';
     },
     websocketQueryUpdateId: (gamePk, updateId, timestamp) => {
-        LOGGER.debug('https://ws.statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live/diffPatch?language=en&startTimecode=' + timestamp + '&pushUpdateId=' + updateId);
+        LOGGER.trace('https://ws.statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live/diffPatch?language=en&startTimecode=' + timestamp + '&pushUpdateId=' + updateId);
         return 'https://ws.statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live/diffPatch?language=en&startTimecode=' + timestamp + '&pushUpdateId=' + updateId;
     },
     linescore: (gamePk) => {
@@ -144,7 +144,7 @@ module.exports = {
         );
         let heartbeatInterval;
         const heartbeat = () => {
-            LOGGER.debug('ping: Gameday5');
+            LOGGER.trace('ping: Gameday5');
             socket.send('Gameday5');
         };
         socket.addEventListener('open', () => {

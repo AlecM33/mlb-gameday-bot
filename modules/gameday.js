@@ -245,7 +245,7 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance) {
             return;
         }
         if (attempts < 10) {
-            LOGGER.debug('Savant: polling for ' + playId + '...');
+            LOGGER.trace('Savant: polling for ' + playId + '...');
             const gameFeed = await mlbAPIUtil.savantGameFeed(gamePk);
             const matchingPlay = gameFeed?.team_away?.find(play => play?.play_id === playId)
                 || gameFeed?.team_home?.find(play => play?.play_id === playId);
