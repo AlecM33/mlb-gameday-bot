@@ -1,5 +1,5 @@
 # MLB Gameday Bot ⚾
-For demos of the bot's commands, view its github pages site here: https://alecm33.github.io/gameday-bot/
+For demos of the bot's commands, view its github pages site here: https://alecm33.github.io/mlb-gameday-bot/
 
 This bot and its author are not affiliated with the MLB. The bot uses the MLB Stats API, which is subject to the notice posted at http://gdx.mlb.com/components/copyright.txt
 
