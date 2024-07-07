@@ -39,6 +39,7 @@ module.exports = {
         }
         return {
             reply,
+            isStartEvent: currentPlayJSON.playEvents?.find(event => event?.details?.description === 'Status Change - In Progress'),
             isComplete: currentPlayJSON.about?.isComplete,
             description: (currentPlayJSON.result?.description || currentPlayJSON.details?.description),
             event: (currentPlayJSON.result?.event || currentPlayJSON.details?.event),

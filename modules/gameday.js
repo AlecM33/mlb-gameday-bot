@@ -173,7 +173,7 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex) {
             if (!play.isScoringPlay && channelSubscription.scoring_plays_only) {
                 LOGGER.debug('Skipping - against the channel\'s preference');
             } else {
-                if (channelSubscription.delay === 0 || play.description === 'A game is starting! Go Guards!') {
+                if (channelSubscription.delay === 0 || play.isStartEvent) {
                     await sendMessage(returnedChannel, embed, messages);
                 } else {
                     LOGGER.debug('Waiting ' + channelSubscription.delay + ' seconds for channel: ' + channelSubscription.channel_id);
