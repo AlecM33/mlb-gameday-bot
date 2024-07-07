@@ -15,7 +15,6 @@ async function statusPoll (bot) {
     const pollingFunction = async () => {
         LOGGER.info('Games: polling...');
         const now = globals.DATE ? new Date(globals.DATE) : new Date();
-        console.log(now);
         try {
             const currentGames = await mlbAPIUtil.currentGames();
             LOGGER.trace('Current game PKs: ' + JSON.stringify(currentGames
