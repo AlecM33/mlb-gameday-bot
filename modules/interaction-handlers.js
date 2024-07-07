@@ -51,7 +51,6 @@ module.exports = {
                         value: buildPitchingStatsMarkdown(hydratedAwayProbable.pitchingStats, hydratedAwayProbable.pitchMix),
                         inline: true
                     });
-
                 await commandUtil.giveFinalCommandResponse(interaction, {
                     ephemeral: false,
                     files: [attachment],

@@ -62,7 +62,6 @@ function subscribe (bot, liveGame, games) {
             globalCache.values.game.lastSocketMessageLength = e.data.length;
             if (eventJSON.gameEvents.includes('game_finished') && !globalCache.values.game.finished) {
                 globalCache.values.game.finished = true;
-                globalCache.values.game.startReported = false;
                 LOGGER.info('NOTIFIED OF GAME CONCLUSION: CLOSING...');
                 ws.close();
                 await statusPoll(bot, games);
@@ -173,7 +172,7 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex) {
             if (!play.isScoringPlay && channelSubscription.scoring_plays_only) {
                 LOGGER.debug('Skipping - against the channel\'s preference');
             } else {
-                if (channelSubscription.delay === 0 || play.description === 'A game is starting! Go Guards!') {
+                if (channelSubscription.delay === 0 || play.isStartEvent) {
                     await sendMessage(returnedChannel, embed, messages);
                 } else {
                     LOGGER.debug('Waiting ' + channelSubscription.delay + ' seconds for channel: ' + channelSubscription.channel_id);
@@ -197,15 +196,45 @@ async function sendMessage (returnedChannel, embed, messages) {
 
 async function sendDelayedMessage (play, gamePk, channelSubscription, returnedChannel, embed) {
     setTimeout(async () => {
+        const cacheHit = checkForCachedSavantMetrics(embed, play);
         LOGGER.debug('Sending!');
         const message = await returnedChannel.send({
             embeds: [embed]
         });
-        /* TODO: savant polling will be done for each delayed message individually. Not ideal, but shouldn't be too bad.
-            In any case, there's an opportunity for non-delayed messages to cache the info for delayed messages.
-         */
-        await maybePopulateAdvancedStatcastMetrics(play, [message], gamePk);
+        if (!cacheHit) {
+            await maybePopulateAdvancedStatcastMetrics(play, [message], gamePk);
+        } else {
+            LOGGER.trace('Savant cache hit for play: ' + play.playId);
+        }
     }, channelSubscription.delay * 1000);
+}
+
+/*
+    Earlier messages not sent on a delay may have already polled baseball savant and obtained the advanced metrics.
+    If that's the case, we can avoid making a call to them again.
+ */
+function checkForCachedSavantMetrics (embed, play) {
+    if (play.isInPlay && play.playId) {
+        const cachedPlay = globalCache.values.game.savantMetricsCache[play.playId];
+        if (cachedPlay) {
+            const description = embed.data?.description;
+            if (cachedPlay.xba) {
+                embed.setDescription(
+                    description.replaceAll('xBA: Pending...', 'xBA: ' + cachedPlay.xba +
+                        (parseFloat(cachedPlay.xba) > 0.5 ? ' \uD83D\uDFE2' : ''))
+                );
+            }
+            if (cachedPlay.homeRunBallparks) {
+                embed.setDescription(description.replaceAll('HR/Park: Pending...', 'HR/Park: ' +
+                    cachedPlay.contextMetrics.homeRunBallparks + '/30' +
+                    (cachedPlay.contextMetrics.homeRunBallparks === 30 ? '\u203C\uFE0F' : ''))
+                );
+            }
+            return true;
+        }
+        return false;
+    }
+    return false;
 }
 
 async function maybePopulateAdvancedStatcastMetrics (play, messages, gamePk) {
@@ -280,6 +309,7 @@ function processMatchingPlay (matchingPlay, messages, messageTrackers, playId, h
             }).then((m) => LOGGER.trace('Edited: ' + m.id)).catch((e) => console.error(e));
             if (hitDistance && hitDistance < 300) {
                 LOGGER.debug('Found xba, done polling for: ' + playId);
+                globalCache.values.game.savantMetricsCache[playId] = { xba: matchingPlay.xba };
                 messageTrackers.find(tracker => tracker.id === messages[i].id).done = true;
             }
         }
@@ -296,6 +326,7 @@ function processMatchingPlay (matchingPlay, messages, messageTrackers, playId, h
             }).then((m) => LOGGER.trace('Edited: ' + m.id)).catch((e) => console.error(e));
             if (matchingPlay.xba) {
                 LOGGER.debug('Found all metrics: done polling for: ' + playId);
+                globalCache.values.game.savantMetricsCache[playId] = { xba: matchingPlay.xba, homeRunBallparks: matchingPlay.contextMetrics.homeRunBallparks };
                 messageTrackers.find(tracker => tracker.id === messages[i].id).done = true;
             }
         }
