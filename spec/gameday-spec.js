@@ -81,7 +81,7 @@ describe('gameday', () => {
     });
 
     describe('#processMatchingPlay', () => {
-        it('should edit all messages with xBA and mark them as done', async () => {
+        it('should edit all messages with xBA and HR/Park and mark them as done', async () => {
             const mockSetDescription = (description) => {};
             const mockEmbed = {
                 description: 'xBA: Pending...\nHR/Park: Pending...',
