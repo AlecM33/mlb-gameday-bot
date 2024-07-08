@@ -224,10 +224,10 @@ function checkForCachedSavantMetrics (embed, play) {
                         (parseFloat(cachedPlay.xba) > 0.5 ? ' \uD83D\uDFE2' : ''))
                 );
             }
-            if (cachedPlay.homeRunBallparks) {
+            if (cachedPlay.homeRunBallparks !== undefined) {
                 embed.setDescription(description.replaceAll('HR/Park: Pending...', 'HR/Park: ' +
-                    cachedPlay.contextMetrics.homeRunBallparks + '/30' +
-                    (cachedPlay.contextMetrics.homeRunBallparks === 30 ? '\u203C\uFE0F' : ''))
+                    cachedPlay.homeRunBallparks + '/30' +
+                    (cachedPlay.homeRunBallparks === 30 ? '\u203C\uFE0F' : ''))
                 );
             }
             return true;
