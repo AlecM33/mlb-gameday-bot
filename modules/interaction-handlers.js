@@ -29,38 +29,36 @@ module.exports = {
         const probables = matchup.probables;
         const hydratedHomeProbable = await commandUtil.hydrateProbable(probables.homeProbable);
         const hydratedAwayProbable = await commandUtil.hydrateProbable(probables.awayProbable);
-
-        joinImages([hydratedHomeProbable.spot, hydratedAwayProbable.spot],
-            { direction: 'horizontal', offset: 10, margin: 0, color: 'transparent' })
-            .then(async (img) => {
-                const attachment = new AttachmentBuilder((await img.png().toBuffer()), { name: 'matchupSpots.png' });
-                const myEmbed = new EmbedBuilder()
-                    .setTitle('Pitching Matchup - ' + commandUtil.constructGameDisplayString(game))
-                    .setImage('attachment://matchupSpots.png')
-                    .addFields({
-                        name: (hydratedHomeProbable.handedness
-                            ? hydratedHomeProbable.handedness + 'HP **'
-                            : '**') + (probables.homeProbableLastName || 'TBD') + '** (' + probables.homeAbbreviation + ')',
-                        value: buildPitchingStatsMarkdown(hydratedHomeProbable.pitchingStats, hydratedHomeProbable.pitchMix),
-                        inline: true
-                    })
-                    .addFields({
-                        name: (hydratedAwayProbable.handedness
-                            ? hydratedAwayProbable.handedness + 'HP **'
-                            : '**') + (probables.awayProbableLastName || 'TBD') + '** (' + probables.awayAbbreviation + ')',
-                        value: buildPitchingStatsMarkdown(hydratedAwayProbable.pitchingStats, hydratedAwayProbable.pitchMix),
-                        inline: true
-                    });
-                await interaction.followUp( {
-                    ephemeral: false,
-                    files: [attachment],
-                    embeds: [myEmbed],
-                    components: [],
-                    content: ''
-                });
+    
+        const [homeLastThree, awayLastThree] = await Promise.all([
+            probables.homeProbable ? mlbAPIUtil.pitcherLastThree(probables.homeProbable) : Promise.resolve(null),
+            probables.awayProbable ? mlbAPIUtil.pitcherLastThree(probables.awayProbable) : Promise.resolve(null)
+        ]);
+    
+        const awaySpotAttachment = new AttachmentBuilder(Buffer.from(hydratedAwayProbable.spot), { name: 'awaySpot.png' });
+        const homeSpotAttachment = new AttachmentBuilder(Buffer.from(hydratedHomeProbable.spot), { name: 'homeSpot.png' });
+    
+        const myEmbed = new EmbedBuilder()
+            .setTitle('Pitching Matchup - ' + commandUtil.constructGameDisplayString(game))
+            .addFields({
+                name: `[Away Spot] ${hydratedAwayProbable.handedness ? hydratedAwayProbable.handedness + 'HP **' : '**'}${probables.awayProbableLastName || 'TBD'} (${probables.awayAbbreviation})`,
+                value: buildPitchingStatsMarkdown(hydratedAwayProbable.pitchingStats, hydratedAwayProbable.pitchMix, awayLastThree?.people[0].stats[0].splits[0].stat),
+                inline: true
+            })
+            .addFields({
+                name: `[Home Spot] ${hydratedHomeProbable.handedness ? hydratedHomeProbable.handedness + 'HP **' : '**'}${probables.homeProbableLastName || 'TBD'} (${probables.homeAbbreviation})`,
+                value: buildPitchingStatsMarkdown(hydratedHomeProbable.pitchingStats, hydratedHomeProbable.pitchMix, homeLastThree?.people[0].stats[0].splits[0].stat),
+                inline: true
             });
+    
+        await interaction.followUp({
+            ephemeral: false,
+            files: [awaySpotAttachment, homeSpotAttachment],
+            embeds: [myEmbed],
+            components: [],
+            content: ''
+        });
     },
-
     scheduleHandler: async (interaction) => {
         console.info(`SCHEDULE command invoked by guild: ${interaction.guildId}`);
         const oneWeek = new Date();
@@ -594,46 +592,53 @@ function getScoreString (liveFeed, currentPlayJSON) {
         : liveFeed.gameData.teams.away.abbreviation + ' ' + awayScore + ', **' +
         liveFeed.gameData.teams.home.abbreviation + ' ' + homeScore + '**');
 }
-
-function buildPitchingStatsMarkdown (pitchingStats, pitchMix, includeExtra = false) {
-    let reply = '\n';
+function buildLastThreeMarkdown(stats) {
+    return `IP: ${stats.inningsPitched} | ERA: ${stats.era} | WHIP: ${stats.whip}\n` +
+        `K: ${stats.strikeOuts} | BB: ${stats.baseOnBalls} | HR: ${stats.homeRuns}`;
+}
+function buildPitchingStatsMarkdown(pitchingStats, pitchMix, lastThree, includeExtra = false) {
+    let reply = '';
     if (!pitchingStats) {
-        reply += 'W-L: -\n' +
-            'ERA: -.--\n' +
-            'WHIP: -.--' +
-            (includeExtra
-                ? '\nK/9: -.--\n' +
-                    'BB/9: -.--\n' +
-                    'H/9: -.--\n' +
-                    'HR/9: -.--\n' +
-                    'Saves/Opps: -/-'
-                : '');
+        reply += '**W-L:** -\n';
+        reply += '**ERA:** -.--\n';
+        reply += '**WHIP:** -.--\n';
+        if (includeExtra) {
+            reply += '**K/9:** -.--\n';
+            reply += '**BB/9:** -.--\n';
+            reply += '**H/9:** -.--\n';
+            reply += '**HR/9:** -.--\n';
+            reply += '**Saves/Opps:** -/-\n';
+        }
     } else {
-        reply += 'W-L: ' + pitchingStats.wins + '-' + pitchingStats.losses + '\n' +
-            'ERA: ' + pitchingStats.era + '\n' +
-            'WHIP: ' + pitchingStats.whip +
-            (includeExtra
-                ? '\nK/9: ' + pitchingStats.strikeoutsPer9Inn + '\n' +
-                    'BB/9: ' + pitchingStats.walksPer9Inn + '\n' +
-                    'H/9: ' + pitchingStats.hitsPer9Inn + '\n' +
-                    'HR/9: ' + pitchingStats.homeRunsPer9 + '\n' +
-                    'Saves/Opps: ' + pitchingStats.saves + '/' + pitchingStats.saveOpportunities
-                : '');
+        reply += `**W-L:** ${pitchingStats.wins}-${pitchingStats.losses}\n`;
+        reply += `**ERA:** ${pitchingStats.era}\n`;
+        reply += `**WHIP:** ${pitchingStats.whip}\n`;
+        if (includeExtra) {
+            reply += `**K/9:** ${pitchingStats.strikeoutsPer9Inn}\n`;
+            reply += `**BB/9:** ${pitchingStats.walksPer9Inn}\n`;
+            reply += `**H/9:** ${pitchingStats.hitsPer9Inn}\n`;
+            reply += `**HR/9:** ${pitchingStats.homeRunsPer9}\n`;
+            reply += `**Saves/Opps:** ${pitchingStats.saves}/${pitchingStats.saveOpportunities}\n`;
+        }
     }
-    reply += '\n**Arsenal:**' + '\n';
+
+    if (lastThree) {
+        reply += '\n**Last 3 Games:**\n';
+        reply += `**IP:** ${lastThree.inningsPitched}\n`;
+        reply += `**ERA:** ${lastThree.era}\n`;
+        reply += `**WHIP:** ${lastThree.whip}\n`;
+        reply += `**K:** ${lastThree.strikeOuts}\n`;
+        reply += `**BB:** ${lastThree.baseOnBalls}\n`;
+        reply += `**HR:** ${lastThree.homeRuns}\n`;
+    }
+
+    reply += '\n**Arsenal:**\n';
     if (pitchMix instanceof Error) {
         reply += pitchMix.message;
-        return reply;
-    }
-    if (pitchMix && pitchMix.length > 0 && pitchMix[0].length > 0) {
-        reply += (() => {
-            let arsenal = '';
-            for (let i = 0; i < pitchMix[0].length; i ++) {
-                arsenal += pitchMix[0][i] + ' (' + pitchMix[1][i] + '%)' +
-                   ': ' + pitchMix[2][i] + ' mph, ' + pitchMix[3][i] + ' BAA' + '\n';
-            }
-            return arsenal;
-        })();
+    } else if (pitchMix && pitchMix.length > 0 && pitchMix[0].length > 0) {
+        for (let i = 0; i < pitchMix[0].length; i++) {
+            reply += `${pitchMix[0][i]} (${pitchMix[1][i]}%): ${pitchMix[2][i]} mph, ${pitchMix[3][i]} BAA\n`;
+        }
     } else {
         reply += 'No data!';
     }

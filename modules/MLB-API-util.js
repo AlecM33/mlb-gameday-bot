@@ -87,7 +87,10 @@ const endpoints = {
     },
     team: (teamId) => {
         return 'https://statsapi.mlb.com/api/v1/teams/' + teamId;
-    }
+    },
+    pitcherLastThree: (personId) => {
+        return `https://statsapi.mlb.com/api/v1/people/${personId}?hydrate=stats(group=[pitching],type=[lastXGames,expectedStatistics],limit=3)`;
+    } 
 };
 
 module.exports = {
@@ -224,5 +227,11 @@ module.exports = {
     },
     team: async (teamId) => {
         return (await fetch(endpoints.team(teamId))).json();
+    },
+    pitcherLastThree: async (personId) => {
+        const url = endpoints.pitcherLastThree(personId);
+        const response = await fetch(url); // Fetch the data
+        const data = await response.json(); // Convert the data to JSON
+        return data; // Return the JSON data
     }
 };
