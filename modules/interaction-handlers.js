@@ -16,7 +16,6 @@ module.exports = {
     startersHandler: async (interaction) => {
         console.info(`STARTERS command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
-        // as opposed to other commands, this one will look for the nearest game that is not finished (AKA in "Live" or "Preview" status).
         const game = globalCache.values.currentGames.find(game => game.status.abstractGameState !== 'Final');
         if (!game) {
             await interaction.followUp({
@@ -29,34 +28,57 @@ module.exports = {
         const probables = matchup.probables;
         const hydratedHomeProbable = await commandUtil.hydrateProbable(probables.homeProbable);
         const hydratedAwayProbable = await commandUtil.hydrateProbable(probables.awayProbable);
-    
+
         const [homeLastThree, awayLastThree] = await Promise.all([
             probables.homeProbable ? mlbAPIUtil.pitcherLastThree(probables.homeProbable) : Promise.resolve(null),
             probables.awayProbable ? mlbAPIUtil.pitcherLastThree(probables.awayProbable) : Promise.resolve(null)
         ]);
-    
-        const awaySpotAttachment = new AttachmentBuilder(Buffer.from(hydratedAwayProbable.spot), { name: 'awaySpot.png' });
-        const homeSpotAttachment = new AttachmentBuilder(Buffer.from(hydratedHomeProbable.spot), { name: 'homeSpot.png' });
-    
+
         const myEmbed = new EmbedBuilder()
             .setTitle('Pitching Matchup - ' + commandUtil.constructGameDisplayString(game))
             .addFields({
                 name: `${hydratedAwayProbable.handedness ? hydratedAwayProbable.handedness + 'HP **' : '**'}${probables.awayProbableLastName || 'TBD'} (${probables.awayAbbreviation})`,
-                value: buildPitchingStatsMarkdown(hydratedAwayProbable.pitchingStats, hydratedAwayProbable.pitchMix, awayLastThree?.people[0].stats[0].splits[0].stat) + '\n ‎ ', // Added invisble character to make line break work
+                value: buildPitchingStatsMarkdown(hydratedAwayProbable.pitchingStats, hydratedAwayProbable.pitchMix, awayLastThree?.people[0].stats[0].splits[0].stat),
                 inline: true
             })
+            .setThumbnail('attachment://awaySpot.png') // Set away pitcher's spot as thumbnail
             .addFields({
                 name: `${hydratedHomeProbable.handedness ? hydratedHomeProbable.handedness + 'HP **' : '**'}${probables.homeProbableLastName || 'TBD'} (${probables.homeAbbreviation})`,
                 value: buildPitchingStatsMarkdown(hydratedHomeProbable.pitchingStats, hydratedHomeProbable.pitchMix, homeLastThree?.people[0].stats[0].splits[0].stat),
                 inline: true
-            });
-    
+            })
+            .setImage('attachment://homeSpot.png'); // Set home pitcher's spot as image
+        // Define the header as the content of the message
+        const headerContent = 'Pitching Matchup - ' + commandUtil.constructGameDisplayString(game);
+
+        // Define the away team embed without the title
+        const awayEmbed = new EmbedBuilder()
+            .addFields({
+                name: `${hydratedAwayProbable.handedness ? hydratedAwayProbable.handedness + 'HP **' : '**'}${probables.awayProbableLastName || 'TBD'} (${probables.awayAbbreviation})`,
+                value: buildPitchingStatsMarkdown(hydratedAwayProbable.pitchingStats, hydratedAwayProbable.pitchMix, awayLastThree?.people[0].stats[0].splits[0].stat),
+                inline: true
+            })
+            .setThumbnail('attachment://awaySpot.png');
+
+        // Define the home team embed without the title
+        const homeEmbed = new EmbedBuilder()
+            .addFields({
+                name: `${hydratedHomeProbable.handedness ? hydratedHomeProbable.handedness + 'HP **' : '**'}${probables.homeProbableLastName || 'TBD'} (${probables.homeAbbreviation})`,
+                value: buildPitchingStatsMarkdown(hydratedHomeProbable.pitchingStats, hydratedHomeProbable.pitchMix, homeLastThree?.people[0].stats[0].splits[0].stat),
+                inline: true
+            })
+            .setThumbnail('attachment://homeSpot.png');
+
+        // Send the message with the header content and both embeds
         await interaction.followUp({
             ephemeral: false,
-            files: [awaySpotAttachment, homeSpotAttachment],
-            embeds: [myEmbed],
+            files: [
+                new AttachmentBuilder(Buffer.from(hydratedAwayProbable.spot), { name: 'awaySpot.png' }),
+                new AttachmentBuilder(Buffer.from(hydratedHomeProbable.spot), { name: 'homeSpot.png' })
+            ],
+            embeds: [awayEmbed, homeEmbed], // Send both embeds
             components: [],
-            content: ''
+            content: headerContent // Add the header content here
         });
     },
     scheduleHandler: async (interaction) => {
@@ -244,8 +266,8 @@ module.exports = {
                 ephemeral: false,
                 content: commandUtil.constructGameDisplayString(game) +
                     ' - **' + (statusCheck.gameData.status.abstractGameState === 'Final'
-                    ? 'Final'
-                    : linescore.inningState + ' ' + linescore.currentInningOrdinal) + '**\n\n',
+                        ? 'Final'
+                        : linescore.inningState + ' ' + linescore.currentInningOrdinal) + '**\n\n',
                 components: [],
                 files: [linescoreAttachment]
             });
@@ -284,13 +306,13 @@ module.exports = {
                 ephemeral: false,
                 content: homeAbbreviation + ' vs. ' + awayAbbreviation +
                     ', ' + new Date(game.gameDate).toLocaleString('default', {
-                    month: 'short',
-                    day: 'numeric',
-                    timeZone: 'America/New_York',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    timeZoneName: 'short'
-                }),
+                        month: 'short',
+                        day: 'numeric',
+                        timeZone: 'America/New_York',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        timeZoneName: 'short'
+                    }),
                 components: [],
                 files: [boxscoreAttachment]
             });
@@ -470,7 +492,7 @@ module.exports = {
             // discord limits messages to 2,000 characters. We very well might need a couple messages to link everything.
             const messagesNeeded = Math.ceil(liveFeed.liveData.plays.scoringPlays.length / globals.SCORING_PLAYS_PER_MESSAGE);
             if (messagesNeeded > 1) {
-                for (let i = 0; i < messagesNeeded; i ++) {
+                for (let i = 0; i < messagesNeeded; i++) {
                     const linksForMessage = links.slice(
                         globals.HIGHLIGHTS_PER_MESSAGE * i,
                         Math.min((globals.HIGHLIGHTS_PER_MESSAGE * (i + 1)), links.length)
@@ -550,16 +572,16 @@ module.exports = {
                 components: [],
                 content: weather && Object.keys(weather).length > 0
                     ? 'Weather at ' + currentLiveFeed.gameData.venue.name + ':\n' +
-                        getWeatherEmoji(weather.condition) + ' ' + weather.condition + '\n' +
-                        '\uD83C\uDF21 ' + weather.temp + '°\n' +
-                        '\uD83C\uDF43 ' + weather.wind
+                    getWeatherEmoji(weather.condition) + ' ' + weather.condition + '\n' +
+                    '\uD83C\uDF21 ' + weather.temp + '°\n' +
+                    '\uD83C\uDF43 ' + weather.wind
                     : 'Not available yet - check back an hour or two before game time.'
             });
         }
     }
 };
 
-function getWeatherEmoji (condition) {
+function getWeatherEmoji(condition) {
     switch (condition) {
         case 'Clear':
         case 'Sunny':
@@ -583,7 +605,7 @@ function getWeatherEmoji (condition) {
     }
 }
 
-function getScoreString (liveFeed, currentPlayJSON) {
+function getScoreString(liveFeed, currentPlayJSON) {
     const homeScore = currentPlayJSON.result.homeScore;
     const awayScore = currentPlayJSON.result.awayScore;
     return (currentPlayJSON.about.halfInning === 'top'
@@ -607,27 +629,27 @@ function buildPitchingStatsMarkdown(pitchingStats, pitchMix, lastThree, includeE
             reply += '**Saves/Opps:** -/-';
         }
     } else {
-        reply += `**W-L:** ${pitchingStats.wins}-${pitchingStats.losses} | `;  
-        reply += `**ER:** ${pitchingStats.earnedRuns} | `;
+        reply += `**W-L:** ${pitchingStats.wins}-${pitchingStats.losses} | `;
+        reply += `**ERA:** ${pitchingStats.era} | `;
         reply += `**WHIP:** ${pitchingStats.whip} `;
         if (includeExtra) {
             reply += `**K/9:** ${pitchingStats.strikeoutsPer9Inn} | `;
-            reply += `**BB/9:** ${pitchingStats.walksPer9Inn} | `;  
+            reply += `**BB/9:** ${pitchingStats.walksPer9Inn} | `;
             reply += `**H/9:** ${pitchingStats.hitsPer9Inn} | `;
             reply += `**HR/9:** ${pitchingStats.homeRunsPer9} | `;
             reply += `**Saves/Opps:** ${pitchingStats.saves}/${pitchingStats.saveOpportunities}`;
         }
     }
-    
+
     if (lastThree) {
         reply += '\n\n**Last 3 Games:** \n';
         reply += `**IP:** ${lastThree.inningsPitched} | `;
-        reply += `**ER:** ${lastThree.earnedRuns} | `; 
+        reply += `**ER:** ${lastThree.earnedRuns} | `;
         reply += `**K:** ${lastThree.strikeOuts} | `;
         reply += `**BB:** ${lastThree.baseOnBalls} | `;
         reply += `**HR:** ${lastThree.homeRuns} `;
     }
-    
+
     reply += '\n\n**Arsenal:**\n';
     if (pitchMix instanceof Error) {
         reply += pitchMix.message;
@@ -640,4 +662,5 @@ function buildPitchingStatsMarkdown(pitchingStats, pitchMix, lastThree, includeE
         reply += 'No data!';
     }
 
-    return reply;}
+    return reply;
+}
