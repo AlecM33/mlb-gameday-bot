@@ -41,12 +41,12 @@ module.exports = {
         const myEmbed = new EmbedBuilder()
             .setTitle('Pitching Matchup - ' + commandUtil.constructGameDisplayString(game))
             .addFields({
-                name: `[Away Spot] ${hydratedAwayProbable.handedness ? hydratedAwayProbable.handedness + 'HP **' : '**'}${probables.awayProbableLastName || 'TBD'} (${probables.awayAbbreviation})`,
-                value: buildPitchingStatsMarkdown(hydratedAwayProbable.pitchingStats, hydratedAwayProbable.pitchMix, awayLastThree?.people[0].stats[0].splits[0].stat),
+                name: `${hydratedAwayProbable.handedness ? hydratedAwayProbable.handedness + 'HP **' : '**'}${probables.awayProbableLastName || 'TBD'} (${probables.awayAbbreviation})`,
+                value: buildPitchingStatsMarkdown(hydratedAwayProbable.pitchingStats, hydratedAwayProbable.pitchMix, awayLastThree?.people[0].stats[0].splits[0].stat) + '\n ‎ ', // Added invisble character to make line break work
                 inline: true
             })
             .addFields({
-                name: `[Home Spot] ${hydratedHomeProbable.handedness ? hydratedHomeProbable.handedness + 'HP **' : '**'}${probables.homeProbableLastName || 'TBD'} (${probables.homeAbbreviation})`,
+                name: `${hydratedHomeProbable.handedness ? hydratedHomeProbable.handedness + 'HP **' : '**'}${probables.homeProbableLastName || 'TBD'} (${probables.homeAbbreviation})`,
                 value: buildPitchingStatsMarkdown(hydratedHomeProbable.pitchingStats, hydratedHomeProbable.pitchMix, homeLastThree?.people[0].stats[0].splits[0].stat),
                 inline: true
             });
