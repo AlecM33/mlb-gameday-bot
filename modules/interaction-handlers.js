@@ -35,59 +35,50 @@ module.exports = {
         ]);
 
         const myEmbed = new EmbedBuilder()
-            .setTitle(` `)
+            .setTitle('Pitching Matchup - ' + commandUtil.constructGameDisplayString(game))
             .addFields({
-                name: ` `,
+                name: `${hydratedAwayProbable.handedness ? hydratedAwayProbable.handedness + 'HP **' : '**'}${probables.awayProbableLastName || 'TBD'} (${probables.awayAbbreviation})`,
                 value: buildPitchingStatsMarkdown(hydratedAwayProbable.pitchingStats, hydratedAwayProbable.pitchMix, awayLastThree?.people[0].stats[0].splits[0].stat),
                 inline: true
             })
             .setThumbnail('attachment://awaySpot.png') // Set away pitcher's spot as thumbnail
             .addFields({
-                name: ` `,
+                name: `${hydratedHomeProbable.handedness ? hydratedHomeProbable.handedness + 'HP **' : '**'}${probables.homeProbableLastName || 'TBD'} (${probables.homeAbbreviation})`,
                 value: buildPitchingStatsMarkdown(hydratedHomeProbable.pitchingStats, hydratedHomeProbable.pitchMix, homeLastThree?.people[0].stats[0].splits[0].stat),
                 inline: true
             })
             .setImage('attachment://homeSpot.png'); // Set home pitcher's spot as image
         // Define the header as the content of the message
-    // Define the away team header
-    const awayHeaderContent = `${hydratedAwayProbable.handedness ? hydratedAwayProbable.handedness + 'HP ' : ''}**${probables.awayProbableLastName || 'TBD'} (${probables.awayAbbreviation})**`;
+        const headerContent = 'Pitching Matchup - ' + commandUtil.constructGameDisplayString(game);
 
-    // Define the home team header
-    const homeHeaderContent = `${hydratedHomeProbable.handedness ? hydratedHomeProbable.handedness + 'HP ' : ''}**${probables.homeProbableLastName || 'TBD'} (${probables.homeAbbreviation})**`;
+        // Define the away team embed without the title
+        const awayEmbed = new EmbedBuilder()
+            .addFields({
+                name: `${hydratedAwayProbable.handedness ? hydratedAwayProbable.handedness + 'HP **' : '**'}${probables.awayProbableLastName || 'TBD'} (${probables.awayAbbreviation})`,
+                value: buildPitchingStatsMarkdown(hydratedAwayProbable.pitchingStats, hydratedAwayProbable.pitchMix, awayLastThree?.people[0].stats[0].splits[0].stat),
+                inline: true
+            })
+            .setThumbnail('attachment://awaySpot.png');
 
-    // Define the away team embed without the title
-    const awayEmbed = new EmbedBuilder()
-        .addFields({
-            name: `Season Stats: `,
-            value: buildPitchingStatsMarkdown(hydratedAwayProbable.pitchingStats, hydratedAwayProbable.pitchMix, awayLastThree?.people[0].stats[0].splits[0].stat),
-            inline: true
-        })
-        .setThumbnail('attachment://awaySpot.png');
+        // Define the home team embed without the title
+        const homeEmbed = new EmbedBuilder()
+            .addFields({
+                name: `${hydratedHomeProbable.handedness ? hydratedHomeProbable.handedness + 'HP **' : '**'}${probables.homeProbableLastName || 'TBD'} (${probables.homeAbbreviation})`,
+                value: buildPitchingStatsMarkdown(hydratedHomeProbable.pitchingStats, hydratedHomeProbable.pitchMix, homeLastThree?.people[0].stats[0].splits[0].stat),
+                inline: true
+            })
+            .setThumbnail('attachment://homeSpot.png');
 
-    // Define the home team embed without the title
-    const homeEmbed = new EmbedBuilder()
-        .addFields({
-            name: `Season Stats: `,
-            value: buildPitchingStatsMarkdown(hydratedHomeProbable.pitchingStats, hydratedHomeProbable.pitchMix, homeLastThree?.people[0].stats[0].splits[0].stat),
-            inline: true
-        })
-        .setThumbnail('attachment://homeSpot.png');
-
+        // Send the message with the header content and both embeds
         await interaction.followUp({
             ephemeral: false,
-            files: [new AttachmentBuilder(Buffer.from(hydratedAwayProbable.spot), { name: 'awaySpot.png' })],
-            embeds: [awayEmbed],
+            files: [
+                new AttachmentBuilder(Buffer.from(hydratedAwayProbable.spot), { name: 'awaySpot.png' }),
+                new AttachmentBuilder(Buffer.from(hydratedHomeProbable.spot), { name: 'homeSpot.png' })
+            ],
+            embeds: [awayEmbed, homeEmbed], // Send both embeds
             components: [],
-            content: awayHeaderContent
-        });
-    
-        // Send the home team message with the header and embed
-        await interaction.followUp({
-            ephemeral: false,
-            files: [new AttachmentBuilder(Buffer.from(hydratedHomeProbable.spot), { name: 'homeSpot.png' })],
-            embeds: [homeEmbed],
-            components: [],
-            content: homeHeaderContent
+            content: headerContent // Add the header content here
         });
     },
     scheduleHandler: async (interaction) => {
@@ -416,7 +407,9 @@ module.exports = {
                 abbreviations.away + ' vs. ' + abbreviations.home + ': Current Pitcher')
             .setThumbnail('attachment://spot.png')
             .setDescription(
-                
+                '## ' + (pitcherInfo.handedness
+                    ? pitcherInfo.handedness + 'HP **'
+                    : '**') + (pitcher.fullName || 'TBD') + '** (' + abbreviation + ')' +
                 buildPitchingStatsMarkdown(pitcherInfo.pitchingStats, pitcherInfo.pitchMix, true))
             .setColor((halfInning === 'top'
                 ? globalCache.values.game.homeTeamColor
