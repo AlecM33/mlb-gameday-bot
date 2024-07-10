@@ -592,56 +592,52 @@ function getScoreString (liveFeed, currentPlayJSON) {
         : liveFeed.gameData.teams.away.abbreviation + ' ' + awayScore + ', **' +
         liveFeed.gameData.teams.home.abbreviation + ' ' + homeScore + '**');
 }
-function buildLastThreeMarkdown(stats) {
-    return `IP: ${stats.inningsPitched} | ERA: ${stats.era} | WHIP: ${stats.whip}\n` +
-        `K: ${stats.strikeOuts} | BB: ${stats.baseOnBalls} | HR: ${stats.homeRuns}`;
-}
+
 function buildPitchingStatsMarkdown(pitchingStats, pitchMix, lastThree, includeExtra = false) {
     let reply = '';
     if (!pitchingStats) {
-        reply += '**W-L:** -\n';
-        reply += '**ERA:** -.--\n';
-        reply += '**WHIP:** -.--\n';
+        reply += '**W-L:** - | ';
+        reply += '**ERA:** -.-- | ';
+        reply += '**WHIP:** -.-- | ';
         if (includeExtra) {
-            reply += '**K/9:** -.--\n';
-            reply += '**BB/9:** -.--\n';
-            reply += '**H/9:** -.--\n';
-            reply += '**HR/9:** -.--\n';
-            reply += '**Saves/Opps:** -/-\n';
+            reply += '**K/9:** -.-- | ';
+            reply += '**BB/9:** -.-- | ';
+            reply += '**H/9:** -.-- | ';
+            reply += '**HR/9:** -.-- | ';
+            reply += '**Saves/Opps:** -/-';
         }
     } else {
-        reply += `**W-L:** ${pitchingStats.wins}-${pitchingStats.losses}\n`;
-        reply += `**ERA:** ${pitchingStats.era}\n`;
-        reply += `**WHIP:** ${pitchingStats.whip}\n`;
+        reply += `**W-L:** ${pitchingStats.wins}-${pitchingStats.losses} | `;  
+        reply += `**ER:** ${pitchingStats.earnedRuns} | `;
+        reply += `**WHIP:** ${pitchingStats.whip} `;
         if (includeExtra) {
-            reply += `**K/9:** ${pitchingStats.strikeoutsPer9Inn}\n`;
-            reply += `**BB/9:** ${pitchingStats.walksPer9Inn}\n`;
-            reply += `**H/9:** ${pitchingStats.hitsPer9Inn}\n`;
-            reply += `**HR/9:** ${pitchingStats.homeRunsPer9}\n`;
-            reply += `**Saves/Opps:** ${pitchingStats.saves}/${pitchingStats.saveOpportunities}\n`;
+            reply += `**K/9:** ${pitchingStats.strikeoutsPer9Inn} | `;
+            reply += `**BB/9:** ${pitchingStats.walksPer9Inn} | `;  
+            reply += `**H/9:** ${pitchingStats.hitsPer9Inn} | `;
+            reply += `**HR/9:** ${pitchingStats.homeRunsPer9} | `;
+            reply += `**Saves/Opps:** ${pitchingStats.saves}/${pitchingStats.saveOpportunities}`;
         }
     }
-
+    
     if (lastThree) {
-        reply += '\n**Last 3 Games:**\n';
-        reply += `**IP:** ${lastThree.inningsPitched}\n`;
-        reply += `**ERA:** ${lastThree.era}\n`;
-        reply += `**WHIP:** ${lastThree.whip}\n`;
-        reply += `**K:** ${lastThree.strikeOuts}\n`;
-        reply += `**BB:** ${lastThree.baseOnBalls}\n`;
-        reply += `**HR:** ${lastThree.homeRuns}\n`;
+        reply += '\n\n**Last 3 Games:** \n';
+        reply += `**IP:** ${lastThree.inningsPitched} | `;
+        reply += `**ER:** ${lastThree.earnedRuns} | `; 
+        reply += `**K:** ${lastThree.strikeOuts} | `;
+        reply += `**BB:** ${lastThree.baseOnBalls} | `;
+        reply += `**HR:** ${lastThree.homeRuns} `;
     }
-
-    reply += '\n**Arsenal:**\n';
+    
+    reply += '\n\n**Arsenal:**\n';
     if (pitchMix instanceof Error) {
         reply += pitchMix.message;
     } else if (pitchMix && pitchMix.length > 0 && pitchMix[0].length > 0) {
         for (let i = 0; i < pitchMix[0].length; i++) {
-            reply += `${pitchMix[0][i]} (${pitchMix[1][i]}%): ${pitchMix[2][i]} mph, ${pitchMix[3][i]} BAA\n`;
+            let pitchType = pitchMix[0][i] === 'Four Seamer' ? '4 Seam' : pitchMix[0][i];
+            reply += `${pitchType} (${pitchMix[1][i]}%): ${pitchMix[2][i]} mph, ${pitchMix[3][i]} BAA \n `;
         }
     } else {
         reply += 'No data!';
     }
 
-    return reply;
-}
+    return reply;}
