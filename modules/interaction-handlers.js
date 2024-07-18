@@ -51,7 +51,7 @@ module.exports = {
                         value: buildPitchingStatsMarkdown(hydratedAwayProbable.pitchingStats, hydratedAwayProbable.pitchMix),
                         inline: true
                     });
-                await interaction.followUp( {
+                await interaction.followUp({
                     ephemeral: false,
                     files: [attachment],
                     embeds: [myEmbed],
