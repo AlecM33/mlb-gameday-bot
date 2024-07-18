@@ -16,8 +16,8 @@ and in turn reports events to any number of subscribed Discord channels. Slash C
 - **/box_score** - view the box score for the current game, including hitting and pitching stats.
 - **/scoring_plays** - get a curated list of scoring plays, with direct links to the play on the Gameday page.
 - **/highlights** - get a direct link to the "game story", which is MLB's timeline of key moments.
-- **/gameday_subscribe** - subscribe a given Discord channel to receive real-time updates from the "Gameday" feed. This command is restricted to certain roles. Users can adjust which plays the bot reports and customize a reporting delay. The message includes a description of the play, any change in score, and statcast metrics for balls in play.
-- **/gameday_unsubscribe** - un-subscribe a given Discord channel from the above functionality.
+- **/subscribe_gameday** - subscribe a given Discord channel to receive real-time updates from the "Gameday" feed. This command is restricted to certain roles. Users can adjust which plays the bot reports and customize a reporting delay. The message includes a description of the play, any change in score, and statcast metrics for balls in play.
+- **/unsubscribe_gameday** - un-subscribe a given Discord channel from the above functionality.
 - **/gameday_preference** - change the preference for the gameday subscription. This includes which types of plays to report ("all plays" or "scoring plays only") and a reporting delay of 0-180 seconds.
 - **/schedule** - view the upcoming schedule for the next week of games.
 - **/batter** - view stats on the batter that is up right now. Only available when a game is live.
