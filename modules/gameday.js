@@ -276,7 +276,7 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance) {
             LOGGER.debug('Savant: all messages done.');
             return;
         }
-        if (attempts < 10) {
+        if (attempts < globals.SAVANT_MAX_ATTEMPTS) {
             LOGGER.trace('Savant: polling for ' + playId + '...');
             const gameFeed = await mlbAPIUtil.savantGameFeed(gamePk);
             const matchingPlay = gameFeed?.team_away?.find(play => play?.play_id === playId)
