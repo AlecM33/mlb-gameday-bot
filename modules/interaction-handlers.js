@@ -51,7 +51,7 @@ module.exports = {
                         value: commandUtil.buildPitchingStatsMarkdown(hydratedAwayProbable.pitchingStats, hydratedAwayProbable.pitchMix),
                         inline: true
                     });
-                await commandUtil.giveFinalCommandResponse(interaction, {
+                await interaction.followUp({
                     ephemeral: false,
                     files: [attachment],
                     embeds: [myEmbed],
@@ -311,8 +311,8 @@ module.exports = {
                 : globalCache.values.nearestGames[0];
             const updatedLineup = (await mlbAPIUtil.lineup(game.gamePk))?.dates[0].games[0];
             const ourTeamLineup = updatedLineup.teams.home.team.id === parseInt(process.env.TEAM_ID)
-                ? updatedLineup.lineups.homePlayers
-                : updatedLineup.lineups.awayPlayers;
+                ? updatedLineup.lineups?.homePlayers
+                : updatedLineup.lineups?.awayPlayers;
             if (updatedLineup.status.detailedState === 'Postponed') {
                 await commandUtil.giveFinalCommandResponse(toHandle, {
                     content: commandUtil.constructGameDisplayString(game) + ' - this game is postponed.',
@@ -518,7 +518,7 @@ module.exports = {
             ]);
             const attendance = currentLiveFeed.gameData.gameInfo.attendance;
             const capacity = currentLiveFeed.gameData.venue.fieldInfo.capacity;
-            await interaction.followUp({
+            await commandUtil.giveFinalCommandResponse(toHandle, {
                 ephemeral: false,
                 files: [],
                 embeds: [],
@@ -545,7 +545,7 @@ module.exports = {
                 'gameData', 'gameInfo', 'weather', 'condition', 'temp', 'wind', 'venue', 'name'
             ]);
             const weather = currentLiveFeed.gameData.weather;
-            await interaction.followUp({
+            await commandUtil.giveFinalCommandResponse(toHandle, {
                 ephemeral: false,
                 files: [],
                 embeds: [],
