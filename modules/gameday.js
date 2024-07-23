@@ -5,10 +5,11 @@ const currentPlayProcessor = require('./current-play-processor');
 const { EmbedBuilder } = require('discord.js');
 const globals = require('../config/globals');
 const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_LEVEL.INFO);
-const ColorContrastChecker = require('color-contrast-checker');
+const liveFeed = require('./livefeed');
+const gamedayUtil = require('./gameday-util');
 
 module.exports = {
-    statusPoll, subscribe, getConstrastingEmbedColors, processAndPushPlay, pollForSavantData, processMatchingPlay
+    statusPoll, subscribe, processAndPushPlay, pollForSavantData, processMatchingPlay
 };
 
 async function statusPoll (bot) {
@@ -29,7 +30,7 @@ async function statusPoll (bot) {
                 LOGGER.info('Gameday: polling stopped: a game is live.');
                 globalCache.resetGameCache();
                 globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(inProgressGame.gamePk);
-                module.exports.getConstrastingEmbedColors();
+                gamedayUtil.getConstrastingEmbedColors();
                 module.exports.subscribe(bot, inProgressGame, nearestGames);
             } else {
                 setTimeout(pollingFunction, globals.SLOW_POLL_INTERVAL);
@@ -102,27 +103,13 @@ function subscribe (bot, liveGame, games) {
     ws.addEventListener('close', (e) => LOGGER.info('Gameday socket closed: ' + JSON.stringify(e)));
 }
 
-function getConstrastingEmbedColors () {
-    globalCache.values.game.homeTeamColor = globals.TEAMS.find(
-        team => team.id === globalCache.values.game.currentLiveFeed.gameData.teams.home.id
-    ).primaryColor;
-    const awayTeam = globals.TEAMS.find(
-        team => team.id === globalCache.values.game.currentLiveFeed.gameData.teams.away.id
-    );
-    const colorContrastChecker = new ColorContrastChecker();
-    if (colorContrastChecker.isLevelCustom(globalCache.values.game.homeTeamColor, awayTeam.primaryColor, globals.TEAM_COLOR_CONTRAST_RATIO)) {
-        globalCache.values.game.awayTeamColor = awayTeam.primaryColor;
-    } else {
-        globalCache.values.game.awayTeamColor = awayTeam.secondaryColor;
-    }
-}
-
 async function reportPlays (bot, gamePk) {
-    const currentPlay = globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay;
+    const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
+    const currentPlay = feed.currentPlay();
     const atBatIndex = currentPlay.atBatIndex;
     const lastReportedCompleteAtBatIndex = globalCache.values.game.lastReportedCompleteAtBatIndex;
     if (atBatIndex > 0) {
-        const lastAtBat = globalCache.values.game.currentLiveFeed.liveData.plays.allPlays
+        const lastAtBat = feed.allPlays()
             .find((play) => play.about.atBatIndex === atBatIndex - 1);
         if (lastAtBat && lastAtBat.about.hasReview) { // a play that's been challenged. We should report updates on it.
             await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat), gamePk, atBatIndex - 1);
@@ -154,16 +141,19 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex) {
         && !globalCache.values.game.reportedDescriptions
             .find(reportedDescription => reportedDescription.description === play.description && reportedDescription.atBatIndex === atBatIndex)) {
         globalCache.values.game.reportedDescriptions.push({ description: play.description, atBatIndex });
+        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         if (play.isComplete) {
             globalCache.values.game.lastReportedCompleteAtBatIndex = atBatIndex;
         }
         const embed = new EmbedBuilder()
-            .setTitle(deriveHalfInning(globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.halfInning) + ' ' +
-                globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.inning + ', ' +
-                globalCache.values.game.currentLiveFeed.gameData.teams.away.abbreviation + ' vs. ' +
-                globalCache.values.game.currentLiveFeed.gameData.teams.home.abbreviation + (play.isScoringPlay ? ' - Scoring Play \u2757' : ''))
-            .setDescription(play.reply)
-            .setColor((globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.halfInning === 'top'
+            .setTitle(gamedayUtil.deriveHalfInning(feed.halfInning()) + ' ' +
+                feed.inning() + ', ' +
+                feed.awayAbbreviation() + (play.isScoringPlay
+                ? ' vs. '
+                : ' ' + play.awayScore + ' - ' + play.homeScore + ' ') +
+                feed.homeAbbreviation() + (play.isScoringPlay ? ' - Scoring Play \u2757' : ''))
+            .setDescription(play.reply + (play.isOut && play.outs === 3 && !gamedayUtil.didGameEnd(play.homeScore, play.awayScore) ? gamedayUtil.getDueUp() : ''))
+            .setColor((feed.halfInning() === 'top'
                 ? globalCache.values.game.awayTeamColor
                 : globalCache.values.game.homeTeamColor
             ));
@@ -209,7 +199,7 @@ async function sendDelayedMessage (play, gamePk, channelSubscription, returnedCh
 }
 
 async function maybePopulateAdvancedStatcastMetrics (play, messages, gamePk) {
-    if (play.isInPlay) {
+    if (play.isInPlay && play.metricsAvailable) {
         if (play.playId) {
             try {
                 // xBA and HR/Park for balls in play is available on a delay via baseballsavant.
@@ -224,7 +214,7 @@ async function maybePopulateAdvancedStatcastMetrics (play, messages, gamePk) {
             notifySavantDataUnavailable(messages);
         }
     } else {
-        LOGGER.debug('Skipping savant poll - not in play.');
+        LOGGER.debug('Skipping savant poll - not in play or metrics unavailable.');
     }
 }
 
@@ -273,7 +263,7 @@ function processMatchingPlay (matchingPlay, messages, messageTrackers, playId, h
         if (matchingPlay.xba && description.includes('xBA: Pending...')) {
             LOGGER.debug('Editing with xba: ' + playId);
             description = description.replaceAll('xBA: Pending...', 'xBA: ' + matchingPlay.xba +
-                (parseFloat(matchingPlay.xba) > 0.5 ? ' \uD83D\uDFE2' : ''));
+                (matchingPlay.is_barrel === 1 ? ' \uD83D\uDFE2 (Barreled)' : ''));
             receivedEmbed.setDescription(description);
             messages[i].edit({
                 embeds: [receivedEmbed]
@@ -300,8 +290,4 @@ function processMatchingPlay (matchingPlay, messages, messageTrackers, playId, h
             }
         }
     }
-}
-
-function deriveHalfInning (halfInningFull) {
-    return halfInningFull === 'top' ? 'TOP' : 'BOT';
 }

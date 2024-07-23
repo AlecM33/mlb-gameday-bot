@@ -3,7 +3,7 @@ const fs = require('fs');
 const globalCache = require('../modules/global-cache');
 const path = require('path');
 
-describe('diffPatch', () => {
+describe('diff-patch', () => {
     let diff;
 
     beforeAll(() => {

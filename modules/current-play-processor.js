@@ -1,5 +1,6 @@
 const globalCache = require('./global-cache');
 const globals = require('../config/globals');
+const liveFeed = require('./livefeed');
 
 module.exports = {
     process: (currentPlayJSON) => {
@@ -37,9 +38,16 @@ module.exports = {
                 }
             }
         }
+        /* two kinds of objects get processed - "at bats", which will have a "result" object, and events within at bats, which put
+            the same information in a "details" object. So we often have to check for both.
+         */
         return {
             reply,
             isStartEvent: currentPlayJSON.playEvents?.find(event => event?.details?.description === 'Status Change - In Progress'),
+            isOut: currentPlayJSON.result?.isOut || currentPlayJSON.details?.isOut,
+            outs: currentPlayJSON.count?.outs,
+            homeScore: (currentPlayJSON.result ? currentPlayJSON.result.homeScore : currentPlayJSON.details?.homeScore),
+            awayScore: (currentPlayJSON.result ? currentPlayJSON.result.awayScore : currentPlayJSON.details?.awayScore),
             isComplete: currentPlayJSON.about?.isComplete,
             description: (currentPlayJSON.result?.description || currentPlayJSON.details?.description),
             event: (currentPlayJSON.result?.event || currentPlayJSON.details?.event),
@@ -47,6 +55,7 @@ module.exports = {
             isScoringPlay: (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details?.isScoringPlay),
             isInPlay: (lastEvent?.details?.isInPlay || currentPlayJSON.details?.isInPlay),
             playId: (lastEvent?.playId || currentPlayJSON.playId),
+            metricsAvailable: (lastEvent?.hitData?.launchSpeed !== undefined || currentPlayJSON.hitData?.launchSpeed !== undefined),
             hitDistance: (lastEvent?.hitData?.totalDistance || currentPlayJSON.hitData?.totalDistance)
         };
     }
@@ -54,6 +63,7 @@ module.exports = {
 
 function addScore (reply, currentPlayJSON) {
     reply += '\n';
+    const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
     let homeScore, awayScore;
     if (currentPlayJSON.result) {
         homeScore = currentPlayJSON.result.homeScore;
@@ -62,11 +72,11 @@ function addScore (reply, currentPlayJSON) {
         homeScore = currentPlayJSON.details.homeScore;
         awayScore = currentPlayJSON.details.awayScore;
     }
-    reply += (globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.halfInning === 'top'
-        ? '# _' + globalCache.values.game.currentLiveFeed.gameData.teams.away.abbreviation + ' ' + awayScore + '_, ' +
-        globalCache.values.game.currentLiveFeed.gameData.teams.home.abbreviation + ' ' + homeScore
-        : '# ' + globalCache.values.game.currentLiveFeed.gameData.teams.away.abbreviation + ' ' + awayScore + ', _' +
-        globalCache.values.game.currentLiveFeed.gameData.teams.home.abbreviation + ' ' + homeScore + '_');
+    reply += (feed.halfInning() === 'top'
+        ? '# _' + feed.awayAbbreviation() + ' ' + awayScore + '_, ' +
+        feed.homeAbbreviation() + ' ' + homeScore
+        : '# ' + feed.awayAbbreviation() + ' ' + awayScore + ', _' +
+        feed.homeAbbreviation() + ' ' + homeScore + '_');
 
     return reply;
 }
@@ -78,15 +88,11 @@ function addMetrics (lastEvent, reply) {
             getFireEmojis(lastEvent.hitData.launchSpeed) + '\n';
         reply += 'Launch Angle: ' + lastEvent.hitData.launchAngle + '° \n';
         reply += 'Distance: ' + lastEvent.hitData.totalDistance + ' ft.\n';
-        reply += 'xBA: Pending...\n';
-        reply += lastEvent.hitData.totalDistance && lastEvent.hitData.totalDistance >= 300 ? 'HR/Park: Pending...' : '';
+        reply += 'xBA: Pending...';
+        reply += lastEvent.hitData.totalDistance && lastEvent.hitData.totalDistance >= 300 ? '\nHR/Park: Pending...' : '';
     } else {
         reply += '\n\n**Statcast Metrics:**\n';
-        reply += 'Exit Velocity: Unavailable\n';
-        reply += 'Launch Angle: Unavailable\n';
-        reply += 'Distance: Unavailable\n';
-        reply += 'xBA: Unavailable\n';
-        reply += 'HR/Park: Unavailable';
+        reply += 'Data was not available.';
     }
 
     return reply;
