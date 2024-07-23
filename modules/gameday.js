@@ -164,9 +164,11 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex) {
         const embed = new EmbedBuilder()
             .setTitle(deriveHalfInning(feed.halfInning()) + ' ' +
                 feed.inning() + ', ' +
-                feed.awayAbbreviation() + (play.isScoringPlay ? ' vs. ' : ' ' + play.awayScore + ' - ' + play.homeScore + ' ') +
+                feed.awayAbbreviation() + (play.isScoringPlay
+                ? ' vs. '
+                : ' ' + play.awayScore + ' - ' + play.homeScore + ' ') +
                 feed.homeAbbreviation() + (play.isScoringPlay ? ' - Scoring Play \u2757' : ''))
-            .setDescription(play.reply)
+            .setDescription(play.reply + (play.isOut && play.outs === 3 && !didGameEnd(play.homeScore, play.awayScore) ? getDueUp() : ''))
             .setColor((feed.halfInning() === 'top'
                 ? globalCache.values.game.awayTeamColor
                 : globalCache.values.game.homeTeamColor
@@ -191,6 +193,22 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex) {
     }
 }
 
+function didGameEnd (homeScore, awayScore) {
+    const feed = liveFeed(globalCache.values.game.currentLiveFeed);
+    return feed.linescore().currentInning >= 9
+        && (
+            (homeScore > awayScore && feed.linescore().inningState === 'Top')
+            || (awayScore > homeScore && feed.linescore().inningState === 'Bottom')
+        );
+}
+
+function getDueUp () {
+    const feed = liveFeed(globalCache.values.game.currentLiveFeed);
+    const linescore = feed.linescore();
+
+    return '\n\n**Due up**: ' + linescore.offense.batter.fullName + ', ' + linescore.offense.onDeck.fullName + ', ' + linescore.offense.inHole.fullName;
+}
+
 async function sendMessage (returnedChannel, embed, messages) {
     LOGGER.debug('Sending!');
     const message = await returnedChannel.send({
@@ -213,7 +231,7 @@ async function sendDelayedMessage (play, gamePk, channelSubscription, returnedCh
 }
 
 async function maybePopulateAdvancedStatcastMetrics (play, messages, gamePk) {
-    if (play.isInPlay) {
+    if (play.isInPlay && play.metricsAvailable) {
         if (play.playId) {
             try {
                 // xBA and HR/Park for balls in play is available on a delay via baseballsavant.
@@ -228,7 +246,7 @@ async function maybePopulateAdvancedStatcastMetrics (play, messages, gamePk) {
             notifySavantDataUnavailable(messages);
         }
     } else {
-        LOGGER.debug('Skipping savant poll - not in play.');
+        LOGGER.debug('Skipping savant poll - not in play or metrics unavailable.');
     }
 }
 
@@ -277,7 +295,7 @@ function processMatchingPlay (matchingPlay, messages, messageTrackers, playId, h
         if (matchingPlay.xba && description.includes('xBA: Pending...')) {
             LOGGER.debug('Editing with xba: ' + playId);
             description = description.replaceAll('xBA: Pending...', 'xBA: ' + matchingPlay.xba +
-                (parseFloat(matchingPlay.xba) > 0.5 ? ' \uD83D\uDFE2' : ''));
+                (matchingPlay.is_barrel === 1 ? ' \uD83D\uDFE2 (Barreled)' : ''));
             receivedEmbed.setDescription(description);
             messages[i].edit({
                 embeds: [receivedEmbed]

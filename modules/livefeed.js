@@ -8,7 +8,7 @@ module.exports = (liveFeed) => {
         homeTeamId: () => { return liveFeed.gameData.teams.home.id; },
         awayTeamId: () => { return liveFeed.gameData.teams.away.id; },
         currentPlay: () => { return liveFeed.liveData.plays.currentPlay; },
-        allPlays: () => { return liveFeed.liveData.plays.allPlays; }
-
+        allPlays: () => { return liveFeed.liveData.plays.allPlays; },
+        linescore: () => { return liveFeed.liveData.linescore; }
     };
 };
