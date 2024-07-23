@@ -6,6 +6,7 @@ const { EmbedBuilder } = require('discord.js');
 const globals = require('../config/globals');
 const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_LEVEL.INFO);
 const ColorContrastChecker = require('color-contrast-checker');
+const liveFeed = require('./livefeed');
 
 module.exports = {
     statusPoll, subscribe, getConstrastingEmbedColors, processAndPushPlay, pollForSavantData, processMatchingPlay
@@ -103,11 +104,12 @@ function subscribe (bot, liveGame, games) {
 }
 
 function getConstrastingEmbedColors () {
+    const feed = liveFeed(globalCache.values.game.currentLiveFeed);
     globalCache.values.game.homeTeamColor = globals.TEAMS.find(
-        team => team.id === globalCache.values.game.currentLiveFeed.gameData.teams.home.id
+        team => team.id === feed.homeTeamId()
     ).primaryColor;
     const awayTeam = globals.TEAMS.find(
-        team => team.id === globalCache.values.game.currentLiveFeed.gameData.teams.away.id
+        team => team.id === feed.awayTeamId()
     );
     const colorContrastChecker = new ColorContrastChecker();
     if (colorContrastChecker.isLevelCustom(globalCache.values.game.homeTeamColor, awayTeam.primaryColor, globals.TEAM_COLOR_CONTRAST_RATIO)) {
@@ -118,11 +120,12 @@ function getConstrastingEmbedColors () {
 }
 
 async function reportPlays (bot, gamePk) {
-    const currentPlay = globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay;
+    const feed = liveFeed(globalCache.values.game.currentLiveFeed);
+    const currentPlay = feed.currentPlay();
     const atBatIndex = currentPlay.atBatIndex;
     const lastReportedCompleteAtBatIndex = globalCache.values.game.lastReportedCompleteAtBatIndex;
     if (atBatIndex > 0) {
-        const lastAtBat = globalCache.values.game.currentLiveFeed.liveData.plays.allPlays
+        const lastAtBat = feed.allPlays()
             .find((play) => play.about.atBatIndex === atBatIndex - 1);
         if (lastAtBat && lastAtBat.about.hasReview) { // a play that's been challenged. We should report updates on it.
             await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat), gamePk, atBatIndex - 1);
@@ -154,16 +157,17 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex) {
         && !globalCache.values.game.reportedDescriptions
             .find(reportedDescription => reportedDescription.description === play.description && reportedDescription.atBatIndex === atBatIndex)) {
         globalCache.values.game.reportedDescriptions.push({ description: play.description, atBatIndex });
+        const feed = liveFeed(globalCache.values.game.currentLiveFeed);
         if (play.isComplete) {
             globalCache.values.game.lastReportedCompleteAtBatIndex = atBatIndex;
         }
         const embed = new EmbedBuilder()
-            .setTitle(deriveHalfInning(globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.halfInning) + ' ' +
-                globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.inning + ', ' +
-                globalCache.values.game.currentLiveFeed.gameData.teams.away.abbreviation + ' vs. ' +
-                globalCache.values.game.currentLiveFeed.gameData.teams.home.abbreviation + (play.isScoringPlay ? ' - Scoring Play \u2757' : ''))
+            .setTitle(deriveHalfInning(feed.halfInning()) + ' ' +
+                feed.inning() + ', ' +
+                feed.awayAbbreviation() + (play.isScoringPlay ? ' vs. ' : ' ' + play.awayScore + ' - ' + play.homeScore + ' ') +
+                feed.homeAbbreviation() + (play.isScoringPlay ? ' - Scoring Play \u2757' : ''))
             .setDescription(play.reply)
-            .setColor((globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.halfInning === 'top'
+            .setColor((feed.halfInning() === 'top'
                 ? globalCache.values.game.awayTeamColor
                 : globalCache.values.game.homeTeamColor
             ));

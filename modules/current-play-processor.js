@@ -1,5 +1,6 @@
 const globalCache = require('./global-cache');
 const globals = require('../config/globals');
+const liveFeed = require('./livefeed');
 
 module.exports = {
     process: (currentPlayJSON) => {
@@ -40,6 +41,8 @@ module.exports = {
         return {
             reply,
             isStartEvent: currentPlayJSON.playEvents?.find(event => event?.details?.description === 'Status Change - In Progress'),
+            homeScore: currentPlayJSON.result?.homeScore,
+            awayScore: currentPlayJSON.result?.awayScore,
             isComplete: currentPlayJSON.about?.isComplete,
             description: (currentPlayJSON.result?.description || currentPlayJSON.details?.description),
             event: (currentPlayJSON.result?.event || currentPlayJSON.details?.event),
@@ -54,6 +57,7 @@ module.exports = {
 
 function addScore (reply, currentPlayJSON) {
     reply += '\n';
+    const feed = liveFeed(globalCache.values.game.currentLiveFeed);
     let homeScore, awayScore;
     if (currentPlayJSON.result) {
         homeScore = currentPlayJSON.result.homeScore;
@@ -62,11 +66,11 @@ function addScore (reply, currentPlayJSON) {
         homeScore = currentPlayJSON.details.homeScore;
         awayScore = currentPlayJSON.details.awayScore;
     }
-    reply += (globalCache.values.game.currentLiveFeed.liveData.plays.currentPlay.about.halfInning === 'top'
-        ? '# _' + globalCache.values.game.currentLiveFeed.gameData.teams.away.abbreviation + ' ' + awayScore + '_, ' +
-        globalCache.values.game.currentLiveFeed.gameData.teams.home.abbreviation + ' ' + homeScore
-        : '# ' + globalCache.values.game.currentLiveFeed.gameData.teams.away.abbreviation + ' ' + awayScore + ', _' +
-        globalCache.values.game.currentLiveFeed.gameData.teams.home.abbreviation + ' ' + homeScore + '_');
+    reply += (feed.halfInning() === 'top'
+        ? '# _' + feed.awayAbbreviation() + ' ' + awayScore + '_, ' +
+        feed.homeAbbreviation() + ' ' + homeScore
+        : '# ' + feed.awayAbbreviation() + ' ' + awayScore + ', _' +
+        feed.homeAbbreviation() + ' ' + homeScore + '_');
 
     return reply;
 }
