@@ -5,11 +5,11 @@ const currentPlayProcessor = require('./current-play-processor');
 const { EmbedBuilder } = require('discord.js');
 const globals = require('../config/globals');
 const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_LEVEL.INFO);
-const ColorContrastChecker = require('color-contrast-checker');
 const liveFeed = require('./livefeed');
+const gamedayUtil = require('./gameday-util');
 
 module.exports = {
-    statusPoll, subscribe, getConstrastingEmbedColors, processAndPushPlay, pollForSavantData, processMatchingPlay
+    statusPoll, subscribe, processAndPushPlay, pollForSavantData, processMatchingPlay
 };
 
 async function statusPoll (bot) {
@@ -30,7 +30,7 @@ async function statusPoll (bot) {
                 LOGGER.info('Gameday: polling stopped: a game is live.');
                 globalCache.resetGameCache();
                 globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(inProgressGame.gamePk);
-                module.exports.getConstrastingEmbedColors();
+                gamedayUtil.getConstrastingEmbedColors();
                 module.exports.subscribe(bot, inProgressGame, nearestGames);
             } else {
                 setTimeout(pollingFunction, globals.SLOW_POLL_INTERVAL);
@@ -103,22 +103,6 @@ function subscribe (bot, liveGame, games) {
     ws.addEventListener('close', (e) => LOGGER.info('Gameday socket closed: ' + JSON.stringify(e)));
 }
 
-function getConstrastingEmbedColors () {
-    const feed = liveFeed(globalCache.values.game.currentLiveFeed);
-    globalCache.values.game.homeTeamColor = globals.TEAMS.find(
-        team => team.id === feed.homeTeamId()
-    ).primaryColor;
-    const awayTeam = globals.TEAMS.find(
-        team => team.id === feed.awayTeamId()
-    );
-    const colorContrastChecker = new ColorContrastChecker();
-    if (colorContrastChecker.isLevelCustom(globalCache.values.game.homeTeamColor, awayTeam.primaryColor, globals.TEAM_COLOR_CONTRAST_RATIO)) {
-        globalCache.values.game.awayTeamColor = awayTeam.primaryColor;
-    } else {
-        globalCache.values.game.awayTeamColor = awayTeam.secondaryColor;
-    }
-}
-
 async function reportPlays (bot, gamePk) {
     const feed = liveFeed(globalCache.values.game.currentLiveFeed);
     const currentPlay = feed.currentPlay();
@@ -162,13 +146,13 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex) {
             globalCache.values.game.lastReportedCompleteAtBatIndex = atBatIndex;
         }
         const embed = new EmbedBuilder()
-            .setTitle(deriveHalfInning(feed.halfInning()) + ' ' +
+            .setTitle(gamedayUtil.deriveHalfInning(feed.halfInning()) + ' ' +
                 feed.inning() + ', ' +
                 feed.awayAbbreviation() + (play.isScoringPlay
                 ? ' vs. '
                 : ' ' + play.awayScore + ' - ' + play.homeScore + ' ') +
                 feed.homeAbbreviation() + (play.isScoringPlay ? ' - Scoring Play \u2757' : ''))
-            .setDescription(play.reply + (play.isOut && play.outs === 3 && !didGameEnd(play.homeScore, play.awayScore) ? getDueUp() : ''))
+            .setDescription(play.reply + (play.isOut && play.outs === 3 && !gamedayUtil.didGameEnd(play.homeScore, play.awayScore) ? gamedayUtil.getDueUp() : ''))
             .setColor((feed.halfInning() === 'top'
                 ? globalCache.values.game.awayTeamColor
                 : globalCache.values.game.homeTeamColor
@@ -191,22 +175,6 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex) {
             await maybePopulateAdvancedStatcastMetrics(play, messages, gamePk);
         }
     }
-}
-
-function didGameEnd (homeScore, awayScore) {
-    const feed = liveFeed(globalCache.values.game.currentLiveFeed);
-    return feed.linescore().currentInning >= 9
-        && (
-            (homeScore > awayScore && feed.linescore().inningState === 'Top')
-            || (awayScore > homeScore && feed.linescore().inningState === 'Bottom')
-        );
-}
-
-function getDueUp () {
-    const feed = liveFeed(globalCache.values.game.currentLiveFeed);
-    const linescore = feed.linescore();
-
-    return '\n\n**Due up**: ' + linescore.offense.batter.fullName + ', ' + linescore.offense.onDeck.fullName + ', ' + linescore.offense.inHole.fullName;
 }
 
 async function sendMessage (returnedChannel, embed, messages) {
@@ -322,8 +290,4 @@ function processMatchingPlay (matchingPlay, messages, messageTrackers, playId, h
             }
         }
     }
-}
-
-function deriveHalfInning (halfInningFull) {
-    return halfInningFull === 'top' ? 'TOP' : 'BOT';
 }

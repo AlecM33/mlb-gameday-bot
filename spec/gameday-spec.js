@@ -1,4 +1,5 @@
 const gameday = require('../modules/gameday');
+const gamedayUtil = require('../modules/gameday-util')
 const mlbAPIUtil = require('../modules/MLB-API-util');
 const globals = require('../config/globals');
 const mockResponses = require('./data/mock-responses');
@@ -8,7 +9,7 @@ const { EmbedBuilder } = require('discord.js');
 describe('gameday', () => {
     describe('#statusPoll', () => {
         beforeEach(() => {
-            spyOn(gameday, 'getConstrastingEmbedColors').and.stub();
+            spyOn(gamedayUtil, 'getConstrastingEmbedColors').and.stub();
             spyOn(mlbAPIUtil, 'liveFeed').and.callFake((gamePk, fields) => {
                 return {};
             });
@@ -23,7 +24,7 @@ describe('gameday', () => {
             expect(gameday.subscribe).toHaveBeenCalled();
             expect(mlbAPIUtil.liveFeed).toHaveBeenCalled();
             expect(globalCache.resetGameCache).toHaveBeenCalled();
-            expect(gameday.getConstrastingEmbedColors).toHaveBeenCalled();
+            expect(gamedayUtil.getConstrastingEmbedColors).toHaveBeenCalled();
         });
 
         it('should continue polling if no game is live', async () => {
@@ -39,7 +40,7 @@ describe('gameday', () => {
             expect(gameday.subscribe).not.toHaveBeenCalled();
             expect(mlbAPIUtil.liveFeed).not.toHaveBeenCalled();
             expect(globalCache.resetGameCache).not.toHaveBeenCalled();
-            expect(gameday.getConstrastingEmbedColors).not.toHaveBeenCalled();
+            expect(gamedayUtil.getConstrastingEmbedColors).not.toHaveBeenCalled();
             jasmine.clock().uninstall();
         });
     });
