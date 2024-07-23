@@ -9,7 +9,7 @@ module.exports = {
     },
 
     didGameEnd: (homeScore, awayScore) => {
-        const feed = liveFeed(globalCache.values.game.currentLiveFeed);
+        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         return feed.inning() >= 9
             && (
                 (homeScore > awayScore && feed.halfInning() === 'top')
@@ -18,7 +18,7 @@ module.exports = {
     },
 
     getConstrastingEmbedColors: () => {
-        const feed = liveFeed(globalCache.values.game.currentLiveFeed);
+        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         globalCache.values.game.homeTeamColor = globals.TEAMS.find(
             team => team.id === feed.homeTeamId()
         ).primaryColor;
@@ -34,9 +34,9 @@ module.exports = {
     },
 
     getDueUp: () => {
-        const feed = liveFeed(globalCache.values.game.currentLiveFeed);
+        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         const linescore = feed.linescore();
 
-        return '\n\n**Due up**: ' + linescore.offense.batter.fullName + ', ' + linescore.offense.onDeck.fullName + ', ' + linescore.offense.inHole.fullName;
+        return '\n\n**Due up**: ' + linescore.offense?.batter?.fullName + ', ' + linescore.offense?.onDeck?.fullName + ', ' + linescore.offense?.inHole?.fullName;
     }
-}
+};

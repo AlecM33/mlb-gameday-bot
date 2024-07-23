@@ -104,7 +104,7 @@ function subscribe (bot, liveGame, games) {
 }
 
 async function reportPlays (bot, gamePk) {
-    const feed = liveFeed(globalCache.values.game.currentLiveFeed);
+    const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
     const currentPlay = feed.currentPlay();
     const atBatIndex = currentPlay.atBatIndex;
     const lastReportedCompleteAtBatIndex = globalCache.values.game.lastReportedCompleteAtBatIndex;
@@ -141,7 +141,7 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex) {
         && !globalCache.values.game.reportedDescriptions
             .find(reportedDescription => reportedDescription.description === play.description && reportedDescription.atBatIndex === atBatIndex)) {
         globalCache.values.game.reportedDescriptions.push({ description: play.description, atBatIndex });
-        const feed = liveFeed(globalCache.values.game.currentLiveFeed);
+        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         if (play.isComplete) {
             globalCache.values.game.lastReportedCompleteAtBatIndex = atBatIndex;
         }

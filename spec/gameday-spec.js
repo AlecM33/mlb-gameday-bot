@@ -1,5 +1,5 @@
 const gameday = require('../modules/gameday');
-const gamedayUtil = require('../modules/gameday-util')
+const gamedayUtil = require('../modules/gameday-util');
 const mlbAPIUtil = require('../modules/MLB-API-util');
 const globals = require('../config/globals');
 const mockResponses = require('./data/mock-responses');

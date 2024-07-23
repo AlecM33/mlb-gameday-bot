@@ -63,7 +63,7 @@ module.exports = {
 
 function addScore (reply, currentPlayJSON) {
     reply += '\n';
-    const feed = liveFeed(globalCache.values.game.currentLiveFeed);
+    const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
     let homeScore, awayScore;
     if (currentPlayJSON.result) {
         homeScore = currentPlayJSON.result.homeScore;

@@ -1,6 +1,6 @@
 const commandUtil = require('../modules/command-util');
 
-describe('commandUtil', () => {
+describe('command-util', () => {
     beforeAll(() => {});
     describe('#formatSplits', () => {
         it('should format splits for a player that has played on multiple teams in a season', async () => {
