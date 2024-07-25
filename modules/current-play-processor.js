@@ -107,25 +107,3 @@ function getFireEmojis (launchSpeed) {
 function getDescription (currentPlayJSON) {
     return (currentPlayJSON.result?.description || currentPlayJSON.details.description || '');
 }
-
-function getHomeRunCall (player, partOfField, scorers, hrNumber) {
-    const calls = [
-        player.toUpperCase() +
-        ' WITH A SWING AND A DRIVE! TO DEEP ' +
-        partOfField.toUpperCase() +
-        '! A-WAAAAY BACK! GONE!!! ' + hrNumber + '\n' +
-        (scorers || ''),
-        player +
-        ' is ready...the pitch...SWUNG ON AND BLASTED. DEEP ' +
-        partOfField.toUpperCase() +
-        ' FIELD! THIS BALL: GONE!! ' + hrNumber + '\n' +
-        (scorers || ''),
-        'The next pitch to ' + player +
-        '...SWUNG ON! HIT HIGH! HIT DEEP TO ' +
-        partOfField.toUpperCase() +
-        '! A-WAAAAY BACK! GONE!!! ' + hrNumber + '\n' +
-        (scorers || '')
-    ];
-
-    return calls[Math.floor(Math.random() * calls.length)];
-}
