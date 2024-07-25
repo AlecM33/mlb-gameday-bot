@@ -30,7 +30,7 @@ const endpoints = {
     spot: (personId) => {
         return 'https://midfield.mlbstatic.com/v1/people/' + personId + '/spots/120';
     },
-    standings: (leagueId = globals.AMERICAN_LEAGUE) => {
+    standings: (leagueId) => {
         LOGGER.debug('https://statsapi.mlb.com/api/v1/standings?leagueId=' + leagueId);
         return 'https://statsapi.mlb.com/api/v1/standings?leagueId=' + leagueId;
     },

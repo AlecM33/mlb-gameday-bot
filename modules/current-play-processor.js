@@ -8,13 +8,7 @@ module.exports = {
         if (!globalCache.values.game.startReported
             && currentPlayJSON.playEvents?.find(event => event?.details?.description === 'Status Change - In Progress')) {
             globalCache.values.game.startReported = true;
-            if (parseInt(process.env.TEAM_ID) === globals.GUARDIANS) {
-                reply += (globalCache.values.game.currentLiveFeed.gameData.teams.home.id === globals.GUARDIANS
-                    ? 'And we\'re underway at the corner of Carnegie and Ontario.'
-                    : 'A game is starting! Go Guards!');
-            } else {
-                reply += 'A game is starting!';
-            }
+            reply += 'A game is starting!';
         }
         let lastEvent;
         if (currentPlayJSON.about?.isComplete
@@ -111,26 +105,7 @@ function getFireEmojis (launchSpeed) {
 }
 
 function getDescription (currentPlayJSON) {
-    if (parseInt(process.env.TEAM_ID) === globals.GUARDIANS
-        && currentPlayJSON.result?.event === 'Home Run'
-        && guardiansBatting(currentPlayJSON)
-        && currentPlayJSON.result?.description) {
-        return getGuardiansHomeRunDescription(currentPlayJSON.result.description);
-    }
     return (currentPlayJSON.result?.description || currentPlayJSON.details.description || '');
-}
-
-function guardiansBatting (currentPlayJSON) {
-    return (currentPlayJSON.about.halfInning === 'bottom' && globalCache.values.game.currentLiveFeed.gameData.teams.home.id === globals.GUARDIANS)
-        || (currentPlayJSON.about.halfInning === 'top' && globalCache.values.game.currentLiveFeed.gameData.teams.away.id === globals.GUARDIANS);
-}
-
-function getGuardiansHomeRunDescription (description) {
-    const player = /(?<person>.+)( homers| hits a grand slam)/.exec(description)?.groups.person;
-    const partOfField = /to (?<partOfField>[a-zA-Z ]+) field./.exec(description)?.groups.partOfField;
-    const scorers = /field.[ ]+(?<scorers>.+)/.exec(description)?.groups.scorers;
-    const hrNumber = /.+(?<hrNumber>\([\d]+\))/.exec(description)?.groups.hrNumber;
-    return getHomeRunCall(player, partOfField, scorers, hrNumber);
 }
 
 function getHomeRunCall (player, partOfField, scorers, hrNumber) {
