@@ -598,7 +598,8 @@ function getScoreString (liveFeed, currentPlayJSON) {
 function buildPitchingStatsMarkdown (pitchingStats, pitchMix, includeExtra = false) {
     let reply = '\n';
     if (!pitchingStats) {
-        reply += 'W-L: -\n' +
+        reply += 'G: -\n' +
+            'W-L: -\n' +
             'ERA: -.--\n' +
             'WHIP: -.--' +
             (includeExtra
@@ -609,7 +610,8 @@ function buildPitchingStatsMarkdown (pitchingStats, pitchMix, includeExtra = fal
                     'Saves/Opps: -/-'
                 : '');
     } else {
-        reply += 'W-L: ' + pitchingStats.wins + '-' + pitchingStats.losses + '\n' +
+        reply += 'G: ' + pitchingStats.gamesPlayed + '\n' +
+            'W-L: ' + pitchingStats.wins + '-' + pitchingStats.losses + '\n' +
             'ERA: ' + pitchingStats.era + '\n' +
             'WHIP: ' + pitchingStats.whip +
             (includeExtra
