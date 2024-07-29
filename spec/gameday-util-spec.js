@@ -97,7 +97,7 @@ describe('gameday-util', () => {
             spyOn(liveFeed, 'init').and.returnValue({
                 homeTeamId: () => { return 109; },
                 awayTeamVenue: () => {
-                    return  {
+                    return {
                         id: 15,
                         name: 'Chase Field',
                         season: '2024',
