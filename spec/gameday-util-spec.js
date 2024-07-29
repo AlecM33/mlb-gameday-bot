@@ -110,5 +110,24 @@ describe('gameday-util', () => {
             const reply = await gamedayUtil.getXParks('77777', 'abc', 26);
             expect(reply).toEqual(', but not Chase Field');
         });
+
+        it('should not list anything for 0 or 30 parks', async () => {
+            spyOn(mlbAPIUtil, 'xParks').and.returnValue(Promise.resolve(mockResponses.xParksSomeParks));
+            spyOn(liveFeed, 'init').and.returnValue({
+                homeTeamId: () => { return 109; },
+                awayTeamVenue: () => {
+                    return {
+                        id: 15,
+                        name: 'Chase Field',
+                        season: '2024',
+                        team_id: 109,
+                        name_display_club: 'D-backs',
+                        team_abbrev: 'ARI'
+                    };
+                }
+            });
+            expect((await gamedayUtil.getXParks('77777', 'abc', 30))).toEqual('');
+            expect((await gamedayUtil.getXParks('77777', 'abc', 0))).toEqual('');
+        });
     });
 });
