@@ -9,7 +9,6 @@ const values = {
         lastReportedPlayDescription: null,
         startReported: false,
         reportedDescriptions: [],
-        savantMetricsCache: {},
         homeTeamColor: null,
         awayTeamColor: null,
         finished: false,
@@ -25,7 +24,6 @@ function resetGameCache () {
     values.game.lastReportedPlayDescription = null;
     values.game.startReported = false;
     values.game.reportedDescriptions = [];
-    values.game.savantMetricsCache = {};
     values.game.homeTeamColor = null;
     values.game.awayTeamColor = null;
     values.game.finished = false;
