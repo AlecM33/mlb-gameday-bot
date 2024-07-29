@@ -63,7 +63,6 @@ function subscribe (bot, liveGame, games) {
             globalCache.values.game.lastSocketMessageLength = e.data.length;
             if (eventJSON.gameEvents.includes('game_finished') && !globalCache.values.game.finished) {
                 globalCache.values.game.finished = true;
-                globalCache.values.game.startReported = false;
                 LOGGER.info('NOTIFIED OF GAME CONCLUSION: CLOSING...');
                 ws.close();
                 await statusPoll(bot, games);
@@ -187,14 +186,16 @@ async function sendMessage (returnedChannel, embed, messages) {
 
 async function sendDelayedMessage (play, gamePk, channelSubscription, returnedChannel, embed) {
     setTimeout(async () => {
+        const cacheHit = gamedayUtil.checkForCachedSavantMetrics(embed, play);
         LOGGER.debug('Sending!');
         const message = await returnedChannel.send({
             embeds: [embed]
         });
-        /* TODO: savant polling will be done for each delayed message individually. Not ideal, but shouldn't be too bad.
-            In any case, there's an opportunity for non-delayed messages to cache the info for delayed messages.
-         */
-        await maybePopulateAdvancedStatcastMetrics(play, [message], gamePk);
+        if (!cacheHit) {
+            await maybePopulateAdvancedStatcastMetrics(play, [message], gamePk);
+        } else {
+            LOGGER.trace('Savant cache hit for play: ' + play.playId);
+        }
     }, channelSubscription.delay * 1000);
 }
 
@@ -238,7 +239,7 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance) {
             LOGGER.debug('Savant: all messages done.');
             return;
         }
-        if (attempts < 10) {
+        if (attempts < globals.SAVANT_MAX_ATTEMPTS) {
             LOGGER.trace('Savant: polling for ' + playId + '...');
             const gameFeed = await mlbAPIUtil.savantGameFeed(gamePk);
             const matchingPlay = gameFeed?.team_away?.find(play => play?.play_id === playId)
@@ -270,6 +271,7 @@ function processMatchingPlay (matchingPlay, messages, messageTrackers, playId, h
             }).then((m) => LOGGER.trace('Edited: ' + m.id)).catch((e) => console.error(e));
             if (hitDistance && hitDistance < 300) {
                 LOGGER.debug('Found xba, done polling for: ' + playId);
+                globalCache.values.game.savantMetricsCache[playId] = { xba: matchingPlay.xba, is_barrel: matchingPlay.is_barrel };
                 messageTrackers.find(tracker => tracker.id === messages[i].id).done = true;
             }
         }
@@ -286,6 +288,11 @@ function processMatchingPlay (matchingPlay, messages, messageTrackers, playId, h
             }).then((m) => LOGGER.trace('Edited: ' + m.id)).catch((e) => console.error(e));
             if (matchingPlay.xba) {
                 LOGGER.debug('Found all metrics: done polling for: ' + playId);
+                globalCache.values.game.savantMetricsCache[playId] = {
+                    xba: matchingPlay.xba,
+                    homeRunBallparks: matchingPlay.contextMetrics.homeRunBallparks,
+                    is_barrel: matchingPlay.is_barrel
+                };
                 messageTrackers.find(tracker => tracker.id === messages[i].id).done = true;
             }
         }

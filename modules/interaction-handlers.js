@@ -41,14 +41,14 @@ module.exports = {
                         name: (hydratedHomeProbable.handedness
                             ? hydratedHomeProbable.handedness + 'HP **'
                             : '**') + (probables.homeProbableLastName || 'TBD') + '** (' + probables.homeAbbreviation + ')',
-                        value: buildPitchingStatsMarkdown(hydratedHomeProbable.pitchingStats, hydratedHomeProbable.pitchMix),
+                        value: commandUtil.buildPitchingStatsMarkdown(hydratedHomeProbable.pitchingStats, hydratedHomeProbable.pitchMix),
                         inline: true
                     })
                     .addFields({
                         name: (hydratedAwayProbable.handedness
                             ? hydratedAwayProbable.handedness + 'HP **'
                             : '**') + (probables.awayProbableLastName || 'TBD') + '** (' + probables.awayAbbreviation + ')',
-                        value: buildPitchingStatsMarkdown(hydratedAwayProbable.pitchingStats, hydratedAwayProbable.pitchMix),
+                        value: commandUtil.buildPitchingStatsMarkdown(hydratedAwayProbable.pitchingStats, hydratedAwayProbable.pitchMix),
                         inline: true
                     });
                 await interaction.followUp({
@@ -390,7 +390,7 @@ module.exports = {
                 '## ' + (pitcherInfo.handedness
                     ? pitcherInfo.handedness + 'HP **'
                     : '**') + (pitcher.fullName || 'TBD') + '** (' + abbreviation + ')' +
-                buildPitchingStatsMarkdown(pitcherInfo.pitchingStats, pitcherInfo.pitchMix, true))
+                commandUtil.buildPitchingStatsMarkdown(pitcherInfo.pitchingStats, pitcherInfo.pitchMix, true))
             .setColor((halfInning === 'top'
                 ? globalCache.values.game.homeTeamColor
                 : globalCache.values.game.awayTeamColor)
@@ -467,7 +467,7 @@ module.exports = {
                     liveFeed.gameData.teams.home.teamName.toLowerCase().replaceAll(' ', '-') + '/' +
                     liveFeed.gameData.datetime.officialDate.replaceAll('-', '/') +
                     '/' + game.gamePk + '/play/' + scoringPlayIndex;
-                links.push(getScoreString(liveFeed, play) + ' [' + play.result.description.trim() + '](<' + link + '>)\n');
+                links.push(commandUtil.getScoreString(liveFeed, play) + ' [' + play.result.description.trim() + '](<' + link + '>)\n');
             });
             // discord limits messages to 2,000 characters. We very well might need a couple messages to link everything.
             const messagesNeeded = Math.ceil(liveFeed.liveData.plays.scoringPlays.length / globals.SCORING_PLAYS_PER_MESSAGE);
@@ -552,7 +552,7 @@ module.exports = {
                 components: [],
                 content: weather && Object.keys(weather).length > 0
                     ? 'Weather at ' + currentLiveFeed.gameData.venue.name + ':\n' +
-                        getWeatherEmoji(weather.condition) + ' ' + weather.condition + '\n' +
+                        commandUtil.getWeatherEmoji(weather.condition) + ' ' + weather.condition + '\n' +
                         '\uD83C\uDF21 ' + weather.temp + '°\n' +
                         '\uD83C\uDF43 ' + weather.wind
                     : 'Not available yet - check back an hour or two before game time.'
@@ -560,85 +560,3 @@ module.exports = {
         }
     }
 };
-
-function getWeatherEmoji (condition) {
-    switch (condition) {
-        case 'Clear':
-        case 'Sunny':
-            return '\u2600';
-        case 'Cloudy':
-            return '\u2601';
-        case 'Partly Cloudy':
-            return '\uD83C\uDF24';
-        case 'Dome':
-        case 'Roof Closed':
-            return '';
-        case 'Drizzle':
-        case 'Rain':
-            return '\uD83C\uDF27';
-        case 'Snow':
-            return '\u2744';
-        case 'Overcast':
-            return '\uD83C\uDF2B';
-        default:
-            return '';
-    }
-}
-
-function getScoreString (liveFeed, currentPlayJSON) {
-    const homeScore = currentPlayJSON.result.homeScore;
-    const awayScore = currentPlayJSON.result.awayScore;
-    return (currentPlayJSON.about.halfInning === 'top'
-        ? '**' + liveFeed.gameData.teams.away.abbreviation + ' ' + awayScore + '**, ' +
-        liveFeed.gameData.teams.home.abbreviation + ' ' + homeScore
-        : liveFeed.gameData.teams.away.abbreviation + ' ' + awayScore + ', **' +
-        liveFeed.gameData.teams.home.abbreviation + ' ' + homeScore + '**');
-}
-
-function buildPitchingStatsMarkdown (pitchingStats, pitchMix, includeExtra = false) {
-    let reply = '\n';
-    if (!pitchingStats) {
-        reply += 'G: -\n' +
-            'W-L: -\n' +
-            'ERA: -.--\n' +
-            'WHIP: -.--' +
-            (includeExtra
-                ? '\nK/9: -.--\n' +
-                    'BB/9: -.--\n' +
-                    'H/9: -.--\n' +
-                    'HR/9: -.--\n' +
-                    'Saves/Opps: -/-'
-                : '');
-    } else {
-        reply += 'G: ' + pitchingStats.gamesPlayed + '\n' +
-            'W-L: ' + pitchingStats.wins + '-' + pitchingStats.losses + '\n' +
-            'ERA: ' + pitchingStats.era + '\n' +
-            'WHIP: ' + pitchingStats.whip +
-            (includeExtra
-                ? '\nK/9: ' + pitchingStats.strikeoutsPer9Inn + '\n' +
-                    'BB/9: ' + pitchingStats.walksPer9Inn + '\n' +
-                    'H/9: ' + pitchingStats.hitsPer9Inn + '\n' +
-                    'HR/9: ' + pitchingStats.homeRunsPer9 + '\n' +
-                    'Saves/Opps: ' + pitchingStats.saves + '/' + pitchingStats.saveOpportunities
-                : '');
-    }
-    reply += '\n**Arsenal:**' + '\n';
-    if (pitchMix instanceof Error) {
-        reply += pitchMix.message;
-        return reply;
-    }
-    if (pitchMix && pitchMix.length > 0 && pitchMix[0].length > 0) {
-        reply += (() => {
-            let arsenal = '';
-            for (let i = 0; i < pitchMix[0].length; i ++) {
-                arsenal += pitchMix[0][i] + ' (' + pitchMix[1][i] + '%)' +
-                   ': ' + pitchMix[2][i] + ' mph, ' + pitchMix[3][i] + ' BAA' + '\n';
-            }
-            return arsenal;
-        })();
-    } else {
-        reply += 'No data!';
-    }
-
-    return reply;
-}
