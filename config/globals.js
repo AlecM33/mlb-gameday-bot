@@ -62,6 +62,7 @@ module.exports = {
         'wild_pitch',
         'other_out'
     ],
+    GUARDIANS: 114, // guardians team ID for MLB stats API
     SAVANT_POLLING_INTERVAL: 15000,
     SLOW_POLL_INTERVAL: 300000,
     GAMEDAY_PING_INTERVAL: 10000,
