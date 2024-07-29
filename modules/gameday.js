@@ -186,7 +186,7 @@ async function sendMessage (returnedChannel, embed, messages) {
 
 async function sendDelayedMessage (play, gamePk, channelSubscription, returnedChannel, embed) {
     setTimeout(async () => {
-        const cacheHit = checkForCachedSavantMetrics(embed, play);
+        const cacheHit = gamedayUtil.checkForCachedSavantMetrics(embed, play);
         LOGGER.debug('Sending!');
         const message = await returnedChannel.send({
             embeds: [embed]
@@ -197,33 +197,6 @@ async function sendDelayedMessage (play, gamePk, channelSubscription, returnedCh
             LOGGER.trace('Savant cache hit for play: ' + play.playId);
         }
     }, channelSubscription.delay * 1000);
-}
-
-/*
-    Earlier messages not sent on a delay may have already polled baseball savant and obtained the advanced metrics.
-    If that's the case, we can avoid making a call to them again.
- */
-function checkForCachedSavantMetrics (embed, play) {
-    if (play.isInPlay && play.playId) {
-        const cachedPlay = globalCache.values.game.savantMetricsCache[play.playId];
-        if (cachedPlay) {
-            let description = embed.data?.description;
-            if (cachedPlay.xba) {
-                description = description.replaceAll('xBA: Pending...', 'xBA: ' + cachedPlay.xba +
-                    (parseFloat(cachedPlay.xba) > 0.5 ? ' \uD83D\uDFE2' : ''));
-                embed.setDescription(description);
-            }
-            if (cachedPlay.homeRunBallparks !== undefined) {
-                description = description.replaceAll('HR/Park: Pending...', 'HR/Park: ' +
-                    cachedPlay.homeRunBallparks + '/30' +
-                    (cachedPlay.homeRunBallparks === 30 ? '\u203C\uFE0F' : ''));
-                embed.setDescription(description);
-            }
-            return true;
-        }
-        return false;
-    }
-    return false;
 }
 
 async function maybePopulateAdvancedStatcastMetrics (play, messages, gamePk) {
@@ -298,7 +271,7 @@ function processMatchingPlay (matchingPlay, messages, messageTrackers, playId, h
             }).then((m) => LOGGER.trace('Edited: ' + m.id)).catch((e) => console.error(e));
             if (hitDistance && hitDistance < 300) {
                 LOGGER.debug('Found xba, done polling for: ' + playId);
-                globalCache.values.game.savantMetricsCache[playId] = { xba: matchingPlay.xba };
+                globalCache.values.game.savantMetricsCache[playId] = { xba: matchingPlay.xba, is_barrel: matchingPlay.is_barrel };
                 messageTrackers.find(tracker => tracker.id === messages[i].id).done = true;
             }
         }
