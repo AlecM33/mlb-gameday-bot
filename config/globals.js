@@ -70,8 +70,8 @@ module.exports = {
     DATE: null,
     ADMIN_ROLES: [ "Mod" ],
     TEAM_COLOR_CONTRAST_RATIO: 1.5,
-    HOME_RUN_PARKS_MIN: 30,
-    HOME_RUN_PARKS_MAX: 1,
+    HOME_RUN_PARKS_MIN: 4,
+    HOME_RUN_PARKS_MAX: 26,
     EVENTS: [
         "Double",
         "Double Play",

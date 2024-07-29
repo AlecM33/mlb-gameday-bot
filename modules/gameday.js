@@ -278,12 +278,9 @@ async function processMatchingPlay (matchingPlay, messages, messageTrackers, pla
             && matchingPlay.contextMetrics.homeRunBallparks !== undefined
             && description.includes('HR/Park: Pending...')) {
             LOGGER.debug('Editing with HR/Park: ' + playId);
-            const homeRunBallParksDescription = 'HR/Park: ' +
-                matchingPlay.contextMetrics.homeRunBallparks + '/30' +
-                (matchingPlay.contextMetrics.homeRunBallparks === 30 ? '\u203C\uFE0F' : '')
-                + (matchingPlay.contextMetrics.homeRunBallparks <= globals.HOME_RUN_PARKS_MIN || matchingPlay.contextMetrics.homeRunBallparks >= globals.HOME_RUN_PARKS_MAX
-                    ? (await gamedayUtil.getXParks(feed.gamePk(), playId, matchingPlay.contextMetrics.homeRunBallparks))
-                    : '')
+            const homeRunBallParksDescription = 'HR/Park: ' + matchingPlay.contextMetrics.homeRunBallparks + '/30' +
+                (matchingPlay.contextMetrics.homeRunBallparks === 30 ? '\u203C\uFE0F' : '') +
+                (await gamedayUtil.getXParks(feed.gamePk(), playId, matchingPlay.contextMetrics.homeRunBallparks));
             description = description.replaceAll('HR/Park: Pending...', homeRunBallParksDescription);
             receivedEmbed.setDescription(description);
             messages[i].edit({
