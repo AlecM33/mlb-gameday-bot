@@ -5,6 +5,7 @@ const globals = require('../config/globals');
 const mockResponses = require('./data/mock-responses');
 const globalCache = require('../modules/global-cache');
 const { EmbedBuilder } = require('discord.js');
+const liveFeed = require('../modules/livefeed');
 
 describe('gameday', () => {
     describe('#statusPoll', () => {
@@ -82,8 +83,14 @@ describe('gameday', () => {
     });
 
     describe('#processMatchingPlay', () => {
-        it('should edit all messages with xBA and mark them as done', async () => {
+        beforeEach(() => {
+            spyOn(liveFeed, 'init').and.returnValue({
+                gamePk: () => { return 77777; }
+            });
+        });
+        it('should edit all messages with xBA and HR/Park and mark them as done', async () => {
             const mockSetDescription = (description) => {};
+            spyOn(gamedayUtil, 'getXParks').and.returnValue('');
             const mockEmbed = {
                 description: 'xBA: Pending...\nHR/Park: Pending...',
                 setDescription: mockSetDescription
@@ -100,7 +107,7 @@ describe('gameday', () => {
             ];
             spyOn(EmbedBuilder, 'from').and.returnValue(mockEmbed);
             spyOn(mockEmbed, 'setDescription').and.callThrough();
-            gameday.processMatchingPlay(
+            await gameday.processMatchingPlay(
                 {
                     play_id: 'abc',
                     xba: '.320',

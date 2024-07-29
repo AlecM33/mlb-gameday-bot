@@ -1,6 +1,9 @@
 module.exports = {
     init: (liveFeed) => {
         return {
+            gamePk: () => {
+                return liveFeed.gameData.game.pk;
+            },
             timestamp: () => {
                 return liveFeed.metaData.timeStamp;
             },
@@ -21,6 +24,12 @@ module.exports = {
             },
             awayTeamId: () => {
                 return liveFeed.gameData.teams.away.id;
+            },
+            homeTeamVenue: () => {
+                return liveFeed.gameData.teams.home.venue;
+            },
+            awayTeamVenue: () => {
+                return liveFeed.gameData.teams.away.venue;
             },
             currentPlay: () => {
                 return liveFeed.liveData.plays.currentPlay;

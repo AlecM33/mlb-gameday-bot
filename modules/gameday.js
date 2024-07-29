@@ -256,7 +256,8 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance) {
     await pollingFunction();
 }
 
-function processMatchingPlay (matchingPlay, messages, messageTrackers, playId, hitDistance) {
+async function processMatchingPlay (matchingPlay, messages, messageTrackers, playId, hitDistance) {
+    const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
     for (let i = 0; i < messages.length; i ++) {
         const receivedEmbed = EmbedBuilder.from(messages[i].embeds[0]);
         let description = messages[i].embeds[0].description;
@@ -277,9 +278,10 @@ function processMatchingPlay (matchingPlay, messages, messageTrackers, playId, h
             && matchingPlay.contextMetrics.homeRunBallparks !== undefined
             && description.includes('HR/Park: Pending...')) {
             LOGGER.debug('Editing with HR/Park: ' + playId);
-            description = description.replaceAll('HR/Park: Pending...', 'HR/Park: ' +
-                matchingPlay.contextMetrics.homeRunBallparks + '/30' +
-                (matchingPlay.contextMetrics.homeRunBallparks === 30 ? '\u203C\uFE0F' : ''));
+            const homeRunBallParksDescription = 'HR/Park: ' + matchingPlay.contextMetrics.homeRunBallparks + '/30' +
+                (matchingPlay.contextMetrics.homeRunBallparks === 30 ? '\u203C\uFE0F' : '') +
+                (await gamedayUtil.getXParks(feed.gamePk(), playId, matchingPlay.contextMetrics.homeRunBallparks));
+            description = description.replaceAll('HR/Park: Pending...', homeRunBallParksDescription);
             receivedEmbed.setDescription(description);
             messages[i].edit({
                 embeds: [receivedEmbed]
