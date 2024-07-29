@@ -73,25 +73,6 @@ describe('gameday-util', () => {
             expect(reply).toEqual(' - Fenway Park (BOS)');
         });
 
-        it('should mention your team\'s ballpark if they are not the home team', async () => {
-            spyOn(mlbAPIUtil, 'xParks').and.returnValue(Promise.resolve(mockResponses.xParksSomeParks));
-            spyOn(liveFeed, 'init').and.returnValue({
-                homeTeamId: () => { return 113; },
-                awayTeamVenue: () => {
-                    return {
-                        id: 5,
-                        name: 'Progressive Field',
-                        season: '2024',
-                        team_id: 114,
-                        name_display_club: 'Guardians',
-                        team_abbrev: 'CLE'
-                    };
-                }
-            });
-            const reply = await gamedayUtil.getXParks('77777', 'abc', 26);
-            expect(reply).toEqual(', including Progressive Field');
-        });
-
         it('should correctly specify when the parks include your team\'s home ballpark, if they are not the home team', async () => {
             spyOn(mlbAPIUtil, 'xParks').and.returnValue(Promise.resolve(mockResponses.xParksSomeParks));
             spyOn(liveFeed, 'init').and.returnValue({
