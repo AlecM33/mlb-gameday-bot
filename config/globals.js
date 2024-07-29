@@ -1,29 +1,4 @@
 module.exports = {
-    EVENT_BLACKLIST: [
-        "batter_timeout",
-        "mound_visit",
-        "offensive_substitution",
-        "defensive_switch",
-        "foul",
-        "ball",
-        "called_strike",
-        "swinging_strike",
-        "swinging_strike_blocked",
-        "hit_into_play",
-        "pickoff_1b",
-        "pickoff_2b",
-        "pickoff_3b",
-        "hit_into_play_no_out",
-        "foul_tip",
-        "at_bat_start",
-        "blocked_ball",
-        "defensive_indiff",
-        "pitcher_step_off",
-        "no_pitch",
-        "ejection",
-        "injury",
-        "umpire_substitution"
-    ],
     EVENT_WHITELIST:[
         'pickoff_1b',
         'pickoff_2b',
@@ -95,6 +70,8 @@ module.exports = {
     DATE: null,
     ADMIN_ROLES: [ "Mod" ],
     TEAM_COLOR_CONTRAST_RATIO: 1.5,
+    HOME_RUN_PARKS_MIN: 30,
+    HOME_RUN_PARKS_MAX: 1,
     EVENTS: [
         "Double",
         "Double Play",

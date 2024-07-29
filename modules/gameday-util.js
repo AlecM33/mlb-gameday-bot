@@ -2,6 +2,7 @@ const liveFeed = require('./livefeed');
 const globalCache = require('./global-cache');
 const globals = require('../config/globals');
 const ColorContrastChecker = require('color-contrast-checker');
+const mlbAPIUtil = require("./MLB-API-util");
 
 module.exports = {
     deriveHalfInning: (halfInningFull) => {
@@ -38,5 +39,20 @@ module.exports = {
         const linescore = feed.linescore();
 
         return '\n\n**Due up**: ' + linescore.offense?.batter?.fullName + ', ' + linescore.offense?.onDeck?.fullName + ', ' + linescore.offense?.inHole?.fullName;
+    },
+
+    getXParks: async (gamePk, playId, numberOfParks) => {
+        let reply = ' - ';
+        const xParks = await mlbAPIUtil.xParks(gamePk, playId);
+
+        let parks = numberOfParks >= globals.HOME_RUN_PARKS_MAX ? xParks.not : xParks.hr
+
+        for (let i = 0; i < parks.length; i ++) {
+            reply += parks[i].name + ' (' + parks[i].team_abbrev + ')'
+            if (i < parks.length - 1) {
+                reply += ', '
+            }
+        }
+        return reply;
     }
 };

@@ -1,6 +1,9 @@
 module.exports = {
     init: (liveFeed) => {
         return {
+            gamePk: () => {
+                return liveFeed.gameData.game.pk;
+            },
             timestamp: () => {
                 return liveFeed.metaData.timeStamp;
             },
