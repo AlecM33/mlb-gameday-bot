@@ -10,8 +10,8 @@ module.exports = {
                 .setDescription('If true, the bot will only report scoring plays. Else, it reports at-bat results + other key events.')
                 .setRequired(true))
         .addIntegerOption(option =>
-            option.setName("reporting_delay")
-                .setDescription("A number of seconds between 0 and 180")
+            option.setName('reporting_delay')
+                .setDescription('A number of seconds between 0 and 180')
                 .setRequired(true)
                 .setMinValue(0)
                 .setMaxValue(180)

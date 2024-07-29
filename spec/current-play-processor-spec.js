@@ -2,7 +2,7 @@ const currentPlayProcessor = require('../modules/current-play-processor');
 const globalCache = require('../modules/global-cache');
 const examplePlays = require('./data/example-plays');
 
-describe('currentPlayProcessor', () => {
+describe('current-play-processor', () => {
     beforeAll(() => {
         globalCache.values.game.currentLiveFeed = require('./data/example-live-feed');
     });

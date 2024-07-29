@@ -29,7 +29,7 @@ and in turn reports events to any number of subscribed Discord channels. Slash C
 
 Examples:
 
-![image](./images/screenshots/homer.png)
+![image](https://github.com/user-attachments/assets/71cc4a01-d591-4219-9eec-6a034efa01b4)
 
 ![image](./images/screenshots/pitcher.png)
 
