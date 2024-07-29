@@ -288,7 +288,11 @@ function processMatchingPlay (matchingPlay, messages, messageTrackers, playId, h
             }).then((m) => LOGGER.trace('Edited: ' + m.id)).catch((e) => console.error(e));
             if (matchingPlay.xba) {
                 LOGGER.debug('Found all metrics: done polling for: ' + playId);
-                globalCache.values.game.savantMetricsCache[playId] = { xba: matchingPlay.xba, homeRunBallparks: matchingPlay.contextMetrics.homeRunBallparks };
+                globalCache.values.game.savantMetricsCache[playId] = {
+                    xba: matchingPlay.xba,
+                    homeRunBallparks: matchingPlay.contextMetrics.homeRunBallparks,
+                    is_barrel: matchingPlay.is_barrel
+                };
                 messageTrackers.find(tracker => tracker.id === messages[i].id).done = true;
             }
         }
