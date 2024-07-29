@@ -288,86 +288,6 @@ module.exports = {
             home: (game.teams?.home?.team?.abbreviation || game.teams?.home?.abbreviation || game.gameData?.teams?.home?.abbreviation),
             away: (game.teams?.away?.team?.abbreviation || game.teams?.away?.abbreviation || game.gameData?.teams?.away?.abbreviation)
         };
-    },
-
-    getWeatherEmoji: (condition) => {
-        switch (condition) {
-            case 'Clear':
-            case 'Sunny':
-                return '\u2600';
-            case 'Cloudy':
-                return '\u2601';
-            case 'Partly Cloudy':
-                return '\uD83C\uDF24';
-            case 'Dome':
-            case 'Roof Closed':
-                return '';
-            case 'Drizzle':
-            case 'Rain':
-                return '\uD83C\uDF27';
-            case 'Snow':
-                return '\u2744';
-            case 'Overcast':
-                return '\uD83C\uDF2B';
-            default:
-                return '';
-        }
-    },
-
-    getScoreString: (liveFeed, currentPlayJSON) => {
-        const homeScore = currentPlayJSON.result.homeScore;
-        const awayScore = currentPlayJSON.result.awayScore;
-        return (currentPlayJSON.about.halfInning === 'top'
-            ? '**' + liveFeed.gameData.teams.away.abbreviation + ' ' + awayScore + '**, ' +
-            liveFeed.gameData.teams.home.abbreviation + ' ' + homeScore
-            : liveFeed.gameData.teams.away.abbreviation + ' ' + awayScore + ', **' +
-            liveFeed.gameData.teams.home.abbreviation + ' ' + homeScore + '**');
-    },
-
-    buildPitchingStatsMarkdown: (pitchingStats, pitchMix, includeExtra = false) => {
-        let reply = '\n';
-        if (!pitchingStats) {
-            reply += 'W-L: -\n' +
-                'ERA: -.--\n' +
-                'WHIP: -.--' +
-                (includeExtra
-                    ? '\nK/9: -.--\n' +
-                    'BB/9: -.--\n' +
-                    'H/9: -.--\n' +
-                    'HR/9: -.--\n' +
-                    'Saves/Opps: -/-'
-                    : '');
-        } else {
-            reply += 'W-L: ' + pitchingStats.wins + '-' + pitchingStats.losses + '\n' +
-                'ERA: ' + pitchingStats.era + '\n' +
-                'WHIP: ' + pitchingStats.whip +
-                (includeExtra
-                    ? '\nK/9: ' + pitchingStats.strikeoutsPer9Inn + '\n' +
-                    'BB/9: ' + pitchingStats.walksPer9Inn + '\n' +
-                    'H/9: ' + pitchingStats.hitsPer9Inn + '\n' +
-                    'HR/9: ' + pitchingStats.homeRunsPer9 + '\n' +
-                    'Saves/Opps: ' + pitchingStats.saves + '/' + pitchingStats.saveOpportunities
-                    : '');
-        }
-        reply += '\n**Arsenal:**' + '\n';
-        if (pitchMix instanceof Error) {
-            reply += pitchMix.message;
-            return reply;
-        }
-        if (pitchMix && pitchMix.length > 0 && pitchMix[0].length > 0) {
-            reply += (() => {
-                let arsenal = '';
-                for (let i = 0; i < pitchMix[0].length; i ++) {
-                    arsenal += pitchMix[0][i] + ' (' + pitchMix[1][i] + '%)' +
-                        ': ' + pitchMix[2][i] + ' mph, ' + pitchMix[3][i] + ' BAA' + '\n';
-                }
-                return arsenal;
-            })();
-        } else {
-            reply += 'No data!';
-        }
-
-        return reply;
     }
 };
 
@@ -418,11 +338,9 @@ function parsePitchingStats (people) {
     return people?.people[0]?.stats?.find(stat => stat?.group?.displayName === 'pitching')?.splits[0]?.stat;
 }
 
-/* This is very hacky. We are building an HTML version of the table in a headless browser, styling
+/* This is not the best solution, admittedly. We are building an HTML version of the table in a headless browser, styling
 it how we want, and taking a screenshot of that, attaching it to the reply as a .png. Why? Trying to simply reply with ASCII
 is subject to formatting issues on phone screens, which rudely break up the characters and make the tables look like gibberish.
-
-TODO: this solution works well, but adds bloat to the codebase by introducing puppeteer as a dependency. I am very much open to better solutions.
  */
 async function getScreenshotOfHTMLTables (tables) {
     const browser = await puppeteer.launch({

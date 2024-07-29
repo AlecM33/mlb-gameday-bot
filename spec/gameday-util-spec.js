@@ -1,6 +1,5 @@
 const gamedayUtil = require('../modules/gameday-util');
 const liveFeed = require('../modules/livefeed');
-const globalCache = require('../modules/global-cache');
 
 describe('gameday-util', () => {
     beforeAll(() => {});
@@ -44,53 +43,6 @@ describe('gameday-util', () => {
                 halfInning: () => { return 'top'; }
             });
             expect(gamedayUtil.didGameEnd(3, 2)).toBeTrue();
-        });
-    });
-
-    describe('#checkForCachedSavantMetrics', () => {
-        beforeEach(() => {
-            globalCache.resetGameCache();
-        });
-
-        it('should replace the embed description with the cached xBA + HR/Park and indicate it was barreled', () => {
-            globalCache.values.game.savantMetricsCache = {
-                abc: {
-                    xba: '1.000',
-                    homeRunBallparks: 30,
-                    is_barrel: 1
-                }
-            };
-            const embed = {
-                data: { description: 'xBA: Pending...\nHR/Park: Pending...' },
-                setDescription: function setDescription (description) { this.data.description = description; }
-            };
-            const hit = gamedayUtil.checkForCachedSavantMetrics(embed, { isInPlay: true, metricsAvailable: true, playId: 'abc' });
-
-            expect(hit).toBeTrue();
-            expect(embed.data.description).toEqual('xBA: 1.000 \uD83D\uDFE2 (Barreled)\nHR/Park: 30/30\u203C\uFE0F');
-        });
-
-        it('should replace the embed description with the cached xBA and NOT indicate it was barreled', () => {
-            globalCache.values.game.savantMetricsCache = {
-                abc: {
-                    xba: '.280',
-                    is_barrel: 0
-                }
-            };
-            const embed = { data: { description: 'xBA: Pending...' }, setDescription: function setDescription (description) { this.data.description = description; } };
-            const hit = gamedayUtil.checkForCachedSavantMetrics(embed, { isInPlay: true, metricsAvailable: true, playId: 'abc' });
-
-            expect(hit).toBeTrue();
-            expect(embed.data.description).toEqual('xBA: .280');
-        });
-
-        it('if it finds nothing in the cache, it shouldn\'t replace anything', () => {
-            globalCache.values.game.savantMetricsCache = {};
-            const embed = { data: { description: 'xBA: Pending...' }, setDescription: function setDescription (description) { this.data.description = description; } };
-            const hit = gamedayUtil.checkForCachedSavantMetrics(embed, { isInPlay: true, metricsAvailable: true, playId: 'abc' });
-
-            expect(hit).toBeFalse();
-            expect(embed.data.description).toEqual('xBA: Pending...');
         });
     });
 });
