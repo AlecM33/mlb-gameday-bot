@@ -14,6 +14,9 @@ const endpoints = {
     hitter: (personId) => {
         return 'https://statsapi.mlb.com/api/v1/people/' + personId + '/stats?stats=season,statSplits,lastXGames&group=hitting&gameType=R&sitCodes=vl,vr,risp&limit=7';
     },
+    pitcher: (personId, lastXGamesLimit) => {
+        return `https://statsapi.mlb.com/api/v1/people?personIds=${personId}&hydrate=stats(type=[season,lastXGames,sabermetrics,seasonAdvanced,expectedStatistics],groups=pitching,limit=${lastXGamesLimit})`;
+    },
     liveFeed: (gamePk, fields = []) => {
         LOGGER.debug('https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live' + (fields.length > 0 ? '?fields=' + fields.join() : ''));
         return 'https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live' + (fields.length > 0 ? '?fields=' + fields.join() : '');
@@ -224,5 +227,8 @@ module.exports = {
     },
     team: async (teamId) => {
         return (await fetch(endpoints.team(teamId))).json();
+    },
+    pitcher: async (personId, lastXGamesLimit) => {
+        return (await fetch(endpoints.pitcher(personId, lastXGamesLimit))).json();
     }
 };

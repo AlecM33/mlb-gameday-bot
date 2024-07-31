@@ -56,7 +56,7 @@ module.exports = {
             mlbAPIUtil.savantPitchData(probable),
             new Promise((resolve, reject) => {
                 if (probable) {
-                    resolve(mlbAPIUtil.people([probable]));
+                    resolve(mlbAPIUtil.pitcher(probable, 3));
                 } else {
                     resolve(undefined);
                 }
@@ -288,6 +288,94 @@ module.exports = {
             home: (game.teams?.home?.team?.abbreviation || game.teams?.home?.abbreviation || game.gameData?.teams?.home?.abbreviation),
             away: (game.teams?.away?.team?.abbreviation || game.teams?.away?.abbreviation || game.gameData?.teams?.away?.abbreviation)
         };
+    },
+
+    buildPitchingStatsMarkdown: (pitchingStats, pitchMix, lastThree, seasonAdvanced, sabermetrics, includeExtra = false) => {
+        let reply = '';
+
+        if (lastThree) {
+            reply += '\n**Recent Games:** \n';
+            reply += `G: ${lastThree.gamesPlayed}, `;
+            reply += `ERA: ${lastThree.era}, `;
+            reply += `Hits: ${lastThree.hits}, `;
+            reply += `K: ${lastThree.strikeOuts}, `;
+            reply += `BB: ${lastThree.baseOnBalls}, `;
+            reply += `HR: ${lastThree.homeRuns}\n`;
+        }
+        reply += '**Season:** \n';
+        if (!pitchingStats) {
+            reply += 'G: 0, ';
+            reply += 'W-L: -, ';
+            reply += 'ERA: -.--, ';
+            reply += 'WHIP: -.--';
+        } else {
+            reply += `G: ${pitchingStats.gamesPlayed}, `;
+            reply += `W-L: ${pitchingStats.wins}-${pitchingStats.losses}, `;
+            reply += `ERA: ${pitchingStats.era}, `;
+            reply += `WHIP: ${pitchingStats.whip} `;
+            if (includeExtra && seasonAdvanced && sabermetrics) {
+                reply += '\n...\n';
+                reply += `IP: ${pitchingStats.inningsPitched}\n`;
+                reply += `K/BB: ${seasonAdvanced.strikesoutsToWalks}\n`;
+                reply += `BABIP: ${seasonAdvanced.babip}\n`;
+                reply += `SLG: ${seasonAdvanced.slg}\n`;
+                reply += `WAR: ${sabermetrics.war.toFixed(2)}\n`;
+                reply += `Saves/Opps: ${pitchingStats.saves}/${pitchingStats.saveOpportunities}`;
+            }
+        }
+        reply += '\n**Arsenal:**' + '\n';
+        if (pitchMix instanceof Error) {
+            reply += pitchMix.message;
+            return reply;
+        }
+        if (pitchMix && pitchMix.length > 0 && pitchMix[0].length > 0) {
+            reply += (() => {
+                let arsenal = '';
+                for (let i = 0; i < pitchMix[0].length; i ++) {
+                    arsenal += pitchMix[0][i] + ' (' + pitchMix[1][i] + '%)' +
+                        ': ' + pitchMix[2][i] + ' mph, ' + pitchMix[3][i] + ' BAA' + '\n';
+                }
+                return arsenal;
+            })();
+        } else {
+            reply += 'No data!';
+        }
+
+        return reply;
+    },
+
+    getWeatherEmoji: (condition) => {
+        switch (condition) {
+            case 'Clear':
+            case 'Sunny':
+                return '\u2600';
+            case 'Cloudy':
+                return '\u2601';
+            case 'Partly Cloudy':
+                return '\uD83C\uDF24';
+            case 'Dome':
+            case 'Roof Closed':
+                return '';
+            case 'Drizzle':
+            case 'Rain':
+                return '\uD83C\uDF27';
+            case 'Snow':
+                return '\u2744';
+            case 'Overcast':
+                return '\uD83C\uDF2B';
+            default:
+                return '';
+        }
+    },
+
+    getScoreString: (liveFeed, currentPlayJSON) => {
+        const homeScore = currentPlayJSON.result.homeScore;
+        const awayScore = currentPlayJSON.result.awayScore;
+        return (currentPlayJSON.about.halfInning === 'top'
+            ? '**' + liveFeed.gameData.teams.away.abbreviation + ' ' + awayScore + '**, ' +
+            liveFeed.gameData.teams.home.abbreviation + ' ' + homeScore
+            : liveFeed.gameData.teams.away.abbreviation + ' ' + awayScore + ', **' +
+            liveFeed.gameData.teams.home.abbreviation + ' ' + homeScore + '**');
     }
 };
 
@@ -335,7 +423,12 @@ async function resolveDoubleHeaderSelection (interaction) {
 }
 
 function parsePitchingStats (people) {
-    return people?.people[0]?.stats?.find(stat => stat?.group?.displayName === 'pitching')?.splits[0]?.stat;
+    return {
+        season: people?.people[0]?.stats?.find(stat => stat?.type?.displayName === 'season')?.splits[0]?.stat,
+        lastXGames: people?.people[0]?.stats?.find(stat => stat?.type?.displayName === 'lastXGames')?.splits[0]?.stat,
+        seasonAdvanced: people?.people[0]?.stats?.find(stat => stat?.type?.displayName === 'seasonAdvanced')?.splits[0]?.stat,
+        sabermetrics: people?.people[0]?.stats?.find(stat => stat?.type?.displayName === 'sabermetrics')?.splits[0]?.stat
+    };
 }
 
 /* This is not the best solution, admittedly. We are building an HTML version of the table in a headless browser, styling
