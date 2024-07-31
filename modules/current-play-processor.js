@@ -112,6 +112,7 @@ function getFireEmojis (launchSpeed) {
 
 function getDescription (currentPlayJSON) {
     if (parseInt(process.env.TEAM_ID) === globals.GUARDIANS
+        && !currentPlayJSON.about?.hasReview
         && currentPlayJSON.result?.event === 'Home Run'
         && guardiansBatting(currentPlayJSON)
         && currentPlayJSON.result?.description) {
