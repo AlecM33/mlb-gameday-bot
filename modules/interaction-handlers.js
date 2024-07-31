@@ -103,7 +103,7 @@ module.exports = {
     },
 
     standingsHandler: async (interaction) => {
-        interaction.deferReply();
+        await interaction.deferReply();
         console.info(`STANDINGS command invoked by guild: ${interaction.guildId}`);
         const team = await mlbAPIUtil.team(process.env.TEAM_ID);
         const divisionId = team.teams[0].division.id;
