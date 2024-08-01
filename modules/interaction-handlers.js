@@ -464,6 +464,103 @@ module.exports = {
         });
     },
 
+    batterSavantHandler: async (interaction) => {
+        await interaction.deferReply();
+        const currentLiveFeed = globalCache.values.game.currentLiveFeed;
+        if (currentLiveFeed === null || currentLiveFeed.gameData.status.abstractGameState !== 'Live') {
+            await interaction.followUp('No game is live right now!');
+            return;
+        }
+        const batter = currentLiveFeed.liveData.plays.currentPlay.matchup.batter;
+        const text = await mlbAPIUtil.savantPage(batter.id, 'hitting');
+        const statcastData = commandUtil.getStatcastData(text);
+        if (statcastData.mostRecentStatcast && statcastData.mostRecentMetricYear && statcastData.metricSummaryJSON) {
+            const batterInfo = await commandUtil.hydrateHitter(batter.id);
+            const attachment = new AttachmentBuilder(Buffer.from(batterInfo.spot), { name: 'spot.png' });
+            const savantAttachment = new AttachmentBuilder((await commandUtil.buildBatterSavantTable(
+                statcastData.mostRecentStatcast,
+                statcastData.metricSummaryJSON[statcastData.mostRecentMetricYear.toString()])), { name: 'savant.png' });
+            const abbreviations = commandUtil.getAbbreviations(currentLiveFeed);
+            const halfInning = currentLiveFeed.liveData.plays.currentPlay.about.halfInning;
+            const abbreviation = halfInning === 'top'
+                ? abbreviations.away
+                : abbreviations.home;
+            const inning = currentLiveFeed.liveData.plays.currentPlay.about.inning;
+            const myEmbed = new EmbedBuilder()
+                .setTitle(halfInning.toUpperCase() + ' ' + inning + ', ' +
+                    abbreviations.away + ' vs. ' + abbreviations.home + ': Current Batter')
+                .setDescription(
+                    '## ' + currentLiveFeed.liveData.plays.currentPlay.matchup.batSide.code +
+                    'HB ' + batter.fullName + ' (' + abbreviation + ')')
+                .setThumbnail('attachment://spot.png')
+                .setImage('attachment://savant.png')
+                .setColor((halfInning === 'top'
+                    ? globalCache.values.game.awayTeamColor
+                    : globalCache.values.game.homeTeamColor)
+                );
+            await interaction.followUp({
+                ephemeral: false,
+                files: [attachment, savantAttachment],
+                embeds: [myEmbed],
+                components: [],
+                content: ''
+            });
+        } else {
+            await interaction.followUp({
+                content: 'There was a problem fetching the savant metrics for this player.'
+            });
+        }
+    },
+
+    pitcherSavantHandler: async (interaction) => {
+        await interaction.deferReply();
+        const currentLiveFeed = globalCache.values.game.currentLiveFeed;
+        if (currentLiveFeed === null || currentLiveFeed.gameData.status.abstractGameState !== 'Live') {
+            await interaction.followUp('No game is live right now!');
+            return;
+        }
+        const pitcher = currentLiveFeed.liveData.plays.currentPlay.matchup.pitcher;
+        const text = await mlbAPIUtil.savantPage(pitcher.id, 'pitching');
+        const statcastData = commandUtil.getStatcastData(text);
+        if (statcastData.mostRecentStatcast && statcastData.mostRecentMetricYear && statcastData.metricSummaryJSON) {
+            const pitcherInfo = await commandUtil.hydrateProbable(pitcher.id);
+            const attachment = new AttachmentBuilder(Buffer.from(pitcherInfo.spot), { name: 'spot.png' });
+            const savantAttachment = new AttachmentBuilder((await commandUtil.buildPitcherSavantTable(
+                statcastData.mostRecentStatcast,
+                statcastData.metricSummaryJSON[statcastData.mostRecentMetricYear.toString()])), { name: 'savant.png' });
+            const abbreviations = commandUtil.getAbbreviations(currentLiveFeed);
+            const halfInning = currentLiveFeed.liveData.plays.currentPlay.about.halfInning;
+            const abbreviation = halfInning === 'top'
+                ? abbreviations.home
+                : abbreviations.away;
+            const inning = currentLiveFeed.liveData.plays.currentPlay.about.inning;
+            const myEmbed = new EmbedBuilder()
+                .setTitle(halfInning.toUpperCase() + ' ' + inning + ', ' +
+                    abbreviations.away + ' vs. ' + abbreviations.home + ': Current Pitcher')
+                .setDescription(
+                    '## ' + (pitcherInfo.handedness
+                        ? pitcherInfo.handedness + 'HP **'
+                        : '**') + (pitcher.fullName || 'TBD') + '** (' + abbreviation + ')')
+                .setThumbnail('attachment://spot.png')
+                .setImage('attachment://savant.png')
+                .setColor((halfInning === 'top'
+                    ? globalCache.values.game.homeTeamColor
+                    : globalCache.values.game.awayTeamColor)
+                );
+            await interaction.followUp({
+                ephemeral: false,
+                files: [attachment, savantAttachment],
+                embeds: [myEmbed],
+                components: [],
+                content: ''
+            });
+        } else {
+            await interaction.followUp({
+                content: 'There was a problem fetching the savant metrics for this player.'
+            });
+        }
+    },
+
     scoringPlaysHandler: async (interaction) => {
         console.info(`SCORING PLAYS command invoked by guild: ${interaction.guildId}`);
         if (!globalCache.values.game.isDoubleHeader) {
