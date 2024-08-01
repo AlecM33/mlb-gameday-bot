@@ -531,8 +531,8 @@ module.exports = {
             const abbreviations = commandUtil.getAbbreviations(currentLiveFeed);
             const halfInning = currentLiveFeed.liveData.plays.currentPlay.about.halfInning;
             const abbreviation = halfInning === 'top'
-                ? abbreviations.away
-                : abbreviations.home;
+                ? abbreviations.home
+                : abbreviations.away;
             const inning = currentLiveFeed.liveData.plays.currentPlay.about.inning;
             const myEmbed = new EmbedBuilder()
                 .setTitle(halfInning.toUpperCase() + ' ' + inning + ', ' +
@@ -544,8 +544,8 @@ module.exports = {
                 .setThumbnail('attachment://spot.png')
                 .setImage('attachment://savant.png')
                 .setColor((halfInning === 'top'
-                    ? globalCache.values.game.awayTeamColor
-                    : globalCache.values.game.homeTeamColor)
+                    ? globalCache.values.game.homeTeamColor
+                    : globalCache.values.game.awayTeamColor)
                 );
             await interaction.followUp({
                 ephemeral: false,
