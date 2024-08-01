@@ -64,6 +64,9 @@ const endpoints = {
         return 'https://baseballsavant.mlb.com/player-services/statcast-pitches-breakdown?playerId=' + personId +
             '&position=1&hand=&pitchBreakdown=pitches&timeFrame=yearly&season=' + new Date().getFullYear() + '&pitchType=&count=&updatePitches=true';
     },
+    savantPage: (personId, type) => {
+        return `https://baseballsavant.mlb.com/savant-player/${personId}?stats=statcast-r-${type}-mlb`;
+    },
     xParks: (gamePk, playId) => {
         return 'https://baseballsavant.mlb.com/gamefeed/x-parks/' + gamePk + '/' + playId;
     },
@@ -217,6 +220,18 @@ module.exports = {
                     signal: AbortSignal.timeout(3000)
                 }
             )).json();
+        } catch (e) {
+            LOGGER.error(e);
+            return {};
+        }
+    },
+    savantPage: async (personId, type) => {
+        try {
+            return (await fetch(endpoints.savantPage(personId, type),
+                {
+                    signal: AbortSignal.timeout(6000)
+                }
+            )).text();
         } catch (e) {
             LOGGER.error(e);
             return {};
