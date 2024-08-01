@@ -6,6 +6,8 @@ const jsdom = require('jsdom');
 const globals = require('../config/globals');
 const puppeteer = require('puppeteer');
 const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_LEVEL.INFO);
+const chroma = require('chroma-js');
+const ztable = require('ztable');
 
 module.exports = {
     getLineupCardTable: async (game) => {
@@ -249,6 +251,113 @@ module.exports = {
         return (await getScreenshotOfHTMLTables([table]));
     },
 
+    getStatcastData: (savantText) => {
+        const statcast = /statcast: \[(?<statcast>.+)],/.exec(savantText)?.groups.statcast;
+        const metricSummaries = /metricSummaryStats: {(?<metricSummaries>.+)},/.exec(savantText)?.groups.metricSummaries;
+        if (statcast) {
+            try {
+                const statcastJSON = JSON.parse('[' + statcast + ']');
+                const metricSummaryJSON = JSON.parse('{' + metricSummaries + '}');
+                const mostRecentStatcast = statcastJSON.findLast(set => set.year != null);
+                // object properties are not guaranteed to always be in the same order, so we need to find the most recent year of data
+                const mostRecentMetricYear = Object.keys(metricSummaryJSON)
+                    .map(k => parseInt(k))
+                    .sort((a, b) => {
+                        return a < b ? 1 : -1;
+                    })[0];
+                return { mostRecentStatcast, metricSummaryJSON, mostRecentMetricYear };
+            } catch (e) {
+                console.error(e);
+                return {};
+            }
+        }
+        return {};
+    },
+
+    buildBatterSavantTable: async (statcast, metricSummaries) => {
+        const value = [
+            { label: 'Batting Run Value', value: statcast.swing_take_run_value, metric: 'swing_take_run_value', percentile: statcast.percent_rank_swing_take_run_value },
+            { label: 'Baserunning Run Value', value: statcast.runner_run_value, metric: 'runner_run_value', percentile: statcast.percent_rank_runner_run_value },
+            { label: 'Fielding Run Value', value: statcast.fielding_run_value, metric: 'fielding_run_value', percentile: statcast.percent_rank_fielding_run_value }
+        ];
+        const hitting = [
+            { label: 'xwOBA', value: statcast.xwoba, metric: 'xwoba', percentile: statcast.percent_rank_xwoba },
+            { label: 'xBA', value: statcast.xba, metric: 'xba', percentile: statcast.percent_rank_xba },
+            { label: 'xSLG', value: statcast.xslg, metric: 'xslg', percentile: statcast.percent_rank_xslg },
+            { label: 'Avg Exit Velocity', value: statcast.exit_velocity_avg, metric: 'exit_velocity_avg', percentile: statcast.percent_rank_exit_velocity_avg },
+            { label: 'Barrel %', value: statcast.barrel_batted_rate, metric: 'barrel_batted_rate', percentile: statcast.percent_rank_barrel_batted_rate },
+            { label: 'Hard-Hit %', value: statcast.hard_hit_percent, metric: 'hard_hit_percent', percentile: statcast.percent_rank_hard_hit_percent },
+            { label: 'LA Sweet-Spot %', value: statcast.sweet_spot_percent, metric: 'sweet_spot_percent', percentile: statcast.percent_rank_sweet_spot_percent },
+            { label: 'Bat Speed', value: statcast.avg_swing_speed, metric: 'avg_swing_speed', percentile: statcast.percent_rank_swing_speed },
+            { label: 'Squared-Up %', value: statcast.squared_up_swing, metric: 'squared_up_swing', percentile: statcast.percent_rank_squared_up_swing },
+            // Chase, Whiff, and K have the "shouldInvert" flag because, for them, high numbers = bad.
+            { label: 'Chase %', value: statcast.oz_swing_percent, metric: 'oz_swing_percent', percentile: statcast.percent_rank_chase_percent, shouldInvert: true },
+            { label: 'Whiff %', value: statcast.whiff_percent, metric: 'whiff_percent', percentile: statcast.percent_rank_whiff_percent, shouldInvert: true },
+            { label: 'K %', value: statcast.k_percent, metric: 'k_percent', percentile: statcast.percent_rank_k_percent, shouldInvert: true },
+            { label: 'BB %', value: statcast.bb_percent, metric: 'bb_percent', percentile: statcast.percent_rank_bb_percent }
+        ];
+        const fielding = [
+            { label: 'OAA', value: statcast.outs_above_average, metric: 'outs_above_average', percentile: statcast.percent_rank_oaa },
+            { label: 'Arm Value', value: statcast.fielding_run_value_arm, metric: 'fielding_run_value_arm', percentile: statcast.percent_rank_fielding_run_value_arm },
+            { label: 'Arm Strength', value: statcast.arm_overall, metric: 'arm_overall', percentile: statcast.percent_rank_arm_overall }
+        ];
+        const catching = [
+            { label: 'Blocks Above Avg', value: statcast.blocks_above_average, metric: 'blocks_above_average', percentile: statcast.percent_rank_blocks_above_average },
+            { label: 'CS Above Avg', value: statcast.cs_above_average, metric: 'cs_above_average', percentile: statcast.percent_rank_cs_above_average },
+            { label: 'Framing', value: statcast.fielding_run_value_framing, metric: 'fielding_run_value_framing', percentile: statcast.percent_rank_fielding_run_value_framing },
+            { label: 'Pop Time', value: statcast.pop_2b, metric: 'pop_2b', percentile: statcast.percent_rank_pop_2b }
+        ];
+        const running = [
+            { label: 'Sprint Speed', value: statcast.sprint_speed, metric: 'sprint_speed', percentile: statcast.percent_rank_sprint_speed }
+        ];
+        const html = `
+            <div id='savant-table'>` +
+                '<h3>Value</h3>' +
+                buildSavantSection(value, metricSummaries) +
+                '<h3>Hitting</h3>' +
+                buildSavantSection(hitting, metricSummaries) +
+                '<h3>Fielding</h3>' +
+                buildSavantSection(fielding, metricSummaries) +
+                (statcast.blocks_above_average !== null ? '<h3>Catching</h3>' + buildSavantSection(catching, metricSummaries) : '') +
+                '<h3>Running</h3>' +
+                buildSavantSection(running, metricSummaries) +
+            '</div>';
+
+        return (await getScreenshotOfSavantTable(html));
+    },
+
+    buildPitcherSavantTable: async (statcast, metricSummaries) => {
+        const value = [
+            { label: 'Pitching Run Value', value: statcast.swing_take_run_value, metric: 'swing_take_run_value', percentile: statcast.percent_rank_swing_take_run_value },
+            { label: 'Fastball Run Value', value: Math.round(statcast.pitch_run_value_fastball), metric: 'pitch_run_value_fastball', percentile: statcast.percent_rank_pitch_run_value_fastball },
+            { label: 'Breaking Run Value', value: Math.round(statcast.pitch_run_value_breaking), metric: 'pitch_run_value_breaking', percentile: statcast.percent_rank_pitch_run_value_breaking },
+            { label: 'Offspeed Run Value', value: Math.round(statcast.pitch_run_value_offspeed), metric: 'pitch_run_value_offspeed', percentile: statcast.percent_rank_pitch_run_value_offspeed }
+        ];
+        const pitching = [
+            { label: 'xERA', value: statcast.xera, metric: 'xera', percentile: statcast.percent_rank_xera, shouldInvert: true },
+            { label: 'xBA', value: statcast.xba, metric: 'xba', percentile: statcast.percent_rank_xba, shouldInvert: true },
+            { label: 'Fastball Velo', value: statcast.fastball_velo, metric: 'fastball_velo', percentile: statcast.percent_rank_fastball_velo },
+            { label: 'Avg Exit Velocity', value: statcast.exit_velocity_avg, metric: 'exit_velocity_avg', percentile: statcast.percent_rank_exit_velocity_avg, shouldInvert: true },
+            { label: 'Chase %', value: statcast.oz_swing_percent, metric: 'oz_swing_percent', percentile: statcast.percent_rank_chase_percent },
+            { label: 'Whiff %', value: statcast.whiff_percent, metric: 'whiff_percent', percentile: statcast.percent_rank_whiff_percent },
+            { label: 'K %', value: statcast.k_percent, metric: 'k_percent', percentile: statcast.percent_rank_k_percent },
+            { label: 'BB %', value: statcast.bb_percent, metric: 'bb_percent', percentile: statcast.percent_rank_bb_percent, shouldInvert: true },
+            { label: 'Barrel %', value: statcast.barrel_batted_rate, metric: 'barrel_batted_rate', percentile: statcast.percent_rank_barrel_batted_rate, shouldInvert: true },
+            { label: 'Hard-Hit %', value: statcast.hard_hit_percent, metric: 'hard_hit_percent', percentile: statcast.percent_rank_hard_hit_percent, shouldInvert: true },
+            { label: 'GB %', value: statcast.groundballs_percent, metric: 'groundballs_percent', percentile: statcast.percent_rank_groundballs_percent },
+            { label: 'Extension', value: statcast.fastball_extension, metric: 'fastball_extension', percentile: statcast.percent_rank_fastball_extension }
+        ];
+        const html = `
+            <div id='savant-table'>` +
+            '<h3>Value</h3>' +
+            buildSavantSection(value, metricSummaries) +
+            '<h3>Pitching</h3>' +
+            buildSavantSection(pitching, metricSummaries) +
+        '</div>';
+
+        return (await getScreenshotOfSavantTable(html));
+    },
+
     screenInteraction: async (interaction) => {
         if (globalCache.values.nearestGames instanceof Error) {
             await interaction.followUp({
@@ -461,6 +570,120 @@ async function getScreenshotOfHTMLTables (tables) {
     return buffer;
 }
 
+async function getScreenshotOfSavantTable (savantHTML) {
+    const browser = await puppeteer.launch({
+        headless: true,
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox'
+        ]
+    });
+    const page = await browser.newPage();
+    await page.setContent(
+        `
+        <style>
+                #savant-table {
+                    background-color: #151820;
+                    color: whitesmoke;
+                    padding: 15px;
+                    font-size: 20px;
+                    font-family: 'Segoe UI', sans-serif;
+                    width: 40%;
+                }
+                .savant-stat {
+                    display: flex;
+                    width: 100%;
+                    justify-content: space-between;
+                    margin: 5px 0;
+                    align-items: center;
+                }
+                h3 {
+                    font-size: 22px;
+                    font-weight: bold;
+                    width: 100%;
+                    text-align: center;
+                    margin: 0 0 10px 0;
+                }
+                #savant-table h3:not(:first-child) {
+                    margin: 10px 0;
+                }
+                .percentile {
+                    width: 28px;
+                    height: 28px;
+                    font-size: 0.7em;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: bold;
+                    border-radius: 50%
+                }
+                .percentile-not-qualified {
+                    background-image: linear-gradient(
+                      -45deg, 
+                      rgba(0,0,0,0.95) 10%, 
+                      transparent 10%, 
+                      transparent 20%, 
+                      rgba(0,0,0,0.95) 20%, 
+                      rgba(0,0,0,0.95) 30%,
+                      transparent 30%, 
+                      transparent 40%,
+                      rgba(0,0,0,0.95) 40%, 
+                      rgba(0,0,0,0.95) 50%,
+                      transparent 50%, 
+                      transparent 60%,
+                      rgba(0,0,0,0.95) 60%, 
+                      rgba(0,0,0,0.95) 70%,
+                      transparent 70%, 
+                      transparent 80%,
+                      rgba(0,0,0,0.95) 80%, 
+                      rgba(0,0,0,0.95) 90%,
+                      transparent 90%, 
+                      transparent 100%
+                    );
+                    background-size: 0.42em;               
+                }
+                .stat-values {
+                    display: flex;
+                    width: 5em;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+            </style>` +
+        savantHTML
+    );
+    const element = await page.waitForSelector('#savant-table');
+    const buffer = await element.screenshot({
+        type: 'png',
+        omitBackground: false
+    });
+    await browser.close();
+    return buffer;
+}
+
+function buildSavantSection (statCollection, metricSummaries) {
+    const scale = chroma.scale(['#325aa1', '#a8c1c3', '#c91f26']);
+    return statCollection.reduce((acc, value) => acc + (value.value !== null
+        ? `
+                <div class='savant-stat'>
+                    <div class='label'>${value.label}</div>
+                    <div class='stat-values'>
+                        <div class='value'>${value.value}</div>
+                        <div class='percentile ${value.percentile ? '' : 'percentile-not-qualified'}' style='background-color: ${value.percentile
+            ? scale(value.percentile / 100)
+            : scale(caculateRoundedPercentileFromNormalDistribution(
+                value.metric,
+                value.value,
+                metricSummaries[value.metric].avg_metric,
+                metricSummaries[value.metric].stddev_metric,
+                value.shouldInvert
+            ))}'>${value.percentile || ' '}
+                        </div>
+                    </div>
+                </div>
+            `
+        : ''), '');
+}
+
 async function getScreenshotOfLineScore (tables, inning, half, awayScore, homeScore, awayAbbreviation, homeAbbreviation) {
     const browser = await puppeteer.launch({
         headless: true,
@@ -511,4 +734,9 @@ async function getScreenshotOfLineScore (tables, inning, half, awayScore, homeSc
     });
     await browser.close();
     return buffer;
+}
+
+function caculateRoundedPercentileFromNormalDistribution (metric, value, mean, standardDeviation, shouldInvert) {
+    if (typeof value === 'string') { value = parseFloat(value); }
+    return shouldInvert ? (1.00 - ztable((value - mean) / standardDeviation)) : ztable((value - mean) / standardDeviation);
 }
