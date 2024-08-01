@@ -466,8 +466,8 @@ module.exports = {
 
     batterSavantHandler: async (interaction) => {
         await interaction.deferReply();
-        const currentLiveFeed = require('../spec/data/example-live-feed');
-        if (currentLiveFeed === null || currentLiveFeed.gameData.status.abstractGameState === 'Live') {
+        const currentLiveFeed = globalCache.values.game.currentLiveFeed;
+        if (currentLiveFeed === null || currentLiveFeed.gameData.status.abstractGameState !== 'Live') {
             await interaction.followUp('No game is live right now!');
             return;
         }
@@ -514,8 +514,8 @@ module.exports = {
 
     pitcherSavantHandler: async (interaction) => {
         await interaction.deferReply();
-        const currentLiveFeed = require('../spec/data/example-live-feed');
-        if (currentLiveFeed === null || currentLiveFeed.gameData.status.abstractGameState === 'Live') {
+        const currentLiveFeed = globalCache.values.game.currentLiveFeed;
+        if (currentLiveFeed === null || currentLiveFeed.gameData.status.abstractGameState !== 'Live') {
             await interaction.followUp('No game is live right now!');
             return;
         }
