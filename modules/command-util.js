@@ -1,13 +1,15 @@
 const globalCache = require('./global-cache');
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const AsciiTable = require('ascii-table');
 const mlbAPIUtil = require('./MLB-API-util');
 const jsdom = require('jsdom');
 const globals = require('../config/globals');
-const puppeteer = require('puppeteer');
 const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_LEVEL.INFO);
 const chroma = require('chroma-js');
 const ztable = require('ztable');
+const levenshtein = require('js-levenshtein');
+const { performance } = require('perf_hooks');
+const liveFeed = require('./livefeed');
 
 module.exports = {
     getLineupCardTable: async (game) => {
@@ -99,7 +101,7 @@ module.exports = {
         ]);
         return {
             spot,
-            stats
+            stats: stats.people[0]
         };
     },
 
@@ -308,7 +310,7 @@ module.exports = {
             { label: 'Pop Time', value: statcast.pop_2b, metric: 'pop_2b', percentile: statcast.percent_rank_pop_2b }
         ];
         const running = [
-            { label: 'Sprint Speed', value: statcast.sprint_speed, metric: 'sprint_speed', percentile: statcast.percent_rank_sprint_speed }
+            { label: 'Sprint Speed', value: statcast.sprint_speed, metric: 'sprint_speed', percentile: statcast.percent_speed_order }
         ];
         const html = `
             <div id='savant-table'>` +
@@ -390,13 +392,6 @@ module.exports = {
             minute: '2-digit',
             timeZoneName: 'short'
         });
-    },
-
-    getAbbreviations: (game) => {
-        return {
-            home: (game.teams?.home?.team?.abbreviation || game.teams?.home?.abbreviation || game.gameData?.teams?.home?.abbreviation),
-            away: (game.teams?.away?.team?.abbreviation || game.teams?.away?.abbreviation || game.gameData?.teams?.away?.abbreviation)
-        };
     },
 
     buildPitchingStatsMarkdown: (pitchingStats, pitchMix, lastThree, seasonAdvanced, sabermetrics, includeExtra = false) => {
@@ -485,6 +480,138 @@ module.exports = {
             liveFeed.gameData.teams.home.abbreviation + ' ' + homeScore
             : liveFeed.gameData.teams.away.abbreviation + ' ' + awayScore + ', **' +
             liveFeed.gameData.teams.home.abbreviation + ' ' + homeScore + '**');
+    },
+
+    getClosestPlayer: async (playerName, type) => {
+        const startTime = performance.now();
+        const allPlayers = await mlbAPIUtil.players();
+        const removeDiacritics = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const normalizedPlayerName = removeDiacritics(playerName.toLowerCase());
+        let matchingPlayer;
+        let smallestDistance = Infinity;
+        allPlayers.people.forEach(p => {
+            const currentName = removeDiacritics(`${p.fullName}`.toLowerCase());
+            const distance = levenshtein(currentName, normalizedPlayerName);
+            if (distance < smallestDistance
+                && (
+                    (type === 'Pitcher' && p.primaryPosition.name === 'Pitcher')
+                    || (type === 'Batter' && p.primaryPosition.name !== 'Pitcher')
+                )) {
+                matchingPlayer = p;
+                smallestDistance = distance;
+            }
+        });
+        const endTime = performance.now();
+        LOGGER.trace(`Savant command - getting closest player took ${endTime - startTime} milliseconds.`);
+        return matchingPlayer;
+    },
+
+    getPitcherEmbed: (pitcher, pitcherInfo, isLiveGame, description) => {
+        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
+        if (isLiveGame) {
+            const abbreviations = {
+                home: feed.homeAbbreviation(),
+                away: feed.awayAbbreviation()
+            };
+            const halfInning = feed.halfInning();
+            const abbreviation = halfInning === 'top'
+                ? abbreviations.home
+                : abbreviations.away;
+            const inning = feed.inning();
+            return new EmbedBuilder()
+                .setTitle(halfInning.toUpperCase() + ' ' + inning + ', ' +
+                    abbreviations.away + ' vs. ' + abbreviations.home + ': Current Pitcher')
+                .setDescription('## ' + (pitcherInfo.handedness
+                    ? pitcherInfo.handedness + 'HP **'
+                    : '**') + (pitcher.fullName || 'TBD') + '** (' + abbreviation + ')' + (description || ''))
+                .setThumbnail('attachment://spot.png')
+                .setImage('attachment://savant.png')
+                .setColor((halfInning === 'top'
+                    ? globalCache.values.game.homeTeamColor
+                    : globalCache.values.game.awayTeamColor)
+                );
+        } else {
+            const embed = new EmbedBuilder()
+                .setTitle((pitcherInfo.handedness
+                    ? pitcherInfo.handedness + 'HP '
+                    : '') + pitcher.fullName)
+                .setThumbnail('attachment://spot.png')
+                .setImage('attachment://savant.png')
+                .setColor(globals.TEAMS.find(team => team.id === pitcher.currentTeam.id).primaryColor);
+
+            if (description) {
+                embed.setDescription(description);
+            }
+
+            return embed;
+        }
+    },
+
+    getBatterEmbed: (batter, batterInfo, isLiveGame, description) => {
+        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
+        if (isLiveGame) {
+            const abbreviations = {
+                home: feed.homeAbbreviation(),
+                away: feed.awayAbbreviation()
+            };
+            const halfInning = feed.halfInning();
+            const abbreviation = halfInning === 'top'
+                ? abbreviations.home
+                : abbreviations.away;
+            const inning = feed.inning();
+            return new EmbedBuilder()
+                .setTitle(halfInning.toUpperCase() + ' ' + inning + ', ' +
+                    abbreviations.away + ' vs. ' + abbreviations.home + ': Current Batter')
+                .setDescription('## ' + feed.currentBatterBatSide() +
+                    'HB ' + batter.fullName + ' (' + abbreviation + ')' + (description || ''))
+                .setThumbnail('attachment://spot.png')
+                .setImage('attachment://savant.png')
+                .setColor((halfInning === 'top'
+                    ? globalCache.values.game.awayTeamColor
+                    : globalCache.values.game.homeTeamColor)
+                );
+        } else {
+            const embed = new EmbedBuilder()
+                .setTitle(batterInfo.stats.batSide.code +
+                    'HB ' + batter.fullName)
+                .setThumbnail('attachment://spot.png')
+                .setImage('attachment://savant.png')
+                .setColor(globals.TEAMS.find(team => team.id === batter.currentTeam.id).primaryColor);
+
+            if (description) {
+                embed.setDescription(description);
+            }
+
+            return embed;
+        }
+    },
+
+    getBatterFromUserInputOrLiveFeed: async (playerName) => {
+        let batter, currentLiveFeed;
+        if (playerName) {
+            batter = await module.exports.getClosestPlayer(playerName, 'Batter');
+        } else {
+            currentLiveFeed = globalCache.values.game.currentLiveFeed;
+            if (currentLiveFeed && currentLiveFeed.gameData.status.abstractGameState === 'Live') {
+                batter = currentLiveFeed.liveData.plays.currentPlay.matchup.batter;
+            }
+        }
+
+        return batter;
+    },
+
+    getPitcherFromUserInputOrLiveFeed: async (playerName) => {
+        let batter, currentLiveFeed;
+        if (playerName) {
+            batter = await module.exports.getClosestPlayer(playerName, 'Pitcher');
+        } else {
+            currentLiveFeed = globalCache.values.game.currentLiveFeed;
+            if (currentLiveFeed && currentLiveFeed.gameData.status.abstractGameState === 'Live') {
+                batter = currentLiveFeed.liveData.plays.currentPlay.matchup.pitcher;
+            }
+        }
+
+        return batter;
     }
 };
 
@@ -545,14 +672,8 @@ it how we want, and taking a screenshot of that, attaching it to the reply as a 
 is subject to formatting issues on phone screens, which rudely break up the characters and make the tables look like gibberish.
  */
 async function getScreenshotOfHTMLTables (tables) {
-    const browser = await puppeteer.launch({
-        headless: true,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox'
-        ]
-    });
-    const page = await browser.newPage();
+    const browser = globalCache.values.browser;
+    const page = await browser.getCurrentPage();
     await page.setContent(`
             <pre id="boxscore" style="background-color: #151820;
                 color: whitesmoke;
@@ -566,19 +687,12 @@ async function getScreenshotOfHTMLTables (tables) {
         type: 'png',
         omitBackground: false
     });
-    await browser.close();
     return buffer;
 }
 
 async function getScreenshotOfSavantTable (savantHTML) {
-    const browser = await puppeteer.launch({
-        headless: true,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox'
-        ]
-    });
-    const page = await browser.newPage();
+    const browser = globalCache.values.browser;
+    const page = await browser.getCurrentPage();
     await page.setContent(
         `
         <style>
@@ -656,7 +770,6 @@ async function getScreenshotOfSavantTable (savantHTML) {
         type: 'png',
         omitBackground: false
     });
-    await browser.close();
     return buffer;
 }
 
@@ -685,14 +798,8 @@ function buildSavantSection (statCollection, metricSummaries) {
 }
 
 async function getScreenshotOfLineScore (tables, inning, half, awayScore, homeScore, awayAbbreviation, homeAbbreviation) {
-    const browser = await puppeteer.launch({
-        headless: true,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox'
-        ]
-    });
-    const page = await browser.newPage();
+    const browser = globalCache.values.browser;
+    const page = await browser.getCurrentPage();
     await page.setContent(`
             <style>
                 #home-score, #away-score, #home-abb, #away-abb {
@@ -732,7 +839,6 @@ async function getScreenshotOfLineScore (tables, inning, half, awayScore, homeSc
         type: 'png',
         omitBackground: false
     });
-    await browser.close();
     return buffer;
 }
 

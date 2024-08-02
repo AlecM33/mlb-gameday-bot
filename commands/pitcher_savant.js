@@ -4,7 +4,11 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('pitcher_savant')
-        .setDescription('View the savant metrics for who is on the mound right now.'),
+        .setDescription('View the savant metrics for a specified pitcher, or who is on the mound right now.')
+        .addStringOption(option =>
+            option.setName('player')
+                .setDescription('An active player\'s name.')
+                .setRequired(false)),
     async execute (interaction) {
         try {
             await interactionHandlers.pitcherSavantHandler(interaction);
