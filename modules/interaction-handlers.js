@@ -466,12 +466,24 @@ module.exports = {
 
     batterSavantHandler: async (interaction) => {
         await interaction.deferReply();
-        const currentLiveFeed = globalCache.values.game.currentLiveFeed;
-        if (currentLiveFeed === null || currentLiveFeed.gameData.status.abstractGameState !== 'Live') {
-            await interaction.followUp('No game is live right now!');
-            return;
+        const playerName = interaction.options.getString('player')?.trim();
+        let batter, currentLiveFeed;
+        if (playerName) {
+            const closestMatch = await commandUtil.getClosestPlayer(playerName, 'Batter');
+            if (closestMatch) {
+                batter = closestMatch;
+            } else {
+                await interaction.followUp('I did not find a matching batter.');
+                return;
+            }
+        } else {
+            currentLiveFeed = globalCache.values.game.currentLiveFeed;
+            if (currentLiveFeed === null || currentLiveFeed.gameData.status.abstractGameState !== 'Live') {
+                await interaction.followUp('No game is live right now!');
+                return;
+            }
+            batter = currentLiveFeed.liveData.plays.currentPlay.matchup.batter;
         }
-        const batter = currentLiveFeed.liveData.plays.currentPlay.matchup.batter;
         const text = await mlbAPIUtil.savantPage(batter.id, 'hitting');
         const statcastData = commandUtil.getStatcastData(text);
         if (statcastData.mostRecentStatcast && statcastData.mostRecentMetricYear && statcastData.metricSummaryJSON) {
@@ -480,28 +492,10 @@ module.exports = {
             const savantAttachment = new AttachmentBuilder((await commandUtil.buildBatterSavantTable(
                 statcastData.mostRecentStatcast,
                 statcastData.metricSummaryJSON[statcastData.mostRecentMetricYear.toString()])), { name: 'savant.png' });
-            const abbreviations = commandUtil.getAbbreviations(currentLiveFeed);
-            const halfInning = currentLiveFeed.liveData.plays.currentPlay.about.halfInning;
-            const abbreviation = halfInning === 'top'
-                ? abbreviations.away
-                : abbreviations.home;
-            const inning = currentLiveFeed.liveData.plays.currentPlay.about.inning;
-            const myEmbed = new EmbedBuilder()
-                .setTitle(halfInning.toUpperCase() + ' ' + inning + ', ' +
-                    abbreviations.away + ' vs. ' + abbreviations.home + ': Current Batter')
-                .setDescription(
-                    '## ' + currentLiveFeed.liveData.plays.currentPlay.matchup.batSide.code +
-                    'HB ' + batter.fullName + ' (' + abbreviation + ')')
-                .setThumbnail('attachment://spot.png')
-                .setImage('attachment://savant.png')
-                .setColor((halfInning === 'top'
-                    ? globalCache.values.game.awayTeamColor
-                    : globalCache.values.game.homeTeamColor)
-                );
             await interaction.followUp({
                 ephemeral: false,
                 files: [attachment, savantAttachment],
-                embeds: [myEmbed],
+                embeds: [commandUtil.getBatterEmbed(batter, batterInfo, !playerName, currentLiveFeed)],
                 components: [],
                 content: ''
             });
@@ -514,12 +508,24 @@ module.exports = {
 
     pitcherSavantHandler: async (interaction) => {
         await interaction.deferReply();
-        const currentLiveFeed = globalCache.values.game.currentLiveFeed;
-        if (currentLiveFeed === null || currentLiveFeed.gameData.status.abstractGameState !== 'Live') {
-            await interaction.followUp('No game is live right now!');
-            return;
+        const playerName = interaction.options.getString('player')?.trim();
+        let pitcher, currentLiveFeed;
+        if (playerName) {
+            const closestMatch = await commandUtil.getClosestPlayer(playerName, 'Pitcher');
+            if (closestMatch) {
+                pitcher = closestMatch;
+            } else {
+                await interaction.followUp('I did not find a matching pitcher.');
+                return;
+            }
+        } else {
+            currentLiveFeed = globalCache.values.game.currentLiveFeed;
+            if (currentLiveFeed === null || currentLiveFeed.gameData.status.abstractGameState !== 'Live') {
+                await interaction.followUp('No game is live right now!');
+                return;
+            }
+            pitcher = currentLiveFeed.liveData.plays.currentPlay.matchup.pitcher;
         }
-        const pitcher = currentLiveFeed.liveData.plays.currentPlay.matchup.pitcher;
         const text = await mlbAPIUtil.savantPage(pitcher.id, 'pitching');
         const statcastData = commandUtil.getStatcastData(text);
         if (statcastData.mostRecentStatcast && statcastData.mostRecentMetricYear && statcastData.metricSummaryJSON) {
@@ -528,29 +534,10 @@ module.exports = {
             const savantAttachment = new AttachmentBuilder((await commandUtil.buildPitcherSavantTable(
                 statcastData.mostRecentStatcast,
                 statcastData.metricSummaryJSON[statcastData.mostRecentMetricYear.toString()])), { name: 'savant.png' });
-            const abbreviations = commandUtil.getAbbreviations(currentLiveFeed);
-            const halfInning = currentLiveFeed.liveData.plays.currentPlay.about.halfInning;
-            const abbreviation = halfInning === 'top'
-                ? abbreviations.home
-                : abbreviations.away;
-            const inning = currentLiveFeed.liveData.plays.currentPlay.about.inning;
-            const myEmbed = new EmbedBuilder()
-                .setTitle(halfInning.toUpperCase() + ' ' + inning + ', ' +
-                    abbreviations.away + ' vs. ' + abbreviations.home + ': Current Pitcher')
-                .setDescription(
-                    '## ' + (pitcherInfo.handedness
-                        ? pitcherInfo.handedness + 'HP **'
-                        : '**') + (pitcher.fullName || 'TBD') + '** (' + abbreviation + ')')
-                .setThumbnail('attachment://spot.png')
-                .setImage('attachment://savant.png')
-                .setColor((halfInning === 'top'
-                    ? globalCache.values.game.homeTeamColor
-                    : globalCache.values.game.awayTeamColor)
-                );
             await interaction.followUp({
                 ephemeral: false,
                 files: [attachment, savantAttachment],
-                embeds: [myEmbed],
+                embeds: [commandUtil.getPitcherEmbed(pitcher, pitcherInfo, !playerName, currentLiveFeed)],
                 components: [],
                 content: ''
             });
