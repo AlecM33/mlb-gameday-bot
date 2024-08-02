@@ -507,7 +507,7 @@ module.exports = {
     },
 
     getPitcherEmbed: (pitcher, pitcherInfo, isLiveGame, description) => {
-        const feed = liveFeed.init(require('../spec/data/example-live-feed'));
+        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         if (isLiveGame) {
             const abbreviations = {
                 home: feed.homeAbbreviation(),
@@ -548,7 +548,7 @@ module.exports = {
     },
 
     getBatterEmbed: (batter, batterInfo, isLiveGame, description) => {
-        const feed = liveFeed.init(require('../spec/data/example-live-feed'));
+        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         if (isLiveGame) {
             const abbreviations = {
                 home: feed.homeAbbreviation(),
@@ -591,8 +591,8 @@ module.exports = {
         if (playerName) {
             batter = await module.exports.getClosestPlayer(playerName, 'Batter');
         } else {
-            currentLiveFeed = require('../spec/data/example-live-feed');
-            if (currentLiveFeed && currentLiveFeed.gameData.status.abstractGameState !== 'Live') {
+            currentLiveFeed = globalCache.values.game.currentLiveFeed;
+            if (currentLiveFeed && currentLiveFeed.gameData.status.abstractGameState === 'Live') {
                 batter = currentLiveFeed.liveData.plays.currentPlay.matchup.batter;
             }
         }
@@ -605,8 +605,8 @@ module.exports = {
         if (playerName) {
             batter = await module.exports.getClosestPlayer(playerName, 'Pitcher');
         } else {
-            currentLiveFeed = require('../spec/data/example-live-feed');
-            if (currentLiveFeed && currentLiveFeed.gameData.status.abstractGameState !== 'Live') {
+            currentLiveFeed = globalCache.values.game.currentLiveFeed;
+            if (currentLiveFeed && currentLiveFeed.gameData.status.abstractGameState === 'Live') {
                 batter = currentLiveFeed.liveData.plays.currentPlay.matchup.pitcher;
             }
         }
