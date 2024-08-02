@@ -12,7 +12,8 @@ const endpoints = {
         return 'https://statsapi.mlb.com/api/v1/schedule?hydrate=lineups&sportId=1&gamePk=' + gamePk + '&teamId=' + teamId;
     },
     hitter: (personId) => {
-        return `https://statsapi.mlb.com/api/v1/people?personIds=${personId}&hydrate=stats(type=[season,statSplits,lastXGames],group=hitting,gameType=R,sitCodes=vl,vr,risp,limit=7)`;
+        LOGGER.debug(`https://statsapi.mlb.com/api/v1/people?personIds=${personId}&hydrate=stats(type=[season,statSplits,lastXGames],group=hitting,gameType=R,sitCodes=[vl,vr,risp],limit=7)`);
+        return `https://statsapi.mlb.com/api/v1/people?personIds=${personId}&hydrate=stats(type=[season,statSplits,lastXGames],group=hitting,gameType=R,sitCodes=[vl,vr,risp],limit=7)`;
     },
     pitcher: (personId, lastXGamesLimit) => {
         return `https://statsapi.mlb.com/api/v1/people?personIds=${personId}&hydrate=stats(type=[season,lastXGames,sabermetrics,seasonAdvanced,expectedStatistics],groups=pitching,limit=${lastXGamesLimit})`;

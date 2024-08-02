@@ -9,6 +9,7 @@ const chroma = require('chroma-js');
 const ztable = require('ztable');
 const levenshtein = require('js-levenshtein');
 const { performance } = require('perf_hooks');
+const liveFeed = require('./livefeed');
 
 module.exports = {
     getLineupCardTable: async (game) => {
@@ -393,13 +394,6 @@ module.exports = {
         });
     },
 
-    getAbbreviations: (game) => {
-        return {
-            home: (game.teams?.home?.team?.abbreviation || game.teams?.home?.abbreviation || game.gameData?.teams?.home?.abbreviation),
-            away: (game.teams?.away?.team?.abbreviation || game.teams?.away?.abbreviation || game.gameData?.teams?.away?.abbreviation)
-        };
-    },
-
     buildPitchingStatsMarkdown: (pitchingStats, pitchMix, lastThree, seasonAdvanced, sabermetrics, includeExtra = false) => {
         let reply = '';
 
@@ -512,21 +506,24 @@ module.exports = {
         return matchingPlayer;
     },
 
-    getPitcherEmbed: (pitcher, pitcherInfo, isLiveGame, currentLiveFeed) => {
+    getPitcherEmbed: (pitcher, pitcherInfo, isLiveGame, description) => {
+        const feed = liveFeed.init(require('../spec/data/example-live-feed'));
         if (isLiveGame) {
-            const abbreviations = module.exports.getAbbreviations(currentLiveFeed);
-            const halfInning = currentLiveFeed.liveData.plays.currentPlay.about.halfInning;
+            const abbreviations = {
+                home: feed.homeAbbreviation(),
+                away: feed.awayAbbreviation()
+            };
+            const halfInning = feed.halfInning();
             const abbreviation = halfInning === 'top'
                 ? abbreviations.home
                 : abbreviations.away;
-            const inning = currentLiveFeed.liveData.plays.currentPlay.about.inning;
+            const inning = feed.inning();
             return new EmbedBuilder()
                 .setTitle(halfInning.toUpperCase() + ' ' + inning + ', ' +
                     abbreviations.away + ' vs. ' + abbreviations.home + ': Current Pitcher')
-                .setDescription(
-                    '## ' + (pitcherInfo.handedness
-                        ? pitcherInfo.handedness + 'HP **'
-                        : '**') + (pitcher.fullName || 'TBD') + '** (' + abbreviation + ')')
+                .setDescription('## ' + (pitcherInfo.handedness
+                    ? pitcherInfo.handedness + 'HP **'
+                    : '**') + (pitcher.fullName || 'TBD') + '** (' + abbreviation + ')' + (description || ''))
                 .setThumbnail('attachment://spot.png')
                 .setImage('attachment://savant.png')
                 .setColor((halfInning === 'top'
@@ -534,30 +531,39 @@ module.exports = {
                     : globalCache.values.game.awayTeamColor)
                 );
         } else {
-            return new EmbedBuilder()
+            const embed = new EmbedBuilder()
                 .setTitle((pitcherInfo.handedness
                     ? pitcherInfo.handedness + 'HP '
                     : '') + pitcher.fullName)
                 .setThumbnail('attachment://spot.png')
                 .setImage('attachment://savant.png')
                 .setColor(globals.TEAMS.find(team => team.id === pitcher.currentTeam.id).primaryColor);
+
+            if (description) {
+                embed.setDescription(description);
+            }
+
+            return embed;
         }
     },
 
-    getBatterEmbed: (batter, batterInfo, isLiveGame, currentLiveFeed) => {
+    getBatterEmbed: (batter, batterInfo, isLiveGame, description) => {
+        const feed = liveFeed.init(require('../spec/data/example-live-feed'));
         if (isLiveGame) {
-            const abbreviations = module.exports.getAbbreviations(currentLiveFeed);
-            const halfInning = currentLiveFeed.liveData.plays.currentPlay.about.halfInning;
+            const abbreviations = {
+                home: feed.homeAbbreviation(),
+                away: feed.awayAbbreviation()
+            };
+            const halfInning = feed.halfInning();
             const abbreviation = halfInning === 'top'
                 ? abbreviations.home
                 : abbreviations.away;
-            const inning = currentLiveFeed.liveData.plays.currentPlay.about.inning;
+            const inning = feed.inning();
             return new EmbedBuilder()
                 .setTitle(halfInning.toUpperCase() + ' ' + inning + ', ' +
                     abbreviations.away + ' vs. ' + abbreviations.home + ': Current Batter')
-                .setDescription(
-                    '## ' + currentLiveFeed.liveData.plays.currentPlay.matchup.batSide.code +
-                    'HB ' + batter.fullName + ' (' + abbreviation + ')')
+                .setDescription('## ' + feed.currentBatterBatSide() +
+                    'HB ' + batter.fullName + ' (' + abbreviation + ')' + (description || ''))
                 .setThumbnail('attachment://spot.png')
                 .setImage('attachment://savant.png')
                 .setColor((halfInning === 'top'
@@ -565,13 +571,47 @@ module.exports = {
                     : globalCache.values.game.homeTeamColor)
                 );
         } else {
-            return new EmbedBuilder()
+            const embed = new EmbedBuilder()
                 .setTitle(batterInfo.stats.batSide.code +
                     'HB ' + batter.fullName)
                 .setThumbnail('attachment://spot.png')
                 .setImage('attachment://savant.png')
                 .setColor(globals.TEAMS.find(team => team.id === batter.currentTeam.id).primaryColor);
+
+            if (description) {
+                embed.setDescription(description);
+            }
+
+            return embed;
         }
+    },
+
+    getBatterFromUserInputOrLiveFeed: async (playerName) => {
+        let batter, currentLiveFeed;
+        if (playerName) {
+            batter = await module.exports.getClosestPlayer(playerName, 'Batter');
+        } else {
+            currentLiveFeed = require('../spec/data/example-live-feed');
+            if (currentLiveFeed && currentLiveFeed.gameData.status.abstractGameState !== 'Live') {
+                batter = currentLiveFeed.liveData.plays.currentPlay.matchup.batter;
+            }
+        }
+
+        return batter;
+    },
+
+    getPitcherFromUserInputOrLiveFeed: async (playerName) => {
+        let batter, currentLiveFeed;
+        if (playerName) {
+            batter = await module.exports.getClosestPlayer(playerName, 'Pitcher');
+        } else {
+            currentLiveFeed = require('../spec/data/example-live-feed');
+            if (currentLiveFeed && currentLiveFeed.gameData.status.abstractGameState !== 'Live') {
+                batter = currentLiveFeed.liveData.plays.currentPlay.matchup.pitcher;
+            }
+        }
+
+        return batter;
     }
 };
 

@@ -4,7 +4,11 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('batter')
-        .setDescription('View stats on who is batting right now, including platoon splits.'),
+        .setDescription('View slash lines and splits for a specified batter, or just who is batting right now.')
+        .addStringOption(option =>
+            option.setName('player')
+                .setDescription('An active player\'s name.')
+                .setRequired(false)),
     async execute (interaction) {
         try {
             await interactionHandlers.batterHandler(interaction);

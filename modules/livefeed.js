@@ -39,6 +39,9 @@ module.exports = {
             },
             linescore: () => {
                 return liveFeed.liveData.linescore;
+            },
+            currentBatterBatSide: () => {
+                return liveFeed.liveData.plays.currentPlay.matchup.batSide.code;
             }
         };
     }
