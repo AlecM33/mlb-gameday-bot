@@ -307,7 +307,6 @@ module.exports = {
             { label: 'Blocks Above Avg', value: statcast.blocks_above_average, metric: 'blocks_above_average', percentile: statcast.percent_rank_blocks_above_average },
             { label: 'CS Above Avg', value: statcast.cs_above_average, metric: 'cs_above_average', percentile: statcast.percent_rank_cs_above_average },
             { label: 'Framing', value: statcast.fielding_run_value_framing, metric: 'fielding_run_value_framing', percentile: statcast.percent_rank_fielding_run_value_framing },
-            { label: 'Framing', value: statcast.fielding_run_value_framing, metric: 'fielding_run_value_framing', percentile: statcast.percent_rank_fielding_run_value_framing },
             { label: 'Pop Time', value: statcast.pop_2b, metric: 'pop_2b', percentile: statcast.percent_rank_pop_2b }
         ];
         const running = [
