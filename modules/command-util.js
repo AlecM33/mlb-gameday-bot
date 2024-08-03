@@ -276,7 +276,7 @@ module.exports = {
         return {};
     },
 
-    buildBatterSavantTable: async (statcast, metricSummaries) => {
+    buildBatterSavantTable: async (statcast, metricSummaries, spot) => {
         const value = [
             { label: 'Batting Run Value', value: statcast.swing_take_run_value, metric: 'swing_take_run_value', percentile: statcast.percent_rank_swing_take_run_value },
             { label: 'Baserunning Run Value', value: statcast.runner_run_value, metric: 'runner_run_value', percentile: statcast.percent_rank_runner_run_value },
@@ -314,6 +314,9 @@ module.exports = {
         ];
         const html = `
             <div id='savant-table'>` +
+                `<img src="data:image/jpeg;base64, ${
+                    Buffer.from(spot).toString('base64')
+                }" alt="alt text" />` +
                 '<h3>Value</h3>' +
                 buildSavantSection(value, metricSummaries) +
                 '<h3>Hitting</h3>' +
@@ -327,7 +330,7 @@ module.exports = {
         return (await getScreenshotOfSavantTable(html));
     },
 
-    buildPitcherSavantTable: async (statcast, metricSummaries) => {
+    buildPitcherSavantTable: async (statcast, metricSummaries, spot) => {
         const value = [
             { label: 'Pitching Run Value', value: statcast.swing_take_run_value, metric: 'swing_take_run_value', percentile: statcast.percent_rank_swing_take_run_value },
             { label: 'Fastball Run Value', value: Math.round(statcast.pitch_run_value_fastball), metric: 'pitch_run_value_fastball', percentile: statcast.percent_rank_pitch_run_value_fastball },
@@ -350,6 +353,9 @@ module.exports = {
         ];
         const html = `
             <div id='savant-table'>` +
+            `<img src="data:image/jpeg;base64, ${
+                Buffer.from(spot).toString('base64')
+            }" alt="alt text" />` +
             '<h3>Value</h3>' +
             buildSavantSection(value, metricSummaries, true) +
             '<h3>Pitching</h3>' +
@@ -505,7 +511,7 @@ module.exports = {
         return matchingPlayer;
     },
 
-    getPitcherEmbed: (pitcher, pitcherInfo, isLiveGame, description) => {
+    getPitcherEmbed: (pitcher, pitcherInfo, isLiveGame, description, savantMode = false) => {
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         if (isLiveGame) {
             const abbreviations = {
@@ -517,24 +523,28 @@ module.exports = {
                 ? abbreviations.home
                 : abbreviations.away;
             const inning = feed.inning();
-            return new EmbedBuilder()
+            const embed = new EmbedBuilder()
                 .setTitle(halfInning.toUpperCase() + ' ' + inning + ', ' +
                     abbreviations.away + ' vs. ' + abbreviations.home + ': Current Pitcher')
                 .setDescription('## ' + (pitcherInfo.handedness
                     ? pitcherInfo.handedness + 'HP **'
                     : '**') + (pitcher.fullName || 'TBD') + '** (' + abbreviation + ')' + (description || ''))
-                .setThumbnail('attachment://spot.png')
                 .setImage('attachment://savant.png')
                 .setColor((halfInning === 'top'
                     ? globalCache.values.game.homeTeamColor
                     : globalCache.values.game.awayTeamColor)
                 );
+
+            if (!savantMode) {
+                embed.setThumbnail('attachment://spot.png');
+            }
+
+            return embed;
         } else {
             const embed = new EmbedBuilder()
                 .setTitle((pitcherInfo.handedness
                     ? pitcherInfo.handedness + 'HP '
                     : '') + pitcher.fullName)
-                .setThumbnail('attachment://spot.png')
                 .setImage('attachment://savant.png')
                 .setColor(globals.TEAMS.find(team => team.id === pitcher.currentTeam.id).primaryColor);
 
@@ -542,11 +552,15 @@ module.exports = {
                 embed.setDescription(description);
             }
 
+            if (!savantMode) {
+                embed.setThumbnail('attachment://spot.png');
+            }
+
             return embed;
         }
     },
 
-    getBatterEmbed: (batter, batterInfo, isLiveGame, description) => {
+    getBatterEmbed: (batter, batterInfo, isLiveGame, description, savantMode = false) => {
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         if (isLiveGame) {
             const abbreviations = {
@@ -558,27 +572,35 @@ module.exports = {
                 ? abbreviations.home
                 : abbreviations.away;
             const inning = feed.inning();
-            return new EmbedBuilder()
+            const embed = new EmbedBuilder()
                 .setTitle(halfInning.toUpperCase() + ' ' + inning + ', ' +
                     abbreviations.away + ' vs. ' + abbreviations.home + ': Current Batter')
                 .setDescription('## ' + feed.currentBatterBatSide() +
                     'HB ' + batter.fullName + ' (' + abbreviation + ')' + (description || ''))
-                .setThumbnail('attachment://spot.png')
                 .setImage('attachment://savant.png')
                 .setColor((halfInning === 'top'
                     ? globalCache.values.game.awayTeamColor
                     : globalCache.values.game.homeTeamColor)
                 );
+
+            if (!savantMode) {
+                embed.setThumbnail('attachment://spot.png');
+            }
+
+            return embed;
         } else {
             const embed = new EmbedBuilder()
                 .setTitle(batterInfo.stats.batSide.code +
                     'HB ' + batter.fullName)
-                .setThumbnail('attachment://spot.png')
                 .setImage('attachment://savant.png')
                 .setColor(globals.TEAMS.find(team => team.id === batter.currentTeam.id).primaryColor);
 
             if (description) {
                 embed.setDescription(description);
+            }
+
+            if (!savantMode) {
+                embed.setThumbnail('attachment://spot.png');
             }
 
             return embed;

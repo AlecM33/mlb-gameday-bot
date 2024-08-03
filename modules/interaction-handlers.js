@@ -447,14 +447,14 @@ module.exports = {
         const statcastData = commandUtil.getStatcastData(text);
         if (statcastData.mostRecentStatcast && statcastData.mostRecentMetricYear && statcastData.metricSummaryJSON) {
             const batterInfo = await commandUtil.hydrateHitter(batter.id);
-            const attachment = new AttachmentBuilder(Buffer.from(batterInfo.spot), { name: 'spot.png' });
             const savantAttachment = new AttachmentBuilder((await commandUtil.buildBatterSavantTable(
                 statcastData.mostRecentStatcast,
-                statcastData.metricSummaryJSON[statcastData.mostRecentMetricYear.toString()])), { name: 'savant.png' });
+                statcastData.metricSummaryJSON[statcastData.mostRecentMetricYear.toString()],
+                batterInfo.spot)), { name: 'savant.png' });
             await interaction.followUp({
                 ephemeral: false,
-                files: [attachment, savantAttachment],
-                embeds: [commandUtil.getBatterEmbed(batter, batterInfo, !playerName)],
+                files: [savantAttachment],
+                embeds: [commandUtil.getBatterEmbed(batter, batterInfo, !playerName, null, true)],
                 components: [],
                 content: ''
             });
@@ -477,14 +477,14 @@ module.exports = {
         const statcastData = commandUtil.getStatcastData(text);
         if (statcastData.mostRecentStatcast && statcastData.mostRecentMetricYear && statcastData.metricSummaryJSON) {
             const pitcherInfo = await commandUtil.hydrateProbable(pitcher.id);
-            const attachment = new AttachmentBuilder(Buffer.from(pitcherInfo.spot), { name: 'spot.png' });
             const savantAttachment = new AttachmentBuilder((await commandUtil.buildPitcherSavantTable(
                 statcastData.mostRecentStatcast,
-                statcastData.metricSummaryJSON[statcastData.mostRecentMetricYear.toString()])), { name: 'savant.png' });
+                statcastData.metricSummaryJSON[statcastData.mostRecentMetricYear.toString()],
+                pitcherInfo.spot)), { name: 'savant.png' });
             await interaction.followUp({
                 ephemeral: false,
-                files: [attachment, savantAttachment],
-                embeds: [commandUtil.getPitcherEmbed(pitcher, pitcherInfo, !playerName)],
+                files: [savantAttachment],
+                embeds: [commandUtil.getPitcherEmbed(pitcher, pitcherInfo, !playerName, null, true)],
                 components: [],
                 content: ''
             });
