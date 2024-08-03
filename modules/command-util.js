@@ -318,9 +318,8 @@ module.exports = {
                 buildSavantSection(value, metricSummaries) +
                 '<h3>Hitting</h3>' +
                 buildSavantSection(hitting, metricSummaries) +
-                '<h3>Fielding</h3>' +
-                buildSavantSection(fielding, metricSummaries) +
-                (statcast.blocks_above_average !== null ? '<h3>Catching</h3>' + buildSavantSection(catching, metricSummaries) : '') +
+                (fielding.find(stat => stat.value !== null) ? '<h3>Fielding</h3>' + buildSavantSection(fielding, metricSummaries) : '') +
+                (catching.find(stat => stat.value !== null) ? '<h3>Catching</h3>' + buildSavantSection(catching, metricSummaries) : '') +
                 '<h3>Running</h3>' +
                 buildSavantSection(running, metricSummaries) +
             '</div>';
@@ -352,9 +351,9 @@ module.exports = {
         const html = `
             <div id='savant-table'>` +
             '<h3>Value</h3>' +
-            buildSavantSection(value, metricSummaries) +
+            buildSavantSection(value, metricSummaries, true) +
             '<h3>Pitching</h3>' +
-            buildSavantSection(pitching, metricSummaries) +
+            buildSavantSection(pitching, metricSummaries, true) +
         '</div>';
 
         return (await getScreenshotOfSavantTable(html));
@@ -699,20 +698,26 @@ async function getScreenshotOfSavantTable (savantHTML) {
                 #savant-table {
                     background-color: #151820;
                     color: whitesmoke;
-                    padding: 15px;
-                    font-size: 20px;
+                    font-size: 25px;
                     font-family: 'Segoe UI', sans-serif;
-                    width: 40%;
+                    width: 65%;
+                    display: flex;
+                    padding: 17px 27.5px 17px 10px;
+                    flex-direction: column;
+                    align-items: center;
                 }
                 .savant-stat {
                     display: flex;
-                    width: 100%;
+                    width: 95%;
                     justify-content: space-between;
                     margin: 5px 0;
                     align-items: center;
                 }
+                .savant-stat-pitcher {
+                    margin: 12px 0;
+                }
                 h3 {
-                    font-size: 22px;
+                    font-size: 30px;
                     font-weight: bold;
                     width: 100%;
                     text-align: center;
@@ -722,45 +727,47 @@ async function getScreenshotOfSavantTable (savantHTML) {
                     margin: 10px 0;
                 }
                 .percentile {
-                    width: 28px;
-                    height: 28px;
+                    width: 35px;
+                    height: 35px;
                     font-size: 0.7em;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     font-weight: bold;
-                    border-radius: 50%
+                    border-radius: 50%;
+                    position: absolute;
+                    top: 50%;
+                    left: -20px;
+                    transform: translateY(-50%);
+                }
+                .percentile-slider-not-qualified {
+                    background-image: repeating-linear-gradient(
+                        -45deg,
+                        transparent,
+                        transparent 3px,
+                        rgba(0, 0, 0, 0.95) 3px,
+                        rgba(0, 0, 0, 0.95) 6px
+                    );           
                 }
                 .percentile-not-qualified {
-                    background-image: linear-gradient(
-                      -45deg, 
-                      rgba(0,0,0,0.95) 10%, 
-                      transparent 10%, 
-                      transparent 20%, 
-                      rgba(0,0,0,0.95) 20%, 
-                      rgba(0,0,0,0.95) 30%,
-                      transparent 30%, 
-                      transparent 40%,
-                      rgba(0,0,0,0.95) 40%, 
-                      rgba(0,0,0,0.95) 50%,
-                      transparent 50%, 
-                      transparent 60%,
-                      rgba(0,0,0,0.95) 60%, 
-                      rgba(0,0,0,0.95) 70%,
-                      transparent 70%, 
-                      transparent 80%,
-                      rgba(0,0,0,0.95) 80%, 
-                      rgba(0,0,0,0.95) 90%,
-                      transparent 90%, 
-                      transparent 100%
-                    );
-                    background-size: 0.42em;               
+                    display: none;
                 }
                 .stat-values {
                     display: flex;
-                    width: 5em;
+                    width: 8.5em;
                     justify-content: space-between;
                     align-items: center;
+                }
+                .percentile-slider {
+                    position: relative;
+                    width: 150px;
+                    height: 0.75em;
+                    background: #80808045;
+                }
+                .percentile-slider-portion {
+                    position: absolute;
+                    width: 100%;
+                    height: 100%;
                 }
             </style>` +
         savantHTML
@@ -773,27 +780,38 @@ async function getScreenshotOfSavantTable (savantHTML) {
     return buffer;
 }
 
-function buildSavantSection (statCollection, metricSummaries) {
+function buildSavantSection (statCollection, metricSummaries, isPitcher = false) {
     const scale = chroma.scale(['#325aa1', '#a8c1c3', '#c91f26']);
+    const sliderScale = chroma.scale(['#3661ad', '#b4cfd1', '#d8221f']);
+    statCollection.forEach(stat => {
+        if (!stat.percentile) {
+            stat.percentile = calculateRoundedPercentileFromNormalDistribution(
+                stat.metric,
+                stat.value,
+                metricSummaries[stat.metric].avg_metric,
+                metricSummaries[stat.metric].stddev_metric,
+                stat.shouldInvert
+            );
+            stat.isQualified = false;
+        } else {
+            stat.isQualified = true;
+        }
+    });
     return statCollection.reduce((acc, value) => acc + (value.value !== null
         ? `
-                <div class='savant-stat'>
-                    <div class='label'>${value.label}</div>
-                    <div class='stat-values'>
-                        <div class='value'>${value.value}</div>
-                        <div class='percentile ${value.percentile ? '' : 'percentile-not-qualified'}' style='background-color: ${value.percentile
-            ? scale(value.percentile / 100)
-            : scale(caculateRoundedPercentileFromNormalDistribution(
-                value.metric,
-                value.value,
-                metricSummaries[value.metric].avg_metric,
-                metricSummaries[value.metric].stddev_metric,
-                value.shouldInvert
-            ))}'>${value.percentile || ' '}
-                        </div>
+        <div class='savant-stat${(isPitcher ? ' savant-stat-pitcher' : '')}'>
+            <div class='label'>${value.label}</div>
+            <div class='stat-values'>
+                <div class='value'>${value.value}</div>
+                <div class='percentile-slider'>
+                    <div class='percentile-slider-portion ${value.isQualified ? '' : 'percentile-slider-not-qualified'}'
+                     style='background-color: ${sliderScale(value.percentile / 100)}; width: ${(value.percentile / 100) * 150}px'></div>
+                    <div class='percentile ${value.isQualified ? '' : 'percentile-not-qualified'}'
+                     style='background-color: ${scale(value.percentile / 100)}; left: ${-17.5 + (value.percentile / 100) * 150}px '>${value.percentile || ' '}
                     </div>
                 </div>
-            `
+            </div>
+        </div>`
         : ''), '');
 }
 
@@ -842,7 +860,9 @@ async function getScreenshotOfLineScore (tables, inning, half, awayScore, homeSc
     return buffer;
 }
 
-function caculateRoundedPercentileFromNormalDistribution (metric, value, mean, standardDeviation, shouldInvert) {
+function calculateRoundedPercentileFromNormalDistribution (metric, value, mean, standardDeviation, shouldInvert) {
     if (typeof value === 'string') { value = parseFloat(value); }
-    return shouldInvert ? (1.00 - ztable((value - mean) / standardDeviation)) : ztable((value - mean) / standardDeviation);
+    return Math.round(
+        (shouldInvert ? (1.00 - ztable((value - mean) / standardDeviation)) : ztable((value - mean) / standardDeviation)) * 100
+    );
 }
