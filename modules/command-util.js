@@ -120,23 +120,23 @@ module.exports = {
             seasonStats.stat.avg + '/' + seasonStats.stat.obp + '/' + seasonStats.stat.slg +
             ', ' + seasonStats.stat.homeRuns + ' HR, ' + seasonStats.stat.rbi + ' RBIs' +
             '\n\nSplits:\n\n' +
-        '**Last 7 Games**' + (lastXGames ? ' (' + lastXGames.stat.plateAppearances + ' ABs)\n' : '\n') + (
-            lastXGames
-                ? lastXGames.stat.avg + '/' + lastXGames.stat.obp + '/' + lastXGames.stat.slg
-                : 'No at-bats!'
-        ) + '\n\n**vs. Righties**' + (vsRight ? ' (' + vsRight.stat.plateAppearances + ' ABs)\n' : '\n') + (
-            vsRight
-                ? vsRight.stat.avg + '/' + vsRight.stat.obp + '/' + vsRight.stat.slg
-                : 'No at-bats!'
-        ) + '\n\n**vs. Lefties**' + (vsLeft ? ' (' + vsLeft.stat.plateAppearances + ' ABs)\n' : '\n') + (
-            vsLeft
-                ? vsLeft.stat.avg + '/' + vsLeft.stat.obp + '/' + vsLeft.stat.slg
-                : 'No at-bats!'
-        ) + '\n\n**with RISP**' + (risp ? ' (' + risp.stat.plateAppearances + ' ABs)\n' : '\n') + (
-            risp
-                ? risp.stat.avg + '/' + risp.stat.obp + '/' + risp.stat.slg
-                : 'No at-bats!'
-        );
+            '**Last 7 Games**' + (lastXGames ? ' (' + lastXGames.stat.plateAppearances + ' ABs)\n' : '\n') + (
+                lastXGames
+                    ? lastXGames.stat.avg + '/' + lastXGames.stat.obp + '/' + lastXGames.stat.slg
+                    : 'No at-bats!'
+            ) + '\n\n**vs. Righties**' + (vsRight ? ' (' + vsRight.stat.plateAppearances + ' ABs)\n' : '\n') + (
+                vsRight
+                    ? vsRight.stat.avg + '/' + vsRight.stat.obp + '/' + vsRight.stat.slg
+                    : 'No at-bats!'
+            ) + '\n\n**vs. Lefties**' + (vsLeft ? ' (' + vsLeft.stat.plateAppearances + ' ABs)\n' : '\n') + (
+                vsLeft
+                    ? vsLeft.stat.avg + '/' + vsLeft.stat.obp + '/' + vsLeft.stat.slg
+                    : 'No at-bats!'
+            ) + '\n\n**with RISP**' + (risp ? ' (' + risp.stat.plateAppearances + ' ABs)\n' : '\n') + (
+                risp
+                    ? risp.stat.avg + '/' + risp.stat.obp + '/' + risp.stat.slg
+                    : 'No at-bats!'
+            );
     },
 
     buildLineScoreTable: async (game, linescore) => {
@@ -314,17 +314,17 @@ module.exports = {
         ];
         const html = `
             <div id='savant-table'>` +
-                `<img src="data:image/jpeg;base64, ${
-                    Buffer.from(spot).toString('base64')
-                }" alt="alt text" />` +
-                '<h3>Value</h3>' +
-                buildSavantSection(value, metricSummaries) +
-                '<h3>Hitting</h3>' +
-                buildSavantSection(hitting, metricSummaries) +
-                (fielding.find(stat => stat.value !== null) ? '<h3>Fielding</h3>' + buildSavantSection(fielding, metricSummaries) : '') +
-                (catching.find(stat => stat.value !== null) ? '<h3>Catching</h3>' + buildSavantSection(catching, metricSummaries) : '') +
-                '<h3>Running</h3>' +
-                buildSavantSection(running, metricSummaries) +
+            `<img src="data:image/jpeg;base64, ${
+                Buffer.from(spot).toString('base64')
+            }" alt="alt text" />` +
+            '<h3>Value</h3>' +
+            buildSavantSection(value, metricSummaries) +
+            '<h3>Hitting</h3>' +
+            buildSavantSection(hitting, metricSummaries) +
+            (fielding.find(stat => stat.value !== null) ? '<h3>Fielding</h3>' + buildSavantSection(fielding, metricSummaries) : '') +
+            (catching.find(stat => stat.value !== null) ? '<h3>Catching</h3>' + buildSavantSection(catching, metricSummaries) : '') +
+            '<h3>Running</h3>' +
+            buildSavantSection(running, metricSummaries) +
             '</div>';
 
         return (await getScreenshotOfSavantTable(html));
@@ -360,7 +360,7 @@ module.exports = {
             buildSavantSection(value, metricSummaries, true) +
             '<h3>Pitching</h3>' +
             buildSavantSection(pitching, metricSummaries, true) +
-        '</div>';
+            '</div>';
 
         return (await getScreenshotOfSavantTable(html));
     },
@@ -390,13 +390,13 @@ module.exports = {
             ' vs. ' +
             (game.teams?.away?.team?.abbreviation || game.teams?.away?.abbreviation || game.gameData?.teams?.away?.abbreviation) +
             ', ' + new Date((game.gameDate || game.datetime?.dateTime || game.gameData?.datetime?.dateTime)).toLocaleString('default', {
-            month: 'short',
-            day: 'numeric',
-            timeZone: 'America/New_York',
-            hour: 'numeric',
-            minute: '2-digit',
-            timeZoneName: 'short'
-        });
+                month: 'short',
+                day: 'numeric',
+                timeZone: 'America/New_York',
+                hour: 'numeric',
+                minute: '2-digit',
+                timeZoneName: 'short'
+            });
     },
 
     buildPitchingStatsMarkdown: (pitchingStats, pitchMix, lastThree, seasonAdvanced, sabermetrics, includeExtra = false) => {
@@ -649,8 +649,8 @@ function getPitchCollections (dom) {
         .querySelectorAll('tbody tr td:nth-child(7)').forEach(el => MPHs.push(el.textContent.trim()));
     dom.window.document
         .querySelectorAll('tbody tr td:nth-child(18)').forEach(el => battingAvgsAgainst.push(
-            (el.textContent.trim().length > 0 ? el.textContent.trim() : 'N/A')
-        ));
+        (el.textContent.trim().length > 0 ? el.textContent.trim() : 'N/A')
+    ));
     return [pitches, percentages, MPHs, battingAvgsAgainst];
 }
 
@@ -701,8 +701,8 @@ async function getScreenshotOfHTMLTables (tables) {
                 padding: 15px;
                 font-size: 20px;
                 width: fit-content;">` +
-            tables.reduce((acc, value) => acc + value.toString() + '\n\n', '') +
-            '</pre>');
+        tables.reduce((acc, value) => acc + value.toString() + '\n\n', '') +
+        '</pre>');
     const element = await page.waitForSelector('#boxscore');
     const buffer = await element.screenshot({
         type: 'png',
@@ -875,8 +875,8 @@ async function getScreenshotOfLineScore (tables, inning, half, awayScore, homeSc
                     <div id="home-abb">` + homeAbbreviation + `</div>
                 </div>
                 <pre id="boxscore">` +
-                    tables.reduce((acc, value) => acc + value.toString() + '\n\n', '') +
-                `</pre>
+        tables.reduce((acc, value) => acc + value.toString() + '\n\n', '') +
+        `</pre>
             </div>`);
     const element = await page.waitForSelector('#line-score-container');
     const buffer = await element.screenshot({
