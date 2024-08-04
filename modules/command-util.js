@@ -120,23 +120,23 @@ module.exports = {
             seasonStats.stat.avg + '/' + seasonStats.stat.obp + '/' + seasonStats.stat.slg +
             ', ' + seasonStats.stat.homeRuns + ' HR, ' + seasonStats.stat.rbi + ' RBIs' +
             '\n\nSplits:\n\n' +
-        '**Last 7 Games**' + (lastXGames ? ' (' + lastXGames.stat.plateAppearances + ' ABs)\n' : '\n') + (
-            lastXGames
-                ? lastXGames.stat.avg + '/' + lastXGames.stat.obp + '/' + lastXGames.stat.slg
-                : 'No at-bats!'
-        ) + '\n\n**vs. Righties**' + (vsRight ? ' (' + vsRight.stat.plateAppearances + ' ABs)\n' : '\n') + (
-            vsRight
-                ? vsRight.stat.avg + '/' + vsRight.stat.obp + '/' + vsRight.stat.slg
-                : 'No at-bats!'
-        ) + '\n\n**vs. Lefties**' + (vsLeft ? ' (' + vsLeft.stat.plateAppearances + ' ABs)\n' : '\n') + (
-            vsLeft
-                ? vsLeft.stat.avg + '/' + vsLeft.stat.obp + '/' + vsLeft.stat.slg
-                : 'No at-bats!'
-        ) + '\n\n**with RISP**' + (risp ? ' (' + risp.stat.plateAppearances + ' ABs)\n' : '\n') + (
-            risp
-                ? risp.stat.avg + '/' + risp.stat.obp + '/' + risp.stat.slg
-                : 'No at-bats!'
-        );
+            '**Last 7 Games**' + (lastXGames ? ' (' + lastXGames.stat.plateAppearances + ' ABs)\n' : '\n') + (
+                lastXGames
+                    ? lastXGames.stat.avg + '/' + lastXGames.stat.obp + '/' + lastXGames.stat.slg
+                    : 'No at-bats!'
+            ) + '\n\n**vs. Righties**' + (vsRight ? ' (' + vsRight.stat.plateAppearances + ' ABs)\n' : '\n') + (
+                vsRight
+                    ? vsRight.stat.avg + '/' + vsRight.stat.obp + '/' + vsRight.stat.slg
+                    : 'No at-bats!'
+            ) + '\n\n**vs. Lefties**' + (vsLeft ? ' (' + vsLeft.stat.plateAppearances + ' ABs)\n' : '\n') + (
+                vsLeft
+                    ? vsLeft.stat.avg + '/' + vsLeft.stat.obp + '/' + vsLeft.stat.slg
+                    : 'No at-bats!'
+            ) + '\n\n**with RISP**' + (risp ? ' (' + risp.stat.plateAppearances + ' ABs)\n' : '\n') + (
+                risp
+                    ? risp.stat.avg + '/' + risp.stat.obp + '/' + risp.stat.slg
+                    : 'No at-bats!'
+            );
     },
 
     buildLineScoreTable: async (game, linescore) => {
@@ -314,17 +314,17 @@ module.exports = {
         ];
         const html = `
             <div id='savant-table'>` +
-                `<img src="data:image/jpeg;base64, ${
-                    Buffer.from(spot).toString('base64')
-                }" alt="alt text" />` +
-                '<h3>Value</h3>' +
-                buildSavantSection(value, metricSummaries) +
-                '<h3>Hitting</h3>' +
-                buildSavantSection(hitting, metricSummaries) +
-                (fielding.find(stat => stat.value !== null) ? '<h3>Fielding</h3>' + buildSavantSection(fielding, metricSummaries) : '') +
-                (catching.find(stat => stat.value !== null) ? '<h3>Catching</h3>' + buildSavantSection(catching, metricSummaries) : '') +
-                '<h3>Running</h3>' +
-                buildSavantSection(running, metricSummaries) +
+            `<img src="data:image/jpeg;base64, ${
+                Buffer.from(spot).toString('base64')
+            }" alt="alt text" />` +
+            '<h3>Value</h3>' +
+            buildSavantSection(value, metricSummaries) +
+            '<h3>Hitting</h3>' +
+            buildSavantSection(hitting, metricSummaries) +
+            (fielding.find(stat => stat.value !== null) ? '<h3>Fielding</h3>' + buildSavantSection(fielding, metricSummaries) : '') +
+            (catching.find(stat => stat.value !== null) ? '<h3>Catching</h3>' + buildSavantSection(catching, metricSummaries) : '') +
+            '<h3>Running</h3>' +
+            buildSavantSection(running, metricSummaries) +
             '</div>';
 
         return (await getScreenshotOfSavantTable(html));
@@ -360,7 +360,7 @@ module.exports = {
             buildSavantSection(value, metricSummaries, true) +
             '<h3>Pitching</h3>' +
             buildSavantSection(pitching, metricSummaries, true) +
-        '</div>';
+            '</div>';
 
         return (await getScreenshotOfSavantTable(html));
     },
@@ -390,13 +390,13 @@ module.exports = {
             ' vs. ' +
             (game.teams?.away?.team?.abbreviation || game.teams?.away?.abbreviation || game.gameData?.teams?.away?.abbreviation) +
             ', ' + new Date((game.gameDate || game.datetime?.dateTime || game.gameData?.datetime?.dateTime)).toLocaleString('default', {
-            month: 'short',
-            day: 'numeric',
-            timeZone: 'America/New_York',
-            hour: 'numeric',
-            minute: '2-digit',
-            timeZoneName: 'short'
-        });
+                month: 'short',
+                day: 'numeric',
+                timeZone: 'America/New_York',
+                hour: 'numeric',
+                minute: '2-digit',
+                timeZoneName: 'short'
+            });
     },
 
     buildPitchingStatsMarkdown: (pitchingStats, pitchMix, lastThree, seasonAdvanced, sabermetrics, includeExtra = false) => {
@@ -649,8 +649,8 @@ function getPitchCollections (dom) {
         .querySelectorAll('tbody tr td:nth-child(7)').forEach(el => MPHs.push(el.textContent.trim()));
     dom.window.document
         .querySelectorAll('tbody tr td:nth-child(18)').forEach(el => battingAvgsAgainst.push(
-            (el.textContent.trim().length > 0 ? el.textContent.trim() : 'N/A')
-        ));
+        (el.textContent.trim().length > 0 ? el.textContent.trim() : 'N/A')
+    ));
     return [pitches, percentages, MPHs, battingAvgsAgainst];
 }
 
@@ -701,8 +701,8 @@ async function getScreenshotOfHTMLTables (tables) {
                 padding: 15px;
                 font-size: 20px;
                 width: fit-content;">` +
-            tables.reduce((acc, value) => acc + value.toString() + '\n\n', '') +
-            '</pre>');
+        tables.reduce((acc, value) => acc + value.toString() + '\n\n', '') +
+        '</pre>');
     const element = await page.waitForSelector('#boxscore');
     const buffer = await element.screenshot({
         type: 'png',
@@ -717,84 +717,84 @@ async function getScreenshotOfSavantTable (savantHTML) {
     await page.setContent(
         `
         <style>
-                #savant-table {
-                    background-color: #151820;
-                    color: whitesmoke;
-                    font-size: 25px;
-                    font-family: 'Segoe UI', sans-serif;
-                    width: 65%;
-                    display: flex;
-                    padding: 17px 77.5px 17px 60px;
-                    flex-direction: column;
-                    align-items: center;
-                }
-                .savant-stat {
-                    display: flex;
-                    width: 100%;
-                    justify-content: space-between;
-                    margin: 5px 0;
-                    align-items: center;
-                }
-                .value {
-                    margin-right: 22.5px;
-                }
-                .savant-stat-pitcher {
-                    margin: 12px 0;
-                }
-                h3 {
-                    font-size: 30px;
-                    font-weight: bold;
-                    width: 100%;
-                    text-align: center;
-                    margin: 0 0 10px 0;
-                }
-                /*#savant-table h3:not(:first-child) {*/
-                /*    margin: 10px 0;*/
-                /*}*/
-                .percentile {
-                    width: 35px;
-                    height: 35px;
-                    font-size: 0.7em;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-weight: bold;
-                    border-radius: 50%;
-                    position: absolute;
-                    top: 50%;
-                    left: -20px;
-                    transform: translateY(-50%);
-                }
-                .percentile-slider-not-qualified {
-                    background-image: repeating-linear-gradient(
+            #savant-table {
+                background-color: #151820;
+                color: whitesmoke;
+                font-size: 25px;
+                font-family: 'Segoe UI', sans-serif;
+                width: 70%;
+                display: flex;
+                padding: 17px 57.5px 17px 40px;
+                flex-direction: column;
+                align-items: center;
+            }
+            .savant-stat {
+                display: flex;
+                width: 100%;
+                justify-content: space-between;
+                margin: 5px 0;
+                align-items: center;
+            }
+            .value {
+                margin-right: 22.5px;
+            }
+            .savant-stat-pitcher {
+                margin: 12px 0;
+            }
+            h3 {
+                font-size: 25px;
+                font-weight: bold;
+                width: 100%;
+                text-align: center;
+                margin: 5px 0;
+            }
+            #savant-table h3:not(:first-child) {
+                margin: 5px 0;
+            }
+            .percentile {
+                width: 35px;
+                height: 35px;
+                font-size: 0.7em;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                border-radius: 50%;
+                position: absolute;
+                top: 50%;
+                left: -20px;
+                transform: translateY(-50%);
+            }
+            .percentile-slider-not-qualified {
+                background-image: repeating-linear-gradient(
                         -45deg,
                         transparent,
                         transparent 3px,
                         rgba(0, 0, 0, 0.95) 3px,
                         rgba(0, 0, 0, 0.95) 6px
-                    );           
-                }
-                .percentile-not-qualified {
-                    display: none;
-                }
-                .stat-values {
-                    display: flex;
-                    width: 9.5em;
-                    justify-content: space-between;
-                    align-items: center;
-                }
-                .percentile-slider {
-                    position: relative;
-                    width: 150px;
-                    height: 0.75em;
-                    background: #80808045;
-                }
-                .percentile-slider-portion {
-                    position: absolute;
-                    width: 100%;
-                    height: 100%;
-                }
-            </style>` +
+                );
+            }
+            .percentile-not-qualified {
+                display: none;
+            }
+            .stat-values {
+                display: flex;
+                width: 9.5em;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .percentile-slider {
+                position: relative;
+                width: 150px;
+                height: 0.75em;
+                background: #80808045;
+            }
+            .percentile-slider-portion {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+            }
+        </style>` +
         savantHTML
     );
     LOGGER.trace((await page.content()));
@@ -875,8 +875,8 @@ async function getScreenshotOfLineScore (tables, inning, half, awayScore, homeSc
                     <div id="home-abb">` + homeAbbreviation + `</div>
                 </div>
                 <pre id="boxscore">` +
-                    tables.reduce((acc, value) => acc + value.toString() + '\n\n', '') +
-                `</pre>
+        tables.reduce((acc, value) => acc + value.toString() + '\n\n', '') +
+        `</pre>
             </div>`);
     const element = await page.waitForSelector('#line-score-container');
     const buffer = await element.screenshot({
