@@ -717,84 +717,84 @@ async function getScreenshotOfSavantTable (savantHTML) {
     await page.setContent(
         `
         <style>
-                #savant-table {
-                    background-color: #151820;
-                    color: whitesmoke;
-                    font-size: 25px;
-                    font-family: 'Segoe UI', sans-serif;
-                    width: 65%;
-                    display: flex;
-                    padding: 17px 77.5px 17px 60px;
-                    flex-direction: column;
-                    align-items: center;
-                }
-                .savant-stat {
-                    display: flex;
-                    width: 100%;
-                    justify-content: space-between;
-                    margin: 5px 0;
-                    align-items: center;
-                }
-                .value {
-                    margin-right: 22.5px;
-                }
-                .savant-stat-pitcher {
-                    margin: 12px 0;
-                }
-                h3 {
-                    font-size: 30px;
-                    font-weight: bold;
-                    width: 100%;
-                    text-align: center;
-                    margin: 0 0 10px 0;
-                }
-                /*#savant-table h3:not(:first-child) {*/
-                /*    margin: 10px 0;*/
-                /*}*/
-                .percentile {
-                    width: 35px;
-                    height: 35px;
-                    font-size: 0.7em;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-weight: bold;
-                    border-radius: 50%;
-                    position: absolute;
-                    top: 50%;
-                    left: -20px;
-                    transform: translateY(-50%);
-                }
-                .percentile-slider-not-qualified {
-                    background-image: repeating-linear-gradient(
+            #savant-table {
+                background-color: #151820;
+                color: whitesmoke;
+                font-size: 25px;
+                font-family: 'Segoe UI', sans-serif;
+                width: 70%;
+                display: flex;
+                padding: 17px 57.5px 17px 40px;
+                flex-direction: column;
+                align-items: center;
+            }
+            .savant-stat {
+                display: flex;
+                width: 100%;
+                justify-content: space-between;
+                margin: 5px 0;
+                align-items: center;
+            }
+            .value {
+                margin-right: 22.5px;
+            }
+            .savant-stat-pitcher {
+                margin: 12px 0;
+            }
+            h3 {
+                font-size: 25px;
+                font-weight: bold;
+                width: 100%;
+                text-align: center;
+                margin: 5px 0;
+            }
+            #savant-table h3:not(:first-child) {
+                margin: 5px 0;
+            }
+            .percentile {
+                width: 35px;
+                height: 35px;
+                font-size: 0.7em;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                border-radius: 50%;
+                position: absolute;
+                top: 50%;
+                left: -20px;
+                transform: translateY(-50%);
+            }
+            .percentile-slider-not-qualified {
+                background-image: repeating-linear-gradient(
                         -45deg,
                         transparent,
                         transparent 3px,
                         rgba(0, 0, 0, 0.95) 3px,
                         rgba(0, 0, 0, 0.95) 6px
-                    );           
-                }
-                .percentile-not-qualified {
-                    display: none;
-                }
-                .stat-values {
-                    display: flex;
-                    width: 9.5em;
-                    justify-content: space-between;
-                    align-items: center;
-                }
-                .percentile-slider {
-                    position: relative;
-                    width: 150px;
-                    height: 0.75em;
-                    background: #80808045;
-                }
-                .percentile-slider-portion {
-                    position: absolute;
-                    width: 100%;
-                    height: 100%;
-                }
-            </style>` +
+                );
+            }
+            .percentile-not-qualified {
+                display: none;
+            }
+            .stat-values {
+                display: flex;
+                width: 9.5em;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .percentile-slider {
+                position: relative;
+                width: 150px;
+                height: 0.75em;
+                background: #80808045;
+            }
+            .percentile-slider-portion {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+            }
+        </style>` +
         savantHTML
     );
     LOGGER.trace((await page.content()));
