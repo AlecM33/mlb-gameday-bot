@@ -1,5 +1,5 @@
 const globalCache = require('./global-cache');
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
+const {ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder} = require('discord.js');
 const AsciiTable = require('ascii-table');
 const mlbAPIUtil = require('./MLB-API-util');
 const jsdom = require('jsdom');
@@ -8,7 +8,7 @@ const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_
 const chroma = require('chroma-js');
 const ztable = require('ztable');
 const levenshtein = require('js-levenshtein');
-const { performance } = require('perf_hooks');
+const {performance} = require('perf_hooks');
 const liveFeed = require('./livefeed');
 
 module.exports = {
@@ -28,7 +28,7 @@ module.exports = {
         table.setAlign(5, AsciiTable.RIGHT);
         table.setAlign(6, AsciiTable.RIGHT);
         table.setAlign(7, AsciiTable.RIGHT);
-        for (let i = 0; i < lineup.length; i ++) {
+        for (let i = 0; i < lineup.length; i++) {
             const hittingStats = people[i]?.stats?.find(stat => stat.group.displayName === 'hitting')?.splits[0]?.stat;
             table.addRow([
                 i + 1,
@@ -267,7 +267,7 @@ module.exports = {
                     .sort((a, b) => {
                         return a < b ? 1 : -1;
                     })[0];
-                return { mostRecentStatcast, metricSummaryJSON, mostRecentMetricYear };
+                return {mostRecentStatcast, metricSummaryJSON, mostRecentMetricYear};
             } catch (e) {
                 console.error(e);
                 return {};
@@ -278,39 +278,142 @@ module.exports = {
 
     buildBatterSavantTable: async (statcast, metricSummaries, spot) => {
         const value = [
-            { label: 'Batting Run Value', value: statcast.swing_take_run_value, metric: 'swing_take_run_value', percentile: statcast.percent_rank_swing_take_run_value },
-            { label: 'Baserunning Run Value', value: statcast.runner_run_value, metric: 'runner_run_value', percentile: statcast.percent_rank_runner_run_value },
-            { label: 'Fielding Run Value', value: statcast.fielding_run_value, metric: 'fielding_run_value', percentile: statcast.percent_rank_fielding_run_value }
+            {
+                label: 'Batting Run Value',
+                value: statcast.swing_take_run_value,
+                metric: 'swing_take_run_value',
+                percentile: statcast.percent_rank_swing_take_run_value
+            },
+            {
+                label: 'Baserunning Run Value',
+                value: statcast.runner_run_value,
+                metric: 'runner_run_value',
+                percentile: statcast.percent_rank_runner_run_value
+            },
+            {
+                label: 'Fielding Run Value',
+                value: statcast.fielding_run_value,
+                metric: 'fielding_run_value',
+                percentile: statcast.percent_rank_fielding_run_value
+            }
         ];
         const hitting = [
-            { label: 'xwOBA', value: statcast.xwoba, metric: 'xwoba', percentile: statcast.percent_rank_xwoba },
-            { label: 'xBA', value: statcast.xba, metric: 'xba', percentile: statcast.percent_rank_xba },
-            { label: 'xSLG', value: statcast.xslg, metric: 'xslg', percentile: statcast.percent_rank_xslg },
-            { label: 'Avg Exit Velocity', value: statcast.exit_velocity_avg, metric: 'exit_velocity_avg', percentile: statcast.percent_rank_exit_velocity_avg },
-            { label: 'Barrel %', value: statcast.barrel_batted_rate, metric: 'barrel_batted_rate', percentile: statcast.percent_rank_barrel_batted_rate },
-            { label: 'Hard-Hit %', value: statcast.hard_hit_percent, metric: 'hard_hit_percent', percentile: statcast.percent_rank_hard_hit_percent },
-            { label: 'LA Sweet-Spot %', value: statcast.sweet_spot_percent, metric: 'sweet_spot_percent', percentile: statcast.percent_rank_sweet_spot_percent },
-            { label: 'Bat Speed', value: statcast.avg_swing_speed, metric: 'avg_swing_speed', percentile: statcast.percent_rank_swing_speed },
-            { label: 'Squared-Up %', value: statcast.squared_up_swing, metric: 'squared_up_swing', percentile: statcast.percent_rank_squared_up_swing },
+            {label: 'xwOBA', value: statcast.xwoba, metric: 'xwoba', percentile: statcast.percent_rank_xwoba},
+            {label: 'xBA', value: statcast.xba, metric: 'xba', percentile: statcast.percent_rank_xba},
+            {label: 'xSLG', value: statcast.xslg, metric: 'xslg', percentile: statcast.percent_rank_xslg},
+            {
+                label: 'Avg Exit Velocity',
+                value: statcast.exit_velocity_avg,
+                metric: 'exit_velocity_avg',
+                percentile: statcast.percent_rank_exit_velocity_avg
+            },
+            {
+                label: 'Barrel %',
+                value: statcast.barrel_batted_rate,
+                metric: 'barrel_batted_rate',
+                percentile: statcast.percent_rank_barrel_batted_rate
+            },
+            {
+                label: 'Hard-Hit %',
+                value: statcast.hard_hit_percent,
+                metric: 'hard_hit_percent',
+                percentile: statcast.percent_rank_hard_hit_percent
+            },
+            {
+                label: 'LA Sweet-Spot %',
+                value: statcast.sweet_spot_percent,
+                metric: 'sweet_spot_percent',
+                percentile: statcast.percent_rank_sweet_spot_percent
+            },
+            {
+                label: 'Bat Speed',
+                value: statcast.avg_swing_speed,
+                metric: 'avg_swing_speed',
+                percentile: statcast.percent_rank_swing_speed
+            },
+            {
+                label: 'Squared-Up %',
+                value: statcast.squared_up_swing,
+                metric: 'squared_up_swing',
+                percentile: statcast.percent_rank_squared_up_swing
+            },
             // Chase, Whiff, and K have the "shouldInvert" flag because, for them, high numbers = bad.
-            { label: 'Chase %', value: statcast.oz_swing_percent, metric: 'oz_swing_percent', percentile: statcast.percent_rank_chase_percent, shouldInvert: true },
-            { label: 'Whiff %', value: statcast.whiff_percent, metric: 'whiff_percent', percentile: statcast.percent_rank_whiff_percent, shouldInvert: true },
-            { label: 'K %', value: statcast.k_percent, metric: 'k_percent', percentile: statcast.percent_rank_k_percent, shouldInvert: true },
-            { label: 'BB %', value: statcast.bb_percent, metric: 'bb_percent', percentile: statcast.percent_rank_bb_percent }
+            {
+                label: 'Chase %',
+                value: statcast.oz_swing_percent,
+                metric: 'oz_swing_percent',
+                percentile: statcast.percent_rank_chase_percent,
+                shouldInvert: true
+            },
+            {
+                label: 'Whiff %',
+                value: statcast.whiff_percent,
+                metric: 'whiff_percent',
+                percentile: statcast.percent_rank_whiff_percent,
+                shouldInvert: true
+            },
+            {
+                label: 'K %',
+                value: statcast.k_percent,
+                metric: 'k_percent',
+                percentile: statcast.percent_rank_k_percent,
+                shouldInvert: true
+            },
+            {
+                label: 'BB %',
+                value: statcast.bb_percent,
+                metric: 'bb_percent',
+                percentile: statcast.percent_rank_bb_percent
+            }
         ];
         const fielding = [
-            { label: 'OAA', value: statcast.outs_above_average, metric: 'outs_above_average', percentile: statcast.percent_rank_oaa },
-            { label: 'Arm Value', value: statcast.fielding_run_value_arm, metric: 'fielding_run_value_arm', percentile: statcast.percent_rank_fielding_run_value_arm },
-            { label: 'Arm Strength', value: statcast.arm_overall, metric: 'arm_overall', percentile: statcast.percent_rank_arm_overall }
+            {
+                label: 'OAA',
+                value: statcast.outs_above_average,
+                metric: 'outs_above_average',
+                percentile: statcast.percent_rank_oaa
+            },
+            {
+                label: 'Arm Value',
+                value: statcast.fielding_run_value_arm,
+                metric: 'fielding_run_value_arm',
+                percentile: statcast.percent_rank_fielding_run_value_arm
+            },
+            {
+                label: 'Arm Strength',
+                value: statcast.arm_overall,
+                metric: 'arm_overall',
+                percentile: statcast.percent_rank_arm_overall
+            }
         ];
         const catching = [
-            { label: 'Blocks Above Avg', value: statcast.blocks_above_average, metric: 'blocks_above_average', percentile: statcast.percent_rank_blocks_above_average },
-            { label: 'CS Above Avg', value: statcast.cs_above_average, metric: 'cs_above_average', percentile: statcast.percent_rank_cs_above_average },
-            { label: 'Framing', value: statcast.fielding_run_value_framing, metric: 'fielding_run_value_framing', percentile: statcast.percent_rank_fielding_run_value_framing },
-            { label: 'Pop Time', value: statcast.pop_2b, metric: 'pop_2b', percentile: statcast.percent_rank_pop_2b }
+            {
+                label: 'Blocks Above Avg',
+                value: statcast.blocks_above_average,
+                metric: 'blocks_above_average',
+                percentile: statcast.percent_rank_blocks_above_average
+            },
+            {
+                label: 'CS Above Avg',
+                value: statcast.cs_above_average,
+                metric: 'cs_above_average',
+                percentile: statcast.percent_rank_cs_above_average
+            },
+            {
+                label: 'Framing',
+                value: statcast.fielding_run_value_framing,
+                metric: 'fielding_run_value_framing',
+                percentile: statcast.percent_rank_fielding_run_value_framing
+            },
+            {label: 'Pop Time', value: statcast.pop_2b, metric: 'pop_2b', percentile: statcast.percent_rank_pop_2b}
         ];
         const running = [
-            { label: 'Sprint Speed', value: statcast.sprint_speed, metric: 'sprint_speed', percentile: statcast.percent_speed_order }
+            {
+                label: 'Sprint Speed',
+                value: statcast.sprint_speed,
+                metric: 'sprint_speed',
+                percentile: statcast.percent_speed_order
+            }
         ];
         const html = `
             <div id='savant-table'>` +
@@ -332,24 +435,105 @@ module.exports = {
 
     buildPitcherSavantTable: async (statcast, metricSummaries, spot) => {
         const value = [
-            { label: 'Pitching Run Value', value: statcast.swing_take_run_value, metric: 'swing_take_run_value', percentile: statcast.percent_rank_swing_take_run_value },
-            { label: 'Fastball Run Value', value: Math.round(statcast.pitch_run_value_fastball), metric: 'pitch_run_value_fastball', percentile: statcast.percent_rank_pitch_run_value_fastball },
-            { label: 'Breaking Run Value', value: Math.round(statcast.pitch_run_value_breaking), metric: 'pitch_run_value_breaking', percentile: statcast.percent_rank_pitch_run_value_breaking },
-            { label: 'Offspeed Run Value', value: Math.round(statcast.pitch_run_value_offspeed), metric: 'pitch_run_value_offspeed', percentile: statcast.percent_rank_pitch_run_value_offspeed }
+            {
+                label: 'Pitching Run Value',
+                value: statcast.swing_take_run_value,
+                metric: 'swing_take_run_value',
+                percentile: statcast.percent_rank_swing_take_run_value
+            },
+            {
+                label: 'Fastball Run Value',
+                value: Math.round(statcast.pitch_run_value_fastball),
+                metric: 'pitch_run_value_fastball',
+                percentile: statcast.percent_rank_pitch_run_value_fastball
+            },
+            {
+                label: 'Breaking Run Value',
+                value: Math.round(statcast.pitch_run_value_breaking),
+                metric: 'pitch_run_value_breaking',
+                percentile: statcast.percent_rank_pitch_run_value_breaking
+            },
+            {
+                label: 'Offspeed Run Value',
+                value: Math.round(statcast.pitch_run_value_offspeed),
+                metric: 'pitch_run_value_offspeed',
+                percentile: statcast.percent_rank_pitch_run_value_offspeed
+            }
         ];
         const pitching = [
-            { label: 'xERA', value: statcast.xera, metric: 'xera', percentile: statcast.percent_rank_xera, shouldInvert: true },
-            { label: 'xBA', value: statcast.xba, metric: 'xba', percentile: statcast.percent_rank_xba, shouldInvert: true },
-            { label: 'Fastball Velo', value: statcast.fastball_velo, metric: 'fastball_velo', percentile: statcast.percent_rank_fastball_velo },
-            { label: 'Avg Exit Velocity', value: statcast.exit_velocity_avg, metric: 'exit_velocity_avg', percentile: statcast.percent_rank_exit_velocity_avg, shouldInvert: true },
-            { label: 'Chase %', value: statcast.oz_swing_percent, metric: 'oz_swing_percent', percentile: statcast.percent_rank_chase_percent },
-            { label: 'Whiff %', value: statcast.whiff_percent, metric: 'whiff_percent', percentile: statcast.percent_rank_whiff_percent },
-            { label: 'K %', value: statcast.k_percent, metric: 'k_percent', percentile: statcast.percent_rank_k_percent },
-            { label: 'BB %', value: statcast.bb_percent, metric: 'bb_percent', percentile: statcast.percent_rank_bb_percent, shouldInvert: true },
-            { label: 'Barrel %', value: statcast.barrel_batted_rate, metric: 'barrel_batted_rate', percentile: statcast.percent_rank_barrel_batted_rate, shouldInvert: true },
-            { label: 'Hard-Hit %', value: statcast.hard_hit_percent, metric: 'hard_hit_percent', percentile: statcast.percent_rank_hard_hit_percent, shouldInvert: true },
-            { label: 'GB %', value: statcast.groundballs_percent, metric: 'groundballs_percent', percentile: statcast.percent_rank_groundballs_percent },
-            { label: 'Extension', value: statcast.fastball_extension, metric: 'fastball_extension', percentile: statcast.percent_rank_fastball_extension }
+            {
+                label: 'xERA',
+                value: statcast.xera,
+                metric: 'xera',
+                percentile: statcast.percent_rank_xera,
+                shouldInvert: true
+            },
+            {
+                label: 'xBA',
+                value: statcast.xba,
+                metric: 'xba',
+                percentile: statcast.percent_rank_xba,
+                shouldInvert: true
+            },
+            {
+                label: 'Fastball Velo',
+                value: statcast.fastball_velo,
+                metric: 'fastball_velo',
+                percentile: statcast.percent_rank_fastball_velo
+            },
+            {
+                label: 'Avg Exit Velocity',
+                value: statcast.exit_velocity_avg,
+                metric: 'exit_velocity_avg',
+                percentile: statcast.percent_rank_exit_velocity_avg,
+                shouldInvert: true
+            },
+            {
+                label: 'Chase %',
+                value: statcast.oz_swing_percent,
+                metric: 'oz_swing_percent',
+                percentile: statcast.percent_rank_chase_percent
+            },
+            {
+                label: 'Whiff %',
+                value: statcast.whiff_percent,
+                metric: 'whiff_percent',
+                percentile: statcast.percent_rank_whiff_percent
+            },
+            {label: 'K %', value: statcast.k_percent, metric: 'k_percent', percentile: statcast.percent_rank_k_percent},
+            {
+                label: 'BB %',
+                value: statcast.bb_percent,
+                metric: 'bb_percent',
+                percentile: statcast.percent_rank_bb_percent,
+                shouldInvert: true
+            },
+            {
+                label: 'Barrel %',
+                value: statcast.barrel_batted_rate,
+                metric: 'barrel_batted_rate',
+                percentile: statcast.percent_rank_barrel_batted_rate,
+                shouldInvert: true
+            },
+            {
+                label: 'Hard-Hit %',
+                value: statcast.hard_hit_percent,
+                metric: 'hard_hit_percent',
+                percentile: statcast.percent_rank_hard_hit_percent,
+                shouldInvert: true
+            },
+            {
+                label: 'GB %',
+                value: statcast.groundballs_percent,
+                metric: 'groundballs_percent',
+                percentile: statcast.percent_rank_groundballs_percent
+            },
+            {
+                label: 'Extension',
+                value: statcast.fastball_extension,
+                metric: 'fastball_extension',
+                percentile: statcast.percent_rank_fastball_extension
+            }
         ];
         const html = `
             <div id='savant-table'>` +
@@ -440,7 +624,7 @@ module.exports = {
         if (pitchMix && pitchMix.length > 0 && pitchMix[0].length > 0) {
             reply += (() => {
                 let arsenal = '';
-                for (let i = 0; i < pitchMix[0].length; i ++) {
+                for (let i = 0; i < pitchMix[0].length; i++) {
                     arsenal += pitchMix[0][i] + ' (' + pitchMix[1][i] + '%)' +
                         ': ' + pitchMix[2][i] + ' mph, ' + pitchMix[3][i] + ' BAA' + '\n';
                 }
@@ -636,7 +820,7 @@ module.exports = {
     }
 };
 
-function getPitchCollections (dom) {
+function getPitchCollections(dom) {
     const pitches = [];
     const percentages = [];
     const MPHs = [];
@@ -654,7 +838,7 @@ function getPitchCollections (dom) {
     return [pitches, percentages, MPHs, battingAvgsAgainst];
 }
 
-async function resolveDoubleHeaderSelection (interaction) {
+async function resolveDoubleHeaderSelection(interaction) {
     const buttons = globalCache.values.nearestGames.map(game =>
         new ButtonBuilder()
             .setCustomId(game.gamePk.toString())
@@ -673,13 +857,16 @@ async function resolveDoubleHeaderSelection (interaction) {
     const collectorFilter = i => i.user.id === interaction.user.id;
     try {
         LOGGER.trace('awaiting');
-        return await response.awaitMessageComponent({ filter: collectorFilter, time: 10_000 });
+        return await response.awaitMessageComponent({filter: collectorFilter, time: 10_000});
     } catch (e) {
-        await interaction.editReply({ content: 'Game selection not received within 10 seconds - request was canceled.', components: [] });
+        await interaction.editReply({
+            content: 'Game selection not received within 10 seconds - request was canceled.',
+            components: []
+        });
     }
 }
 
-function parsePitchingStats (people) {
+function parsePitchingStats(people) {
     return {
         season: people?.people[0]?.stats?.find(stat => stat?.type?.displayName === 'season')?.splits[0]?.stat,
         lastXGames: people?.people[0]?.stats?.find(stat => stat?.type?.displayName === 'lastXGames')?.splits[0]?.stat,
@@ -692,7 +879,7 @@ function parsePitchingStats (people) {
 it how we want, and taking a screenshot of that, attaching it to the reply as a .png. Why? Trying to simply reply with ASCII
 is subject to formatting issues on phone screens, which rudely break up the characters and make the tables look like gibberish.
  */
-async function getScreenshotOfHTMLTables (tables) {
+async function getScreenshotOfHTMLTables(tables) {
     const browser = globalCache.values.browser;
     const page = await browser.getCurrentPage();
     await page.setContent(`
@@ -711,7 +898,7 @@ async function getScreenshotOfHTMLTables (tables) {
     return buffer;
 }
 
-async function getScreenshotOfSavantTable (savantHTML) {
+async function getScreenshotOfSavantTable(savantHTML) {
     const browser = globalCache.values.browser;
     const page = await browser.getCurrentPage();
     await page.setContent(
@@ -806,7 +993,7 @@ async function getScreenshotOfSavantTable (savantHTML) {
     return buffer;
 }
 
-function buildSavantSection (statCollection, metricSummaries, isPitcher = false) {
+function buildSavantSection(statCollection, metricSummaries, isPitcher = false) {
     const scale = chroma.scale(['#325aa1', '#a8c1c3', '#c91f26']);
     const sliderScale = chroma.scale(['#3661ad', '#b4cfd1', '#d8221f']);
     statCollection.forEach(stat => {
@@ -841,7 +1028,7 @@ function buildSavantSection (statCollection, metricSummaries, isPitcher = false)
         : ''), '');
 }
 
-async function getScreenshotOfLineScore (tables, inning, half, awayScore, homeScore, awayAbbreviation, homeAbbreviation) {
+async function getScreenshotOfLineScore(tables, inning, half, awayScore, homeScore, awayAbbreviation, homeAbbreviation) {
     const browser = globalCache.values.browser;
     const page = await browser.getCurrentPage();
     await page.setContent(`
@@ -886,8 +1073,10 @@ async function getScreenshotOfLineScore (tables, inning, half, awayScore, homeSc
     return buffer;
 }
 
-function calculateRoundedPercentileFromNormalDistribution (metric, value, mean, standardDeviation, shouldInvert) {
-    if (typeof value === 'string') { value = parseFloat(value); }
+function calculateRoundedPercentileFromNormalDistribution(metric, value, mean, standardDeviation, shouldInvert) {
+    if (typeof value === 'string') {
+        value = parseFloat(value);
+    }
     return Math.round(
         (shouldInvert ? (1.00 - ztable((value - mean) / standardDeviation)) : ztable((value - mean) / standardDeviation)) * 100
     );
