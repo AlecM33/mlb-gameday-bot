@@ -724,16 +724,19 @@ async function getScreenshotOfSavantTable (savantHTML) {
                     font-family: 'Segoe UI', sans-serif;
                     width: 65%;
                     display: flex;
-                    padding: 17px 27.5px 17px 10px;
+                    padding: 17px 77.5px 17px 60px;
                     flex-direction: column;
                     align-items: center;
                 }
                 .savant-stat {
                     display: flex;
-                    width: 95%;
+                    width: 100%;
                     justify-content: space-between;
                     margin: 5px 0;
                     align-items: center;
+                }
+                .value {
+                    margin-right: 22.5px;
                 }
                 .savant-stat-pitcher {
                     margin: 12px 0;
@@ -745,9 +748,9 @@ async function getScreenshotOfSavantTable (savantHTML) {
                     text-align: center;
                     margin: 0 0 10px 0;
                 }
-                #savant-table h3:not(:first-child) {
-                    margin: 10px 0;
-                }
+                /*#savant-table h3:not(:first-child) {*/
+                /*    margin: 10px 0;*/
+                /*}*/
                 .percentile {
                     width: 35px;
                     height: 35px;
@@ -776,7 +779,7 @@ async function getScreenshotOfSavantTable (savantHTML) {
                 }
                 .stat-values {
                     display: flex;
-                    width: 8.5em;
+                    width: 9.5em;
                     justify-content: space-between;
                     align-items: center;
                 }
@@ -794,6 +797,7 @@ async function getScreenshotOfSavantTable (savantHTML) {
             </style>` +
         savantHTML
     );
+    LOGGER.trace((await page.content()));
     const element = await page.waitForSelector('#savant-table');
     const buffer = await element.screenshot({
         type: 'png',
@@ -821,7 +825,7 @@ function buildSavantSection (statCollection, metricSummaries, isPitcher = false)
     });
     return statCollection.reduce((acc, value) => acc + (value.value !== null
         ? `
-        <div class='savant-stat${(isPitcher ? ' savant-stat-pitcher' : '')}'>
+        <div class='savant-stat'>
             <div class='label'>${value.label}</div>
             <div class='stat-values'>
                 <div class='value'>${value.value}</div>
