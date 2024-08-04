@@ -1,5 +1,5 @@
 const globalCache = require('./global-cache');
-const {ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder} = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const AsciiTable = require('ascii-table');
 const mlbAPIUtil = require('./MLB-API-util');
 const jsdom = require('jsdom');
@@ -8,7 +8,7 @@ const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_
 const chroma = require('chroma-js');
 const ztable = require('ztable');
 const levenshtein = require('js-levenshtein');
-const {performance} = require('perf_hooks');
+const { performance } = require('perf_hooks');
 const liveFeed = require('./livefeed');
 
 module.exports = {
@@ -28,7 +28,7 @@ module.exports = {
         table.setAlign(5, AsciiTable.RIGHT);
         table.setAlign(6, AsciiTable.RIGHT);
         table.setAlign(7, AsciiTable.RIGHT);
-        for (let i = 0; i < lineup.length; i++) {
+        for (let i = 0; i < lineup.length; i ++) {
             const hittingStats = people[i]?.stats?.find(stat => stat.group.displayName === 'hitting')?.splits[0]?.stat;
             table.addRow([
                 i + 1,
@@ -121,22 +121,22 @@ module.exports = {
             ', ' + seasonStats.stat.homeRuns + ' HR, ' + seasonStats.stat.rbi + ' RBIs' +
             '\n\nSplits:\n\n' +
             '**Last 7 Games**' + (lastXGames ? ' (' + lastXGames.stat.plateAppearances + ' ABs)\n' : '\n') + (
-                lastXGames
-                    ? lastXGames.stat.avg + '/' + lastXGames.stat.obp + '/' + lastXGames.stat.slg
-                    : 'No at-bats!'
-            ) + '\n\n**vs. Righties**' + (vsRight ? ' (' + vsRight.stat.plateAppearances + ' ABs)\n' : '\n') + (
-                vsRight
-                    ? vsRight.stat.avg + '/' + vsRight.stat.obp + '/' + vsRight.stat.slg
-                    : 'No at-bats!'
-            ) + '\n\n**vs. Lefties**' + (vsLeft ? ' (' + vsLeft.stat.plateAppearances + ' ABs)\n' : '\n') + (
-                vsLeft
-                    ? vsLeft.stat.avg + '/' + vsLeft.stat.obp + '/' + vsLeft.stat.slg
-                    : 'No at-bats!'
-            ) + '\n\n**with RISP**' + (risp ? ' (' + risp.stat.plateAppearances + ' ABs)\n' : '\n') + (
-                risp
-                    ? risp.stat.avg + '/' + risp.stat.obp + '/' + risp.stat.slg
-                    : 'No at-bats!'
-            );
+            lastXGames
+                ? lastXGames.stat.avg + '/' + lastXGames.stat.obp + '/' + lastXGames.stat.slg
+                : 'No at-bats!'
+        ) + '\n\n**vs. Righties**' + (vsRight ? ' (' + vsRight.stat.plateAppearances + ' ABs)\n' : '\n') + (
+            vsRight
+                ? vsRight.stat.avg + '/' + vsRight.stat.obp + '/' + vsRight.stat.slg
+                : 'No at-bats!'
+        ) + '\n\n**vs. Lefties**' + (vsLeft ? ' (' + vsLeft.stat.plateAppearances + ' ABs)\n' : '\n') + (
+            vsLeft
+                ? vsLeft.stat.avg + '/' + vsLeft.stat.obp + '/' + vsLeft.stat.slg
+                : 'No at-bats!'
+        ) + '\n\n**with RISP**' + (risp ? ' (' + risp.stat.plateAppearances + ' ABs)\n' : '\n') + (
+            risp
+                ? risp.stat.avg + '/' + risp.stat.obp + '/' + risp.stat.slg
+                : 'No at-bats!'
+        );
     },
 
     buildLineScoreTable: async (game, linescore) => {
@@ -267,7 +267,7 @@ module.exports = {
                     .sort((a, b) => {
                         return a < b ? 1 : -1;
                     })[0];
-                return {mostRecentStatcast, metricSummaryJSON, mostRecentMetricYear};
+                return { mostRecentStatcast, metricSummaryJSON, mostRecentMetricYear };
             } catch (e) {
                 console.error(e);
                 return {};
@@ -298,9 +298,9 @@ module.exports = {
             }
         ];
         const hitting = [
-            {label: 'xwOBA', value: statcast.xwoba, metric: 'xwoba', percentile: statcast.percent_rank_xwoba},
-            {label: 'xBA', value: statcast.xba, metric: 'xba', percentile: statcast.percent_rank_xba},
-            {label: 'xSLG', value: statcast.xslg, metric: 'xslg', percentile: statcast.percent_rank_xslg},
+            { label: 'xwOBA', value: statcast.xwoba, metric: 'xwoba', percentile: statcast.percent_rank_xwoba },
+            { label: 'xBA', value: statcast.xba, metric: 'xba', percentile: statcast.percent_rank_xba },
+            { label: 'xSLG', value: statcast.xslg, metric: 'xslg', percentile: statcast.percent_rank_xslg },
             {
                 label: 'Avg Exit Velocity',
                 value: statcast.exit_velocity_avg,
@@ -405,7 +405,7 @@ module.exports = {
                 metric: 'fielding_run_value_framing',
                 percentile: statcast.percent_rank_fielding_run_value_framing
             },
-            {label: 'Pop Time', value: statcast.pop_2b, metric: 'pop_2b', percentile: statcast.percent_rank_pop_2b}
+            { label: 'Pop Time', value: statcast.pop_2b, metric: 'pop_2b', percentile: statcast.percent_rank_pop_2b }
         ];
         const running = [
             {
@@ -500,7 +500,7 @@ module.exports = {
                 metric: 'whiff_percent',
                 percentile: statcast.percent_rank_whiff_percent
             },
-            {label: 'K %', value: statcast.k_percent, metric: 'k_percent', percentile: statcast.percent_rank_k_percent},
+            { label: 'K %', value: statcast.k_percent, metric: 'k_percent', percentile: statcast.percent_rank_k_percent },
             {
                 label: 'BB %',
                 value: statcast.bb_percent,
@@ -574,13 +574,13 @@ module.exports = {
             ' vs. ' +
             (game.teams?.away?.team?.abbreviation || game.teams?.away?.abbreviation || game.gameData?.teams?.away?.abbreviation) +
             ', ' + new Date((game.gameDate || game.datetime?.dateTime || game.gameData?.datetime?.dateTime)).toLocaleString('default', {
-                month: 'short',
-                day: 'numeric',
-                timeZone: 'America/New_York',
-                hour: 'numeric',
-                minute: '2-digit',
-                timeZoneName: 'short'
-            });
+            month: 'short',
+            day: 'numeric',
+            timeZone: 'America/New_York',
+            hour: 'numeric',
+            minute: '2-digit',
+            timeZoneName: 'short'
+        });
     },
 
     buildPitchingStatsMarkdown: (pitchingStats, pitchMix, lastThree, seasonAdvanced, sabermetrics, includeExtra = false) => {
@@ -624,7 +624,7 @@ module.exports = {
         if (pitchMix && pitchMix.length > 0 && pitchMix[0].length > 0) {
             reply += (() => {
                 let arsenal = '';
-                for (let i = 0; i < pitchMix[0].length; i++) {
+                for (let i = 0; i < pitchMix[0].length; i ++) {
                     arsenal += pitchMix[0][i] + ' (' + pitchMix[1][i] + '%)' +
                         ': ' + pitchMix[2][i] + ' mph, ' + pitchMix[3][i] + ' BAA' + '\n';
                 }
@@ -820,7 +820,7 @@ module.exports = {
     }
 };
 
-function getPitchCollections(dom) {
+function getPitchCollections (dom) {
     const pitches = [];
     const percentages = [];
     const MPHs = [];
@@ -833,12 +833,12 @@ function getPitchCollections(dom) {
         .querySelectorAll('tbody tr td:nth-child(7)').forEach(el => MPHs.push(el.textContent.trim()));
     dom.window.document
         .querySelectorAll('tbody tr td:nth-child(18)').forEach(el => battingAvgsAgainst.push(
-        (el.textContent.trim().length > 0 ? el.textContent.trim() : 'N/A')
-    ));
+            (el.textContent.trim().length > 0 ? el.textContent.trim() : 'N/A')
+        ));
     return [pitches, percentages, MPHs, battingAvgsAgainst];
 }
 
-async function resolveDoubleHeaderSelection(interaction) {
+async function resolveDoubleHeaderSelection (interaction) {
     const buttons = globalCache.values.nearestGames.map(game =>
         new ButtonBuilder()
             .setCustomId(game.gamePk.toString())
@@ -857,7 +857,7 @@ async function resolveDoubleHeaderSelection(interaction) {
     const collectorFilter = i => i.user.id === interaction.user.id;
     try {
         LOGGER.trace('awaiting');
-        return await response.awaitMessageComponent({filter: collectorFilter, time: 10_000});
+        return await response.awaitMessageComponent({ filter: collectorFilter, time: 10_000 });
     } catch (e) {
         await interaction.editReply({
             content: 'Game selection not received within 10 seconds - request was canceled.',
@@ -866,7 +866,7 @@ async function resolveDoubleHeaderSelection(interaction) {
     }
 }
 
-function parsePitchingStats(people) {
+function parsePitchingStats (people) {
     return {
         season: people?.people[0]?.stats?.find(stat => stat?.type?.displayName === 'season')?.splits[0]?.stat,
         lastXGames: people?.people[0]?.stats?.find(stat => stat?.type?.displayName === 'lastXGames')?.splits[0]?.stat,
@@ -879,7 +879,7 @@ function parsePitchingStats(people) {
 it how we want, and taking a screenshot of that, attaching it to the reply as a .png. Why? Trying to simply reply with ASCII
 is subject to formatting issues on phone screens, which rudely break up the characters and make the tables look like gibberish.
  */
-async function getScreenshotOfHTMLTables(tables) {
+async function getScreenshotOfHTMLTables (tables) {
     const browser = globalCache.values.browser;
     const page = await browser.getCurrentPage();
     await page.setContent(`
@@ -898,7 +898,7 @@ async function getScreenshotOfHTMLTables(tables) {
     return buffer;
 }
 
-async function getScreenshotOfSavantTable(savantHTML) {
+async function getScreenshotOfSavantTable (savantHTML) {
     const browser = globalCache.values.browser;
     const page = await browser.getCurrentPage();
     await page.setContent(
@@ -993,7 +993,7 @@ async function getScreenshotOfSavantTable(savantHTML) {
     return buffer;
 }
 
-function buildSavantSection(statCollection, metricSummaries, isPitcher = false) {
+function buildSavantSection (statCollection, metricSummaries, isPitcher = false) {
     const scale = chroma.scale(['#325aa1', '#a8c1c3', '#c91f26']);
     const sliderScale = chroma.scale(['#3661ad', '#b4cfd1', '#d8221f']);
     statCollection.forEach(stat => {
@@ -1028,7 +1028,7 @@ function buildSavantSection(statCollection, metricSummaries, isPitcher = false) 
         : ''), '');
 }
 
-async function getScreenshotOfLineScore(tables, inning, half, awayScore, homeScore, awayAbbreviation, homeAbbreviation) {
+async function getScreenshotOfLineScore (tables, inning, half, awayScore, homeScore, awayAbbreviation, homeAbbreviation) {
     const browser = globalCache.values.browser;
     const page = await browser.getCurrentPage();
     await page.setContent(`
@@ -1073,7 +1073,7 @@ async function getScreenshotOfLineScore(tables, inning, half, awayScore, homeSco
     return buffer;
 }
 
-function calculateRoundedPercentileFromNormalDistribution(metric, value, mean, standardDeviation, shouldInvert) {
+function calculateRoundedPercentileFromNormalDistribution (metric, value, mean, standardDeviation, shouldInvert) {
     if (typeof value === 'string') {
         value = parseFloat(value);
     }
