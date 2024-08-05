@@ -380,14 +380,15 @@ module.exports = {
         console.info(`PITCHER command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
         const playerName = interaction.options.getString('player')?.trim();
-        const pitcher = await commandUtil.getPitcherFromUserInputOrLiveFeed(playerName);
-        if (!pitcher) {
+        const playerResult = await commandUtil.getPlayerFromUserInputOrLiveFeed(playerName, interaction, 'Pitcher');
+        const pitcher = playerResult.player;
+        if (!pitcher && !playerName) {
             await interaction.followUp('No game is live right now!');
             return;
         }
         const pitcherInfo = await commandUtil.hydrateProbable(pitcher.id);
         const attachment = new AttachmentBuilder(Buffer.from(pitcherInfo.spot), { name: 'spot.png' });
-        await interaction.followUp({
+        const replyOptions = {
             ephemeral: false,
             files: [attachment],
             embeds: [commandUtil.getPitcherEmbed(
@@ -404,21 +405,23 @@ module.exports = {
                 ))],
             components: [],
             content: ''
-        });
+        };
+        await (playerResult.shouldEditReply ? interaction.editReply(replyOptions) : interaction.followUp(replyOptions));
     },
 
     batterHandler: async (interaction) => {
         console.info(`BATTER command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
         const playerName = interaction.options.getString('player')?.trim();
-        const batter = await commandUtil.getBatterFromUserInputOrLiveFeed(playerName);
-        if (!batter) {
+        const playerResult = await commandUtil.getPlayerFromUserInputOrLiveFeed(playerName, interaction, 'Batter');
+        const batter = playerResult.player;
+        if (!batter && !playerName) {
             await interaction.followUp('No game is live right now!');
             return;
         }
         const batterInfo = await commandUtil.hydrateHitter(batter.id);
         const attachment = new AttachmentBuilder(Buffer.from(batterInfo.spot), { name: 'spot.png' });
-        await interaction.followUp({
+        const replyOptions = {
             ephemeral: false,
             files: [attachment],
             embeds: [commandUtil.getBatterEmbed(
@@ -432,14 +435,16 @@ module.exports = {
             )],
             components: [],
             content: ''
-        });
+        };
+        await (playerResult.shouldEditReply ? interaction.editReply(replyOptions) : interaction.followUp(replyOptions));
     },
 
     batterSavantHandler: async (interaction) => {
         await interaction.deferReply();
         const playerName = interaction.options.getString('player')?.trim();
-        const batter = await commandUtil.getBatterFromUserInputOrLiveFeed(playerName);
-        if (!batter) {
+        const playerResult = await commandUtil.getPlayerFromUserInputOrLiveFeed(playerName, interaction, 'Batter');
+        const batter = playerResult.player;
+        if (!batter && !playerName) {
             await interaction.followUp('No game is live right now!');
             return;
         }
@@ -451,13 +456,14 @@ module.exports = {
                 statcastData.mostRecentStatcast,
                 statcastData.metricSummaryJSON[statcastData.mostRecentMetricYear.toString()],
                 batterInfo.spot)), { name: 'savant.png' });
-            await interaction.followUp({
+            const replyOptions = {
                 ephemeral: false,
                 files: [savantAttachment],
                 embeds: [commandUtil.getBatterEmbed(batter, batterInfo, !playerName, null, true)],
                 components: [],
                 content: ''
-            });
+            };
+            await (playerResult.shouldEditReply ? interaction.editReply(replyOptions) : interaction.followUp(replyOptions));
         } else {
             await interaction.followUp({
                 content: 'There was a problem fetching the savant metrics for this player.'
@@ -468,8 +474,9 @@ module.exports = {
     pitcherSavantHandler: async (interaction) => {
         await interaction.deferReply();
         const playerName = interaction.options.getString('player')?.trim();
-        const pitcher = await commandUtil.getPitcherFromUserInputOrLiveFeed(playerName);
-        if (!pitcher) {
+        const playerResult = await commandUtil.getPlayerFromUserInputOrLiveFeed(playerName, interaction, 'Pitcher');
+        const pitcher = playerResult.player;
+        if (!pitcher && !playerName) {
             await interaction.followUp('No game is live right now!');
             return;
         }
@@ -481,13 +488,14 @@ module.exports = {
                 statcastData.mostRecentStatcast,
                 statcastData.metricSummaryJSON[statcastData.mostRecentMetricYear.toString()],
                 pitcherInfo.spot)), { name: 'savant.png' });
-            await interaction.followUp({
+            const replyOptions = {
                 ephemeral: false,
                 files: [savantAttachment],
                 embeds: [commandUtil.getPitcherEmbed(pitcher, pitcherInfo, !playerName, null, true)],
                 components: [],
                 content: ''
-            });
+            };
+            await (playerResult.shouldEditReply ? interaction.editReply(replyOptions) : interaction.followUp(replyOptions));
         } else {
             await interaction.followUp({
                 content: 'There was a problem fetching the savant metrics for this player.'

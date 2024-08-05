@@ -103,182 +103,212 @@ module.exports = {
         {
             "id": 133,
             "name": "Athletics",
-            primaryColor: "#003831",
-            secondaryColor: "#EFB21E"
+            "primaryColor": "#003831",
+            "secondaryColor": "#EFB21E",
+            "abbreviation": "OAK"
         },
         {
             "id": 134,
             "name": "Pirates",
-            primaryColor: "#FDB827",
-            secondaryColor: "#27251F"
+            "primaryColor": "#FDB827",
+            "secondaryColor": "#27251F",
+            "abbreviation": "PIT"
         },
         {
             "id": 135,
             "name": "Padres",
-            primaryColor: "#2F241D",
-            secondaryColor: "#FFC425"
+            "primaryColor": "#2F241D",
+            "secondaryColor": "#FFC425",
+            "abbreviation": "SD"
         },
         {
             "id": 136,
             "name": "Mariners",
-            primaryColor: "#005C5C",
-            secondaryColor: "#0C2C56"
+            "primaryColor": "#005C5C",
+            "secondaryColor": "#0C2C56",
+            "abbreviation": "SEA"
         },
         {
             "id": 137,
             "name": "Giants",
-            primaryColor: "#FD5A1E",
-            secondaryColor: "#27251F"
+            "primaryColor": "#FD5A1E",
+            "secondaryColor": "#27251F",
+            "abbreviation": "SF"
         },
         {
             "id": 138,
             "name": "Cardinals",
-            primaryColor: "#C41E3A",
-            secondaryColor: "#0C2340"
+            "primaryColor": "#C41E3A",
+            "secondaryColor": "#0C2340",
+            "abbreviation": "STL"
         },
         {
             "id": 139,
             "name": "Rays",
-            primaryColor: "#8FBCE6",
-            secondaryColor: "#092C5C"
+            "primaryColor": "#8FBCE6",
+            "secondaryColor": "#092C5C",
+            "abbreviation": "TB"
         },
         {
             "id": 140,
             "name": "Rangers",
-            primaryColor: "#003278",
-            secondaryColor: "#C0111F"
+            "primaryColor": "#003278",
+            "secondaryColor": "#C0111F",
+            "abbreviation": "TEX"
         },
         {
             "id": 141,
             "name": "Blue Jays",
-            primaryColor: "#134A8E",
-            secondaryColor: "#1D2D5C"
+            "primaryColor": "#134A8E",
+            "secondaryColor": "#1D2D5C",
+            "abbreviation": "TOR"
         },
         {
             "id": 142,
             "name": "Twins",
-            primaryColor: "#002B5C",
-            secondaryColor: "#D31145"
+            "primaryColor": "#002B5C",
+            "secondaryColor": "#D31145",
+            "abbreviation": "MIN"
         },
         {
             "id": 143,
             "name": "Phillies",
-            primaryColor: "#E81828",
-            secondaryColor: "#002D72"
+            "primaryColor": "#E81828",
+            "secondaryColor": "#002D72",
+            "abbreviation": "PHI"
         },
         {
             "id": 144,
             "name": "Braves",
             "primaryColor": "#CE1141",
-            secondaryColor: "#13274F"
+            "secondaryColor": "#13274F",
+            "abbreviation": "ATL"
         },
         {
             "id": 145,
             "name": "White Sox",
-            primaryColor: "#27251F",
-            secondaryColor: "#C4CED4"
+            "primaryColor": "#27251F",
+            "secondaryColor": "#C4CED4",
+            "abbreviation": "CWS"
         },
         {
             "id": 146,
             "name": "Marlins",
-            primaryColor: "#00A3E0",
-            secondaryColor: "#EF3340",
+            "primaryColor": "#00A3E0",
+            "secondaryColor": "#EF3340",
+            "abbreviation": "MIA"
         },
         {
             "id": 147,
             "name": "Yankees",
-            primaryColor: "#C4CED3",
-            secondaryColor: "#0C2340"
+            "primaryColor": "#C4CED3",
+            "secondaryColor": "#0C2340",
+            "abbreviation": "NYY"
         },
         {
             "id": 158,
             "name": "Brewers",
-            primaryColor: "#FFC52F",
-            secondaryColor: "#12284B"
+            "primaryColor": "#FFC52F",
+            "secondaryColor": "#12284B",
+            "abbreviation": "MIL"
         },
         {
             "id": 108,
             "name": "Angels",
-            primaryColor: "#BA0021",
-            secondaryColor: "#003263"
+            "primaryColor": "#BA0021",
+            "secondaryColor": "#003263",
+            "abbreviation": "LAA"
         },
         {
             "id": 109,
             "name": "D-backs",
             "primaryColor": "#A71930",
-            "secondaryColor": "#E3D4AD"
+            "secondaryColor": "#E3D4AD",
+            "abbreviation": "AZ"
         },
         {
             "id": 110,
             "name": "Orioles",
-            primaryColor: "#DF4601",
-            secondaryColor: "#000000"
+            "primaryColor": "#DF4601",
+            "secondaryColor": "#000000",
+            "abbreviation": "BAL"
         },
         {
             "id": 111,
             "name": "Red Sox",
-            primaryColor: "#BD3039",
-            secondaryColor: "#0C2340"
+            "primaryColor": "#BD3039",
+            "secondaryColor": "#0C2340",
+            "abbreviation": "BOS"
         },
         {
             "id": 112,
             "name": "Cubs",
-            primaryColor: "#0E3386",
-            secondaryColor: "#CC3433"
+            "primaryColor": "#0E3386",
+            "secondaryColor": "#CC3433",
+            "abbreviation": "CHC"
         },
         {
             "id": 113,
             "name": "Reds",
-            primaryColor: "#C6011F",
-            secondaryColor: "#000000"
+            "primaryColor": "#C6011F",
+            "secondaryColor": "#000000",
+            "abbreviation": "CIN"
         },
         {
             "id": 114,
             "name": "Guardians",
-            primaryColor: "#E50022",
-            secondaryColor: "#00385D"
+            "primaryColor": "#E50022",
+            "secondaryColor": "#00385D",
+            "abbreviation": "CLE"
         },
         {
             "id": 115,
             "name": "Rockies",
-            primaryColor: "#333366",
-            secondaryColor: "#C4CED4"
+            "primaryColor": "#333366",
+            "secondaryColor": "#C4CED4",
+            "abbreviation": "COL"
         },
         {
             "id": 116,
             "name": "Tigers",
-            primaryColor: "#0C2340",
-            secondaryColor: "#FA4616"
+            "primaryColor": "#0C2340",
+            "secondaryColor": "#FA4616",
+            "abbreviation": "DET"
         },
         {
             "id": 117,
             "name": "Astros",
-            primaryColor: "#002D62",
-            secondaryColor: "#EB6E1F"
+            "primaryColor": "#002D62",
+            "secondaryColor": "#EB6E1F",
+            "abbreviation": "HOU"
         },
         {
             "id": 118,
             "name": "Royals",
-            primaryColor: "#004687",
-            secondaryColor: "#BD9B60"
+            "primaryColor": "#004687",
+            "secondaryColor": "#BD9B60",
+            "abbreviation": "KC"
         },
         {
             "id": 119,
             "name": "Dodgers",
-            primaryColor: "#005A9C",
-            secondaryColor: "#EF3E42"
+            "primaryColor": "#005A9C",
+            "secondaryColor": "#EF3E42",
+            "abbreviation": "LAD"
         },
         {
             "id": 120,
             "name": "Nationals",
-            primaryColor: "#AB0003",
-            secondaryColor: "#14225A"
+            "primaryColor": "#AB0003",
+            "secondaryColor": "#14225A",
+            "abbreviation": "WSH"
         },
         {
             "id": 121,
             "name": "Mets",
-            primaryColor: "#002D72",
-            secondaryColor: "#FF5910"
+            "primaryColor": "#002D72",
+            "secondaryColor": "#FF5910",
+            "abbreviation": "NYM"
         }
     ],
     HELP_MESSAGE: '`/starters` - examine the starting pitching matchup for the upcoming game.\n'
