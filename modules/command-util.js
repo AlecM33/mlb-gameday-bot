@@ -579,7 +579,7 @@ module.exports = {
             return await response.awaitMessageComponent({ filter: collectorFilter, time: 20_000 });
         } catch (e) {
             await interaction.editReply({
-                content: 'Player selection not received within 10 seconds - request was canceled.',
+                content: 'Player selection not received within 20 seconds - request was canceled.',
                 components: []
             });
         }
