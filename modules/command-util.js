@@ -562,6 +562,29 @@ module.exports = {
         }
     },
 
+    resolvePlayerSelection: async (players, interaction) => {
+        const buttons = players.map(player =>
+            new ButtonBuilder()
+                .setCustomId(player.id.toString())
+                .setLabel(`${player.fullName} (${globals.TEAMS.find(team => team.id === player.currentTeam.id)?.abbreviation})`)
+                .setStyle(ButtonStyle.Primary)
+        );
+        const response = await interaction.followUp({
+            content: 'I found multiple matches. Which one?',
+            components: [new ActionRowBuilder().addComponents(buttons)]
+        });
+        const collectorFilter = i => i.user.id === interaction.user.id;
+        try {
+            LOGGER.trace('awaiting');
+            return await response.awaitMessageComponent({ filter: collectorFilter, time: 20_000 });
+        } catch (e) {
+            await interaction.editReply({
+                content: 'Player selection not received within 20 seconds - request was canceled.',
+                components: []
+            });
+        }
+    },
+
     giveFinalCommandResponse: async (toHandle, options) => {
         await (globalCache.values.game.isDoubleHeader
             ? toHandle.update(options)
@@ -671,28 +694,32 @@ module.exports = {
             liveFeed.gameData.teams.home.abbreviation + ' ' + homeScore + '**');
     },
 
-    getClosestPlayer: async (playerName, type) => {
+    getClosestPlayers: async (playerName, type) => {
         const startTime = performance.now();
         const allPlayers = await mlbAPIUtil.players();
         const removeDiacritics = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         const normalizedPlayerName = removeDiacritics(playerName.toLowerCase());
-        let matchingPlayer;
+        let matchingPlayers = [];
         let smallestDistance = Infinity;
         allPlayers.people.forEach(p => {
             const currentName = removeDiacritics(`${p.fullName}`.toLowerCase());
             const distance = levenshtein(currentName, normalizedPlayerName);
-            if (distance < smallestDistance
+            if (distance <= smallestDistance
                 && (
                     (type === 'Pitcher' && p.primaryPosition.name === 'Pitcher')
                     || (type === 'Batter' && p.primaryPosition.name !== 'Pitcher')
                 )) {
-                matchingPlayer = p;
-                smallestDistance = distance;
+                if (distance < smallestDistance) {
+                    matchingPlayers = [p];
+                    smallestDistance = distance;
+                } else {
+                    matchingPlayers.push(p);
+                }
             }
         });
         const endTime = performance.now();
         LOGGER.trace(`Savant command - getting closest player took ${endTime - startTime} milliseconds.`);
-        return matchingPlayer;
+        return matchingPlayers;
     },
 
     getPitcherEmbed: (pitcher, pitcherInfo, isLiveGame, description, savantMode = false) => {
@@ -791,32 +818,39 @@ module.exports = {
         }
     },
 
-    getBatterFromUserInputOrLiveFeed: async (playerName) => {
-        let batter, currentLiveFeed;
+    getPlayerFromUserInputOrLiveFeed: async (playerName, interaction, type) => {
+        let player, currentLiveFeed, shouldEditReply, pendingChoice;
         if (playerName) {
-            batter = await module.exports.getClosestPlayer(playerName, 'Batter');
+            const players = await module.exports.getClosestPlayers(playerName, type);
+            if (players.length > 1) {
+                pendingChoice = await module.exports.resolvePlayerSelection(players.slice(0, 5), interaction);
+                const idString = pendingChoice?.customId;
+                if (idString) {
+                    player = players.find(player => player.id === parseInt(idString));
+                    await pendingChoice.deferUpdate(); // This function says it takes reply options, but it doesn't work?? So I've resorted to editing on the next line.
+                    await interaction.editReply({
+                        content: `Getting stats for ${player.fullName} (${globals.TEAMS.find(team => team.id === player.currentTeam.id)?.abbreviation}). Please wait...`,
+                        components: []
+                    });
+                    shouldEditReply = true;
+                }
+            } else {
+                player = players[0];
+            }
         } else {
             currentLiveFeed = globalCache.values.game.currentLiveFeed;
             if (currentLiveFeed && currentLiveFeed.gameData.status.abstractGameState === 'Live') {
-                batter = currentLiveFeed.liveData.plays.currentPlay.matchup.batter;
+                player = type === 'Pitcher'
+                    ? currentLiveFeed.liveData.plays.currentPlay.matchup.pitcher
+                    : currentLiveFeed.liveData.plays.currentPlay.matchup.batter;
             }
         }
 
-        return batter;
-    },
-
-    getPitcherFromUserInputOrLiveFeed: async (playerName) => {
-        let batter, currentLiveFeed;
-        if (playerName) {
-            batter = await module.exports.getClosestPlayer(playerName, 'Pitcher');
-        } else {
-            currentLiveFeed = globalCache.values.game.currentLiveFeed;
-            if (currentLiveFeed && currentLiveFeed.gameData.status.abstractGameState === 'Live') {
-                batter = currentLiveFeed.liveData.plays.currentPlay.matchup.pitcher;
-            }
-        }
-
-        return batter;
+        return {
+            player,
+            pendingChoice,
+            shouldEditReply
+        };
     }
 };
 
