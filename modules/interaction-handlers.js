@@ -39,7 +39,7 @@ module.exports = {
                     .addFields({
                         name: (hydratedHomeProbable.handedness
                             ? hydratedHomeProbable.handedness + 'HP **'
-                            : '**') + (probables.homeProbableLastName || 'TBD') + '** (' + probables.homeAbbreviation + ')',
+                            : '**') + (hydratedHomeProbable.fullName || 'TBD') + '** (' + probables.homeAbbreviation + ')',
                         value: commandUtil.buildPitchingStatsMarkdown(
                             hydratedHomeProbable.pitchingStats.season,
                             hydratedHomeProbable.pitchMix,
@@ -52,7 +52,7 @@ module.exports = {
                     .addFields({
                         name: (hydratedAwayProbable.handedness
                             ? hydratedAwayProbable.handedness + 'HP **'
-                            : '**') + (probables.awayProbableLastName || 'TBD') + '** (' + probables.awayAbbreviation + ')',
+                            : '**') + (hydratedAwayProbable.fullName || 'TBD') + '** (' + probables.awayAbbreviation + ')',
                         value: commandUtil.buildPitchingStatsMarkdown(
                             hydratedAwayProbable.pitchingStats.season,
                             hydratedAwayProbable.pitchMix,
