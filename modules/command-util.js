@@ -785,7 +785,6 @@ module.exports = {
                 ? abbreviations.home
                 : abbreviations.away;
             const inning = feed.inning();
-            console.log(batter);
             const embed = new EmbedBuilder()
                 .setTitle(halfInning.toUpperCase() + ' ' + inning + ', ' +
                     abbreviations.away + ' vs. ' + abbreviations.home + ': Current Batter')
