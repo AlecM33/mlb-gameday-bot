@@ -20,8 +20,10 @@ and in turn reports events to any number of subscribed Discord channels. Slash C
 - **/unsubscribe_gameday** - un-subscribe a given Discord channel from the above functionality.
 - **/gameday_preference** - change the preference for the gameday subscription. This includes which types of plays to report ("all plays" or "scoring plays only") and a reporting delay of 0-180 seconds.
 - **/schedule** - view the upcoming schedule for the next week of games.
-- **/batter** - view stats on the batter that is up right now. Only available when a game is live.
-- **/pitcher** - view stats on the pitcher that is pitching right now. Only available when a game is live.
+- **/batter** - view stats on a specified batter. If you don't provide a name, the bot will check for a live game and use the current batter.
+- **/pitcher** - view stats on a specified pitcher. If you don't provide a name, the bot will check for a live game and use the current pitcher.
+- **/batter_savant** - view Baseball Savant percentile rankings for a specified batter. If you don't provide a name, the bot will check for a live game and use the current batter.
+- **/pitcher_savant** - view Baseball Savant percentile rankings for a specified pitcher. If you don't provide a name, the bot will check for a live game and use the current pitcher.
 - **/weather** - view the weather for current the game.
 - **/attendance** - view the attendance for the current game.
 
@@ -29,12 +31,9 @@ and in turn reports events to any number of subscribed Discord channels. Slash C
 
 Examples:
 
-![image](https://github.com/user-attachments/assets/71cc4a01-d591-4219-9eec-6a034efa01b4)
+![image](https://github.com/user-attachments/assets/4339bbee-1615-434d-8a18-b7cad1372f02)
 
-![image](./images/screenshots/pitcher.png)
-
-![image](./images/screenshots/scoring_plays.png)
-
+<img src='https://github.com/user-attachments/assets/82730d13-9f1a-471e-be65-f5a3960d844a' width=400/>
 
 # Tech Stack
 
