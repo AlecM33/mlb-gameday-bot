@@ -42,6 +42,9 @@ module.exports = {
             },
             currentBatterBatSide: () => {
                 return liveFeed.liveData.plays.currentPlay.matchup.batSide.code;
+            },
+            players: () => {
+                return liveFeed.gameData.players;
             }
         };
     }
