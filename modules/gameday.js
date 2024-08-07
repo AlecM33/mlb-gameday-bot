@@ -23,7 +23,7 @@ async function statusPoll (bot) {
             currentGames.sort((a, b) => Math.abs(now - new Date(a.gameDate)) - Math.abs(now - new Date(b.gameDate)));
             globalCache.values.currentGames = currentGames;
             const nearestGames = currentGames.filter(game => game.officialDate === currentGames[0].officialDate); // could be more than one game for double-headers.
-            globalCache.values.nearestGames = nearestGames;
+            globalCache.values.nearestGames = nearestGames.filter(g => g.status.codedGameState !== 'D');
             globalCache.values.game.isDoubleHeader = nearestGames.length > 1;
             const inProgressGame = nearestGames.find(nearestGame => nearestGame.status.statusCode === 'I' || nearestGame.status.statusCode === 'PW');
             if (inProgressGame) {

@@ -9,6 +9,7 @@ const endpoints = {
         return 'https://statsapi.mlb.com/api/v1/schedule?hydrate=team,lineups&sportId=1&startDate=' + startDate + '&endDate=' + endDate + '&teamId=' + teamId;
     },
     lineup: (gamePk, teamId = parseInt(process.env.TEAM_ID)) => {
+        LOGGER.debug('https://statsapi.mlb.com/api/v1/schedule?hydrate=lineups&sportId=1&gamePk=' + gamePk + '&teamId=' + teamId);
         return 'https://statsapi.mlb.com/api/v1/schedule?hydrate=lineups&sportId=1&gamePk=' + gamePk + '&teamId=' + teamId;
     },
     hitter: (personId) => {

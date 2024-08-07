@@ -893,10 +893,10 @@ async function resolveDoubleHeaderSelection (interaction) {
     const collectorFilter = i => i.user.id === interaction.user.id;
     try {
         LOGGER.trace('awaiting');
-        return await response.awaitMessageComponent({ filter: collectorFilter, time: 10_000 });
+        return await response.awaitMessageComponent({ filter: collectorFilter, time: 20_000 });
     } catch (e) {
         await interaction.editReply({
-            content: 'Game selection not received within 10 seconds - request was canceled.',
+            content: 'Game selection not received within 20 seconds - request was canceled.',
             components: []
         });
     }
