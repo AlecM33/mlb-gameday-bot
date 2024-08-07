@@ -774,8 +774,9 @@ module.exports = {
 
     getBatterEmbed: (batter, batterInfo, isLiveGame, description, savantMode = false) => {
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
-        const expandedBatter = feed.players()['ID' + batter.id];
+        let expandedBatter;
         if (isLiveGame) {
+            expandedBatter = feed.players()['ID' + batter.id];
             const abbreviations = {
                 home: feed.homeAbbreviation(),
                 away: feed.awayAbbreviation()
@@ -803,12 +804,12 @@ module.exports = {
         } else {
             const embed = new EmbedBuilder()
                 .setTitle(`${batter.fullName} (${globals.TEAMS.find(team => team.id === batter.currentTeam.id).abbreviation})`)
-                .setDescription(`${expandedBatter.primaryPosition.abbreviation} | Bats ${batterInfo.stats.batSide.description}`)
+                .setDescription(`${batter.primaryPosition.abbreviation} | Bats ${batterInfo.stats.batSide.description}`)
                 .setImage('attachment://savant.png')
                 .setColor(globals.TEAMS.find(team => team.id === batter.currentTeam.id).primaryColor);
 
             if (description) {
-                embed.setDescription(`${expandedBatter.primaryPosition.abbreviation} | Bats ${batterInfo.stats.batSide.description}` + description);
+                embed.setDescription(`${batter.primaryPosition.abbreviation} | Bats ${batterInfo.stats.batSide.description}` + description);
             }
 
             if (!savantMode) {
