@@ -774,21 +774,22 @@ module.exports = {
 
     getBatterEmbed: (batter, batterInfo, isLiveGame, description, savantMode = false) => {
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
+        const expandedBatter = feed.players()['ID' + batter.id];
         if (isLiveGame) {
             const abbreviations = {
                 home: feed.homeAbbreviation(),
                 away: feed.awayAbbreviation()
             };
             const halfInning = feed.halfInning();
-            const abbreviation = halfInning === 'top'
+            const abbreviation = halfInning === 'bottom'
                 ? abbreviations.home
                 : abbreviations.away;
             const inning = feed.inning();
+            console.log(batter);
             const embed = new EmbedBuilder()
                 .setTitle(halfInning.toUpperCase() + ' ' + inning + ', ' +
                     abbreviations.away + ' vs. ' + abbreviations.home + ': Current Batter')
-                .setDescription('## ' + feed.currentBatterBatSide() +
-                    'HB ' + batter.fullName + ' (' + abbreviation + ')' + (description || ''))
+                .setDescription(`### ${batter.fullName} (${abbreviation})\n ${expandedBatter.primaryPosition.abbreviation} | Bats ${expandedBatter.batSide.description} ${(description || '')}`)
                 .setImage('attachment://savant.png')
                 .setColor((halfInning === 'top'
                     ? globalCache.values.game.awayTeamColor
@@ -802,13 +803,13 @@ module.exports = {
             return embed;
         } else {
             const embed = new EmbedBuilder()
-                .setTitle(batterInfo.stats.batSide.code +
-                    'HB ' + batter.fullName)
+                .setTitle(`${batter.fullName} (${globals.TEAMS.find(team => team.id === batter.currentTeam.id).abbreviation})`)
+                .setDescription(`${expandedBatter.primaryPosition.abbreviation} | Bats ${batterInfo.stats.batSide.description}`)
                 .setImage('attachment://savant.png')
                 .setColor(globals.TEAMS.find(team => team.id === batter.currentTeam.id).primaryColor);
 
             if (description) {
-                embed.setDescription(description);
+                embed.setDescription(`${expandedBatter.primaryPosition.abbreviation} | Bats ${batterInfo.stats.batSide.description}` + description);
             }
 
             if (!savantMode) {
