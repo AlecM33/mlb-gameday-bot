@@ -58,10 +58,12 @@ module.exports = {
         if (numberOfParks <= globals.HOME_RUN_PARKS_MIN || numberOfParks >= globals.HOME_RUN_PARKS_MAX) {
             reply += ' - ';
             const parks = numberOfParks >= globals.HOME_RUN_PARKS_MAX ? xParks.not : xParks.hr;
-            for (let i = 0; i < parks.length; i ++) {
-                reply += parks[i].name + ' (' + parks[i].team_abbrev + ')';
-                if (i < parks.length - 1) {
-                    reply += ', ';
+            if (parks) {
+                for (let i = 0; i < parks.length; i ++) {
+                    reply += parks[i].name + ' (' + parks[i].team_abbrev + ')';
+                    if (i < parks.length - 1) {
+                        reply += ', ';
+                    }
                 }
             }
             return reply;
