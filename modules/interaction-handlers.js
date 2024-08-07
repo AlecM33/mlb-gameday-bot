@@ -324,14 +324,7 @@ module.exports = {
             const ourTeamLineup = updatedLineup.teams.home.team.id === parseInt(process.env.TEAM_ID)
                 ? updatedLineup.lineups?.homePlayers
                 : updatedLineup.lineups?.awayPlayers;
-            if (updatedLineup.status.detailedState === 'Postponed') {
-                await commandUtil.giveFinalCommandResponse(toHandle, {
-                    content: commandUtil.constructGameDisplayString(game) + ' - this game is postponed.',
-                    ephemeral: false,
-                    components: []
-                });
-                return;
-            } else if (!ourTeamLineup) {
+            if (!ourTeamLineup) {
                 await commandUtil.giveFinalCommandResponse(toHandle, {
                     content: commandUtil.constructGameDisplayString(game) + ' - No lineup card has been submitted for this game yet.',
                     ephemeral: false,
