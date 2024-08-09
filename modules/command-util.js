@@ -18,7 +18,7 @@ module.exports = {
             ? game.lineups.homePlayers
             : game.lineups.awayPlayers;
         const people = (await mlbAPIUtil.people(lineup.map(lineupPlayer => lineupPlayer.id))).people;
-        table.setHeading(['', '', '', 'B', 'HR', 'RBI', 'AVG', 'OPS']);
+        table.setHeading(['', '', '', 'B', 'HR', 'RBI', 'SB', 'AVG', 'OPS']);
         table.setHeadingAlign(AsciiTable.RIGHT);
         table.setAlign(0, AsciiTable.RIGHT);
         table.setAlign(1, AsciiTable.LEFT);
@@ -28,6 +28,7 @@ module.exports = {
         table.setAlign(5, AsciiTable.RIGHT);
         table.setAlign(6, AsciiTable.RIGHT);
         table.setAlign(7, AsciiTable.RIGHT);
+        table.setAlign(8, AsciiTable.RIGHT);
         for (let i = 0; i < lineup.length; i ++) {
             const hittingStats = people[i]?.stats?.find(stat => stat.group.displayName === 'hitting')?.splits[0]?.stat;
             table.addRow([
@@ -37,6 +38,7 @@ module.exports = {
                 people[i].batSide.code,
                 (hittingStats?.homeRuns || hittingStats?.homeRuns === 0 ? hittingStats?.homeRuns : '-'),
                 (hittingStats?.rbi || hittingStats?.rbi === 0 ? hittingStats?.rbi : '-'),
+                (hittingStats?.stolenBases || hittingStats?.stolenBases === 0 ? hittingStats?.stolenBases : '-'),
                 hittingStats?.avg || '-',
                 hittingStats?.ops || '-'
             ]);

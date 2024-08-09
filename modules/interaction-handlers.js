@@ -320,7 +320,16 @@ module.exports = {
             const game = globalCache.values.game.isDoubleHeader
                 ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId)) // the user's choice between the two games of the double-header.
                 : globalCache.values.nearestGames[0];
-            const updatedLineup = (await mlbAPIUtil.lineup(game.gamePk))?.dates[0].games[0];
+            const gameLineups = (await mlbAPIUtil.lineup(game.gamePk));
+            let updatedLineup;
+            /* if a game is postponed and rescheduled, the lineups call returns two games with the same gamePk, one on the original date
+                and one on the re-scheduled date.
+             */
+            if (gameLineups.dates?.length > 1) {
+                updatedLineup = gameLineups.dates.find(date => date.games[0].rescheduledFrom)?.games[0];
+            } else {
+                updatedLineup = gameLineups.dates[0].games[0];
+            }
             const ourTeamLineup = updatedLineup.teams.home.team.id === parseInt(process.env.TEAM_ID)
                 ? updatedLineup.lineups?.homePlayers
                 : updatedLineup.lineups?.awayPlayers;
