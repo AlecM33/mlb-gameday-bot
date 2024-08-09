@@ -87,6 +87,7 @@ const endpoints = {
         return 'https://statsapi.mlb.com/api/v1/people?personIds=' + personIds.reduce((acc, value) => acc + ',' + value, '') + '&hydrate=stats(type=season,groups=hitting,pitching)';
     },
     boxScore: (gamePk) => {
+        LOGGER.debug('https://statsapi.mlb.com/api/v1/game/' + gamePk + '/boxscore');
         return 'https://statsapi.mlb.com/api/v1/game/' + gamePk + '/boxscore';
     },
     savantGameFeed: (gamePk) => {
