@@ -107,10 +107,18 @@ async function reportPlays (bot, gamePk) {
     const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
     const currentPlay = feed.currentPlay();
     const atBatIndex = currentPlay.atBatIndex;
+    const lastReportedCompleteAtBatIndex = globalCache.values.game.lastReportedCompleteAtBatIndex;
     if (atBatIndex > 0) {
         const lastAtBat = feed.allPlays()
             .find((play) => play.about.atBatIndex === atBatIndex - 1);
         if (lastAtBat && lastAtBat.about.hasReview) { // a play that's been challenged. We should report updates on it.
+            await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat), gamePk, atBatIndex - 1);
+        /* the below block detects and handles if we missed the result of an at-bat due to the data moving too fast.
+         Sometimes it progresses to the next at bat quite quickly. */
+        } else if (lastReportedCompleteAtBatIndex !== null
+            && (atBatIndex - lastReportedCompleteAtBatIndex > 1)) {
+            LOGGER.debug('Missed at-bat index: ' + atBatIndex - 1);
+            await reportAnyMissedEvents(lastAtBat, bot, gamePk, atBatIndex - 1);
             await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat), gamePk, atBatIndex - 1);
         }
     }
