@@ -129,7 +129,10 @@ async function reportPlays (bot, gamePk) {
 async function reportAnyMissedEvents (atBat, bot, gamePk, atBatIndex) {
     const missedEventsToReport = atBat.playEvents?.filter(event => globals.EVENT_WHITELIST.includes(event?.details?.eventType)
         && !globalCache.values.game.reportedDescriptions
-            .find(reportedDescription => reportedDescription.description === event?.details?.description && reportedDescription.atBatIndex === atBatIndex));
+            .find(reportedDescription => reportedDescription.description === event?.details?.description
+                && (reportedDescription.atBatIndex === atBatIndex || reportedDescription.atBatIndex === (atBatIndex - 1))
+            )
+    );
     for (const missedEvent of missedEventsToReport) {
         await processAndPushPlay(bot, currentPlayProcessor.process(missedEvent), gamePk, atBatIndex);
     }
@@ -139,7 +142,10 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex) {
     if (play.reply
         && play.reply.length > 0
         && !globalCache.values.game.reportedDescriptions
-            .find(reportedDescription => reportedDescription.description === play.description && reportedDescription.atBatIndex === atBatIndex)) {
+            .find(reportedDescription => reportedDescription.description === play.description
+                && (reportedDescription.atBatIndex === atBatIndex || reportedDescription.atBatIndex === (atBatIndex - 1))
+            )
+    ) {
         globalCache.values.game.reportedDescriptions.push({ description: play.description, atBatIndex });
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         if (play.isComplete) {
