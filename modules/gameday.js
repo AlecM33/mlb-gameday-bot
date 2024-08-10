@@ -67,7 +67,9 @@ function subscribe (bot, liveGame, games) {
                 globalCache.values.game.startReported = false;
                 LOGGER.info('NOTIFIED OF GAME CONCLUSION: CLOSING...');
                 await processAndPushPlay(bot, {
-                    reply: `## Final: ${feed.awayAbbreviation()} ${feed.awayTeamScore()} - ${feed.homeTeamScore()} ${feed.homeAbbreviation()}`,
+                    reply: `${gamedayUtil.didOurTeamWin(feed.homeTeamScore(), feed.awayTeamScore())
+                        ? '## BALLGAME!\n\n '
+                        : ''} ## Final: ${feed.awayAbbreviation()} ${feed.awayTeamScore()} - ${feed.homeTeamScore()} ${feed.homeAbbreviation()}`,
                     isScoringPlay: true,
                     isOut: false
                 }, liveGame, globalCache.values.game.lastReportedCompleteAtBatIndex, false);
