@@ -40,6 +40,12 @@ module.exports = {
             linescore: () => {
                 return liveFeed.liveData.linescore;
             },
+            homeTeamScore: () => {
+                return liveFeed.liveData.linescore.teams.home.runs;
+            },
+            awayTeamScore: () => {
+                return liveFeed.liveData.linescore.teams.away.runs;
+            },
             currentBatterBatSide: () => {
                 return liveFeed.liveData.plays.currentPlay.matchup.batSide.code;
             },
