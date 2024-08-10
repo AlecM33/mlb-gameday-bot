@@ -116,6 +116,22 @@ module.exports = {
         });
     },
 
+    wildcardHandler: async (interaction) => {
+        await interaction.deferReply();
+        console.info(`WILDCARD command invoked by guild: ${interaction.guildId}`);
+        const team = await mlbAPIUtil.team(process.env.TEAM_ID);
+        const leagueId = team.teams[0].league.id;
+        const leagueName = team.teams[0].league.name;
+        const wildcard = (await mlbAPIUtil.wildcard()).records
+            .find(record => record.standingsType === 'wildCard' && record.league === leagueId);
+        const divisionLeaders = (await mlbAPIUtil.wildcard()).records
+            .find(record => record.standingsType === 'divisionLeaders' && record.league === leagueId);
+        await interaction.followUp({
+            ephemeral: false,
+            files: [new AttachmentBuilder((await commandUtil.buildWildcardTable(divisionLeaders, wildcard, leagueName)), { name: 'wildcard.png' })]
+        });
+    },
+
     subscribeGamedayHandler: async (interaction) => {
         console.info(`SUBSCRIBE GAMEDAY command invoked by guild: ${interaction.guildId}`);
         if (!interaction.member.roles.cache.some(role => globals.ADMIN_ROLES.includes(role.name))) {
@@ -442,6 +458,7 @@ module.exports = {
     },
 
     batterSavantHandler: async (interaction) => {
+        console.info(`BATTER SAVANT command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
         const playerName = interaction.options.getString('player')?.trim();
         const playerResult = await commandUtil.getPlayerFromUserInputOrLiveFeed(playerName, interaction, 'Batter');
@@ -474,6 +491,7 @@ module.exports = {
     },
 
     pitcherSavantHandler: async (interaction) => {
+        console.info(`PITCHER SAVANT command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
         const playerName = interaction.options.getString('player')?.trim();
         const playerResult = await commandUtil.getPlayerFromUserInputOrLiveFeed(playerName, interaction, 'Pitcher');
