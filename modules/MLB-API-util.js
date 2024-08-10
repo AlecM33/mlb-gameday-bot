@@ -99,6 +99,11 @@ const endpoints = {
     },
     players: () => {
         return 'https://statsapi.mlb.com/api/v1/sports/1/players?fields=people,fullName,lastName,id,currentTeam,primaryPosition,name,code,abbreviation';
+    },
+    wildcard: () => {
+        return 'https://bdfed.stitch.mlbinfra.com/bdfed/transform-mlb-standings?&splitPcts=false&numberPcts=false&standingsView=division&sortTemplate=3&season=' +
+            (new Date().getFullYear()) + '&leagueIds=103,104&standingsTypes=wildCard&contextTeamId=&date=' +
+            ((new Date()).toISOString().split('T')[0]) + '&hydrateAlias=noSchedule&sortDivisions=201,202,200,204,205,203&sortLeagues=103,104,115,114&sortSports=1';
     }
 };
 
@@ -254,5 +259,8 @@ module.exports = {
     },
     players: async () => {
         return (await fetch(endpoints.players())).json();
+    },
+    wildcard: async () => {
+        return (await fetch(endpoints.wildcard())).json();
     }
 };
