@@ -45,6 +45,7 @@ async function statusPoll (bot) {
 function subscribe (bot, liveGame, games) {
     LOGGER.trace('Gameday: subscribing...');
     const ws = mlbAPIUtil.websocketSubscribe(liveGame.gamePk);
+    const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
     ws.addEventListener('message', async (e) => {
         try {
             const eventJSON = JSON.parse(e.data);
@@ -65,6 +66,11 @@ function subscribe (bot, liveGame, games) {
                 globalCache.values.game.finished = true;
                 globalCache.values.game.startReported = false;
                 LOGGER.info('NOTIFIED OF GAME CONCLUSION: CLOSING...');
+                await processAndPushPlay(bot, {
+                    reply: `## Final: ${feed.awayAbbreviation()} ${feed.awayTeamScore()} - ${feed.homeTeamScore()} ${feed.homeAbbreviation()}`,
+                    isScoringPlay: true,
+                    isOut: false
+                }, liveGame, globalCache.values.game.lastReportedCompleteAtBatIndex, false);
                 ws.close();
                 await statusPoll(bot, games);
             } else if (!globalCache.values.game.finished) {
@@ -138,7 +144,7 @@ async function reportAnyMissedEvents (atBat, bot, gamePk, atBatIndex) {
     }
 }
 
-async function processAndPushPlay (bot, play, gamePk, atBatIndex) {
+async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle = true) {
     if (play.reply
         && play.reply.length > 0
         && !globalCache.values.game.reportedDescriptions
@@ -152,17 +158,19 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex) {
             globalCache.values.game.lastReportedCompleteAtBatIndex = atBatIndex;
         }
         const embed = new EmbedBuilder()
-            .setTitle(gamedayUtil.deriveHalfInning(feed.halfInning()) + ' ' +
-                feed.inning() + ', ' +
-                feed.awayAbbreviation() + (play.isScoringPlay
-                ? ' vs. '
-                : ' ' + play.awayScore + ' - ' + play.homeScore + ' ') +
-                feed.homeAbbreviation() + (play.isScoringPlay ? ' - Scoring Play \u2757' : ''))
             .setDescription(play.reply + (play.isOut && play.outs === 3 && !gamedayUtil.didGameEnd(play.homeScore, play.awayScore) ? gamedayUtil.getDueUp() : ''))
             .setColor((feed.halfInning() === 'top'
                 ? globalCache.values.game.awayTeamColor
                 : globalCache.values.game.homeTeamColor
             ));
+        if (includeTitle) {
+            embed.setTitle(gamedayUtil.deriveHalfInning(feed.halfInning()) + ' ' +
+                feed.inning() + ', ' +
+                feed.awayAbbreviation() + (play.isScoringPlay
+                ? ' vs. '
+                : ' ' + play.awayScore + ' - ' + play.homeScore + ' ') +
+                feed.homeAbbreviation() + (play.isScoringPlay ? ' - Scoring Play \u2757' : ''));
+        }
         const messages = [];
         for (const channelSubscription of globalCache.values.subscribedChannels) {
             const returnedChannel = await bot.channels.fetch(channelSubscription.channel_id);

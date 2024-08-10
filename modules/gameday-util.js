@@ -18,6 +18,12 @@ module.exports = {
             );
     },
 
+    didOurTeamWin: (homeScore, awayScore) => {
+        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
+        return (homeScore > awayScore && feed.homeTeamId() === parseInt(process.env.TEAM_ID))
+                || (awayScore > homeScore && feed.awayTeamId() === parseInt(process.env.TEAM_ID));
+    },
+
     getConstrastingEmbedColors: () => {
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         globalCache.values.game.homeTeamColor = globals.TEAMS.find(
