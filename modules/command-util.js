@@ -240,24 +240,32 @@ module.exports = {
         const divisionLeadersMap = mapStandings(divisionLeaders);
         const wildcardMap = mapStandings(wildcard, true);
         const table = new AsciiTable(leagueName + ' Wild Card \n');
-        table.setHeading('Team', 'W-L', 'WCGB', 'L10', 'STRK');
+        table.setHeading('Team', 'W-L', 'PCT', 'WCGB', 'L10', 'STRK');
+        table.setHeadingAlign(AsciiTable.CENTER);
+        table.setAlign(1, AsciiTable.CENTER);
+        table.setAlign(2, AsciiTable.CENTER);
+        table.setAlign(3, AsciiTable.CENTER);
+        table.setAlign(4, AsciiTable.CENTER);
+        table.setAlign(5, AsciiTable.CENTER);
         divisionLeadersMap.forEach((entry) => table.addRow(
             entry.name,
             entry.wins + '-' + entry.losses,
+            entry.pct,
             '-',
             entry.lastTen,
             entry.streak
         ));
         let wildCardDivided = false;
-        table.addRow('', '', '', '', '');
+        table.addRow('', '', '', '', '', '');
         wildcardMap.forEach((entry) => {
             if (!wildCardDivided && entry.gamesBack !== '-' && !entry.gamesBack.includes('+')) {
                 wildCardDivided = true;
-                table.addRow('', '', '', '', '');
+                table.addRow('', '', '', '', '', '');
             }
             table.addRow(
                 entry.name,
                 entry.wins + '-' + entry.losses,
+                entry.pct,
                 entry.gamesBack,
                 entry.lastTen,
                 entry.streak
