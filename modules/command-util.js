@@ -223,27 +223,7 @@ module.exports = {
     },
 
     buildStandingsTable: async (standings, divisionName) => {
-        const centralMap = standings.teamRecords.map(teamRecord => {
-            return {
-                name: teamRecord.team.name,
-                wins: teamRecord.leagueRecord.wins,
-                losses: teamRecord.leagueRecord.losses,
-                pct: teamRecord.leagueRecord.pct,
-                gamesBack: teamRecord.gamesBack,
-                homeRecord: (() => {
-                    const home = teamRecord.records.splitRecords.find(record => record.type === 'home');
-                    return home.wins + '-' + home.losses;
-                })(),
-                awayRecord: (() => {
-                    const away = teamRecord.records.splitRecords.find(record => record.type === 'away');
-                    return away.wins + '-' + away.losses;
-                })(),
-                lastTen: (() => {
-                    const l10 = teamRecord.records.splitRecords.find(record => record.type === 'lastTen');
-                    return l10.wins + '-' + l10.losses;
-                })()
-            };
-        });
+        const centralMap = mapStandings(standings);
         const table = new AsciiTable(divisionName + '\n');
         table.setHeading('Team', 'W-L', 'GB', 'L10');
         centralMap.forEach((entry) => table.addRow(
@@ -252,6 +232,37 @@ module.exports = {
             entry.gamesBack,
             entry.lastTen
         ));
+        table.removeBorder();
+        return (await getScreenshotOfHTMLTables([table]));
+    },
+
+    buildWildcardTable: async (divisionLeaders, wildcard, leagueName) => {
+        const divisionLeadersMap = mapStandings(divisionLeaders);
+        const wildcardMap = mapStandings(wildcard, true);
+        const table = new AsciiTable(leagueName + ' Wild Card \n');
+        table.setHeading('Team', 'W-L', 'WCGB', 'L10', 'STRK');
+        divisionLeadersMap.forEach((entry) => table.addRow(
+            entry.name,
+            entry.wins + '-' + entry.losses,
+            '-',
+            entry.lastTen,
+            entry.streak
+        ));
+        let wildCardDivided = false;
+        table.addRow('', '', '', '', '');
+        wildcardMap.forEach((entry) => {
+            if (!wildCardDivided && entry.gamesBack !== '-' && !entry.gamesBack.includes('+')) {
+                wildCardDivided = true;
+                table.addRow('', '', '', '', '');
+            }
+            table.addRow(
+                entry.name,
+                entry.wins + '-' + entry.losses,
+                entry.gamesBack,
+                entry.lastTen,
+                entry.streak
+            );
+        });
         table.removeBorder();
         return (await getScreenshotOfHTMLTables([table]));
     },
@@ -858,6 +869,37 @@ module.exports = {
     }
 };
 
+function mapStandings (standings, wildcard = false) {
+    return standings.teamRecords.map(teamRecord => {
+        return {
+            name: teamRecord.team.name + (standings.standingsType === 'divisionLeaders' ? ' - ' + getDivisionAbbreviation(teamRecord.team.division.name) : ''),
+            wins: (teamRecord.leagueRecord?.wins === undefined ? teamRecord.wins : teamRecord.leagueRecord.wins),
+            losses: (teamRecord.leagueRecord?.losses === undefined ? teamRecord.losses : teamRecord.leagueRecord.losses),
+            pct: (teamRecord.leagueRecord?.pct === undefined ? teamRecord.pct : teamRecord.leagueRecord.pct),
+            gamesBack: (wildcard ? teamRecord.wildCardGamesBack : teamRecord.gamesBack),
+            homeRecord: (teamRecord.record_home
+                ? teamRecord.record_home
+                : (() => {
+                    const home = teamRecord.records.splitRecords.find(record => record.type === 'home');
+                    return home.wins + '-' + home.losses;
+                })()),
+            awayRecord: (teamRecord.record_away
+                ? teamRecord.record_away
+                : (() => {
+                    const away = teamRecord.records.splitRecords.find(record => record.type === 'away');
+                    return away.wins + '-' + away.losses;
+                })()),
+            lastTen: (teamRecord.record_lastTen
+                ? teamRecord.record_lastTen
+                : (() => {
+                    const l10 = teamRecord.records.splitRecords.find(record => record.type === 'lastTen');
+                    return l10.wins + '-' + l10.losses;
+                })()),
+            streak: teamRecord.streak
+        };
+    });
+}
+
 function getPitchCollections (dom) {
     const pitches = [];
     const percentages = [];
@@ -1118,4 +1160,14 @@ function calculateRoundedPercentileFromNormalDistribution (metric, value, mean, 
     return Math.round(
         (shouldInvert ? (1.00 - ztable((value - mean) / standardDeviation)) : ztable((value - mean) / standardDeviation)) * 100
     );
+}
+
+function getDivisionAbbreviation (division) {
+    if (division.toLowerCase().includes('east')) {
+        return 'E';
+    } else if (division.toLowerCase().includes('west')) {
+        return 'W';
+    } else {
+        return 'C';
+    }
 }
