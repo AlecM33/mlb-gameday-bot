@@ -157,7 +157,7 @@ module.exports = {
         const { WebSocket } = require('ws');
         const socket = new ReconnectingWebSocket(endpoints.websocketSubscribe(gamePk),
             [],
-            { WebSocket, maxRetries: 3 }
+            { WebSocket, maxRetries: 1 }
         );
         let heartbeatInterval;
         /*

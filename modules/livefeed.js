@@ -41,10 +41,10 @@ module.exports = {
                 return liveFeed.liveData.linescore;
             },
             homeTeamScore: () => {
-                return liveFeed.liveData.linescore.teams.home.runs;
+                return liveFeed.liveData.plays.currentPlay.result.homeScore;
             },
             awayTeamScore: () => {
-                return liveFeed.liveData.linescore.teams.away.runs;
+                return liveFeed.liveData.plays.currentPlay.result.awayScore;
             },
             currentBatterBatSide: () => {
                 return liveFeed.liveData.plays.currentPlay.matchup.batSide.code;
