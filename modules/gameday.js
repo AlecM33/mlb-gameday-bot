@@ -50,9 +50,9 @@ async function statusPoll (bot) {
 function subscribe (bot, liveGame, games) {
     LOGGER.trace('Gameday: subscribing...');
     const ws = mlbAPIUtil.websocketSubscribe(liveGame.gamePk);
-    const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
     ws.addEventListener('message', async (e) => {
         try {
+            const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
             const eventJSON = JSON.parse(e.data);
             /*
                 Once in a while, Gameday will send us duplicate messages. They have different updateIds, but the exact
