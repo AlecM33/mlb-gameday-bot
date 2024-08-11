@@ -4,6 +4,7 @@ const values = {
     subscribedChannels: [],
     game: {
         currentLiveFeed: null,
+        currentGamePk: null,
         isDoubleHeader: null,
         lastReportedCompleteAtBatIndex: null,
         lastReportedPlayDescription: null,
@@ -19,6 +20,7 @@ const values = {
 
 function resetGameCache () {
     values.game.currentLiveFeed = null;
+    values.game.currentGamePk = null;
     values.game.isDoubleHeader = null;
     values.game.lastReportedCompleteAtBatIndex = null;
     values.game.lastReportedPlayDescription = null;

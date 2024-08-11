@@ -26,10 +26,15 @@ async function statusPoll (bot) {
             globalCache.values.nearestGames = nearestGames.filter(g => g.status.codedGameState !== 'D');
             globalCache.values.game.isDoubleHeader = nearestGames.length > 1;
             const inProgressGame = nearestGames.find(nearestGame => nearestGame.status.statusCode === 'I' || nearestGame.status.statusCode === 'PW');
-            if (inProgressGame) {
+            /*
+                the "game_finished" socket event is received before a game's status changes to "Final", typically. So we shouldn't try to
+                re-subscribe just because the status is still "In Progress". We should check if it's a different game.
+             */
+            if (inProgressGame && inProgressGame.gamePk !== globalCache.values.game.currentGamePk) {
                 LOGGER.info('Gameday: polling stopped: a game is live.');
                 globalCache.resetGameCache();
                 globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(inProgressGame.gamePk);
+                globalCache.values.game.currentGamePk = inProgressGame.gamePk;
                 gamedayUtil.getConstrastingEmbedColors();
                 module.exports.subscribe(bot, inProgressGame, nearestGames);
             } else {
