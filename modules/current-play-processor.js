@@ -83,13 +83,14 @@ function addScore (reply, currentPlayJSON) {
 
 function addMetrics (lastEvent, reply) {
     if (lastEvent.hitData.launchSpeed) { // this data can be randomly unavailable
-        reply += '\n\n**Statcast Metrics:**\n';
+        reply += '\n\n';
         reply += 'Exit Velo: ' + lastEvent.hitData.launchSpeed + ' mph' +
             getFireEmojis(lastEvent.hitData.launchSpeed) + '\n';
         reply += 'Launch Angle: ' + lastEvent.hitData.launchAngle + '° \n';
         reply += 'Distance: ' + lastEvent.hitData.totalDistance + ' ft.\n';
-        reply += 'xBA: Pending...';
-        reply += lastEvent.hitData.totalDistance && lastEvent.hitData.totalDistance >= 300 ? '\nHR/Park: Pending...' : '';
+        reply += 'xBA: Pending...\n';
+        reply += 'Bat Speed: Pending...';
+        reply += lastEvent.hitData.totalDistance && lastEvent.hitData.totalDistance >= globals.HOME_RUN_BALLPARKS_MIN_DISTANCE ? '\nHR/Park: Pending...' : '';
     } else {
         reply += '\n\n**Statcast Metrics:**\n';
         reply += 'Data was not available.';
