@@ -43,8 +43,14 @@ module.exports = {
     getDueUp: () => {
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         const linescore = feed.linescore();
+        const upIndex = linescore.offense.battingOrder > 9 ? linescore.offense.battingOrder % 9 : linescore.offense.battingOrder;
+        const onDeckIndex = linescore.offense.battingOrder >= 9 ? (linescore.offense.battingOrder + 1) % 9 : linescore.offense.battingOrder + 1;
+        const inHoleIndex = linescore.offense.battingOrder >= 8 ? (linescore.offense.battingOrder + 2) % 9 : linescore.offense.battingOrder + 2;
 
-        return '\n\n**Due up**: ' + linescore.offense?.batter?.fullName + ', ' + linescore.offense?.onDeck?.fullName + ', ' + linescore.offense?.inHole?.fullName;
+        return '\n\n**Due up**: ' +
+            upIndex + '. ' + linescore.offense?.batter?.fullName + ', ' +
+            onDeckIndex + '. ' + linescore.offense?.onDeck?.fullName + ', ' +
+            inHoleIndex + '. ' + linescore.offense?.inHole?.fullName;
     },
 
     getXParks: async (gamePk, playId, numberOfParks) => {
