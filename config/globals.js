@@ -63,6 +63,8 @@ module.exports = {
         'other_out'
     ],
     SAVANT_POLLING_INTERVAL: 15000,
+    SAVANT_POLLING_ATTEMPTS: 15,
+    HOME_RUN_BALLPARKS_MIN_DISTANCE: 300,
     SLOW_POLL_INTERVAL: 300000,
     GAMEDAY_PING_INTERVAL: 10000,
     HIGHLIGHTS_PER_MESSAGE: 8,
@@ -70,8 +72,8 @@ module.exports = {
     DATE: null,
     ADMIN_ROLES: [ "Mod" ],
     TEAM_COLOR_CONTRAST_RATIO: 1.5,
-    HOME_RUN_PARKS_MIN: 4,
-    HOME_RUN_PARKS_MAX: 26,
+    HOME_RUN_PARKS_MIN: 5,
+    HOME_RUN_PARKS_MAX: 25,
     EVENTS: [
         "Double",
         "Double Play",
