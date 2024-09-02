@@ -89,7 +89,7 @@ module.exports = {
             reply += date.date.substr(6) +
                 (home ? ' vs. ' : ' @ ') + (home ? teams.away.team.name : teams.home.team.name) + ' ' +
                 gameDate.toLocaleString('en-US', {
-                    timeZone: 'America/New_York',
+                    timeZone: (process.env.TIME_ZONE.trim() || 'America/New_York'),
                     hour: 'numeric',
                     minute: '2-digit',
                     timeZoneName: 'short'
@@ -315,7 +315,7 @@ module.exports = {
                     ', ' + new Date(game.gameDate).toLocaleString('default', {
                     month: 'short',
                     day: 'numeric',
-                    timeZone: 'America/New_York',
+                    timeZone: (process.env.TIME_ZONE.trim() || 'America/New_York'),
                     hour: 'numeric',
                     minute: '2-digit',
                     timeZoneName: 'short'
