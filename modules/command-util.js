@@ -621,7 +621,7 @@ module.exports = {
             ', ' + new Date((game.gameDate || game.datetime?.dateTime || game.gameData?.datetime?.dateTime)).toLocaleString('default', {
             month: 'short',
             day: 'numeric',
-            timeZone: (process.env.TIME_ZONE.trim() || 'America/New_York'),
+            timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
             hour: 'numeric',
             minute: '2-digit',
             timeZoneName: 'short'
@@ -931,7 +931,7 @@ async function resolveDoubleHeaderSelection (interaction) {
         new ButtonBuilder()
             .setCustomId(game.gamePk.toString())
             .setLabel(new Date(game.gameDate).toLocaleString('en-US', {
-                timeZone: (process.env.TIME_ZONE.trim() || 'America/New_York'),
+                timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
                 hour: 'numeric',
                 minute: '2-digit',
                 timeZoneName: 'short'
