@@ -75,7 +75,7 @@ describe('gameday', () => {
             });
             jasmine.clock().install();
             await gameday.pollForSavantData(1, 'xyz', [{}, {}], 350);
-            jasmine.clock().tick(globals.SAVANT_POLLING_INTERVAL);
+            jasmine.clock().tick(globals.SAVANT_POLLING_INTERVAL + globals.SAVANT_POLLING_BACKOFF_INCREASE);
             expect(mlbAPIUtil.savantGameFeed).toHaveBeenCalledTimes(2);
             expect(gameday.processMatchingPlay).not.toHaveBeenCalled();
             jasmine.clock().uninstall();

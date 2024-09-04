@@ -62,6 +62,7 @@ The bot is dependent on a short list of environment variables. When these are po
 - LOG_LEVEL - your chosen log level. 
 - TEAM_ID - the team you want to follow. These match those of the "teams" resource in the MLB stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1 . They are also stored statically in `config/globals.js`. Every command will be configured for that team.
 - TOKEN - your bot's authentication token. **Obligatory 'this is sensitive' - be careful where you store it**
+- TIME_ZONE - Your chosen time zone. Defaults to EST. Time zone names correspond to the Zone and Link names of the [IANA Time Zone Database](https://www.iana.org/time-zones), such as "UTC", "Asia/Shanghai", "Asia/Kolkata", and "America/New_York". Additionally, time zones can be given as UTC offsets in the format "±hh:mm", "±hhmm", or "±hh", for example as "+01:00", "-2359", or "+23".
 
 If the bot starts up successfully, the start-up logs look something like the following (subject to your log level):
 ```

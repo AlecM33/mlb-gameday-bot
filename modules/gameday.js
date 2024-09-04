@@ -253,6 +253,7 @@ function notifySavantDataUnavailable (messages) {
 
 async function pollForSavantData (gamePk, playId, messages, hitDistance) {
     let attempts = 1;
+    let currentInterval = globals.SAVANT_POLLING_INTERVAL;
     const messageTrackers = messages.map(message => { return { id: message.id, done: false }; });
     console.time('xBA: ' + playId);
     console.time('Bat Speed: ' + playId);
@@ -275,7 +276,8 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance) {
                 await module.exports.processMatchingPlay(matchingPlay, messages, messageTrackers, playId, hitDistance);
             }
             attempts ++;
-            setTimeout(async () => { await pollingFunction(); }, globals.SAVANT_POLLING_INTERVAL);
+            currentInterval = currentInterval + globals.SAVANT_POLLING_BACKOFF_INCREASE;
+            setTimeout(async () => { await pollingFunction(); }, currentInterval);
         } else {
             LOGGER.debug('max savant polling attempts reached for: ' + playId);
             notifySavantDataUnavailable(messages);
