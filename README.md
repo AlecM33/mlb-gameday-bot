@@ -26,7 +26,7 @@ and in turn reports events to any number of subscribed Discord channels. Slash C
 - **/subscribe_gameday** - subscribe a given Discord channel to receive real-time updates from the "Gameday" feed. This command is restricted to certain roles. Users can adjust which plays the bot reports and customize a reporting delay. The message includes a description of the play, any change in score, and statcast metrics for balls in play.
 - **/unsubscribe_gameday** - un-subscribe a given Discord channel from the above functionality.
 - **/weather** - view the weather for current the game.
-- **/wildcard** - check the standings for your team's division.
+- **/wildcard** - the current wildcard standings.
 
 ...and likely more to follow!
 
