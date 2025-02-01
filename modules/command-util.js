@@ -119,27 +119,27 @@ module.exports = {
         );
         const lastXGames = (lastXGamesStats.splits.find(split => !split.team) || lastXGamesStats.splits[0]);
         const seasonStats = (season.splits.find(split => !split.team) || season.splits[0]);
-        const formattedSplits = '\n### ' + seasonStats.season +' Season Stats:\n### ' +
+        const formattedSplits = '\n### ' + seasonStats.season + ' Season Stats:\n### ' +
             seasonStats.stat.avg + '/' + seasonStats.stat.obp + '/' + seasonStats.stat.slg + ', ' + seasonStats.stat.homeRuns + ' HR, ' + seasonStats.stat.rbi + ' RBIs\n' +
             '**Last 7 Games**' + (lastXGames ? ' (' + lastXGames.stat.plateAppearances + ' ABs)\n' : '\n') + (
-                lastXGames
-                    ? lastXGames.stat.avg + '/' + lastXGames.stat.obp + '/' + lastXGames.stat.slg
-                    : 'No at-bats!'
-            ) + '\n\n**vs. Righties**' + (vsRight ? ' (' + vsRight.stat.plateAppearances + ' ABs)\n' : '\n') + (
-                vsRight
-                    ? vsRight.stat.avg + '/' + vsRight.stat.obp + '/' + vsRight.stat.slg
-                    : 'No at-bats!'
-            ) + '\n\n**vs. Lefties**' + (vsLeft ? ' (' + vsLeft.stat.plateAppearances + ' ABs)\n' : '\n') + (
-                vsLeft
-                    ? vsLeft.stat.avg + '/' + vsLeft.stat.obp + '/' + vsLeft.stat.slg
-                    : 'No at-bats!'
-            ) + '\n\n**with RISP**' + (risp ? ' (' + risp.stat.plateAppearances + ' ABs)\n' : '\n') + (
-                risp
-                    ? risp.stat.avg + '/' + risp.stat.obp + '/' + risp.stat.slg
-                    : 'No at-bats!'
-            );
+            lastXGames
+                ? lastXGames.stat.avg + '/' + lastXGames.stat.obp + '/' + lastXGames.stat.slg
+                : 'No at-bats!'
+        ) + '\n\n**vs. Righties**' + (vsRight ? ' (' + vsRight.stat.plateAppearances + ' ABs)\n' : '\n') + (
+            vsRight
+                ? vsRight.stat.avg + '/' + vsRight.stat.obp + '/' + vsRight.stat.slg
+                : 'No at-bats!'
+        ) + '\n\n**vs. Lefties**' + (vsLeft ? ' (' + vsLeft.stat.plateAppearances + ' ABs)\n' : '\n') + (
+            vsLeft
+                ? vsLeft.stat.avg + '/' + vsLeft.stat.obp + '/' + vsLeft.stat.slg
+                : 'No at-bats!'
+        ) + '\n\n**with RISP**' + (risp ? ' (' + risp.stat.plateAppearances + ' ABs)\n' : '\n') + (
+            risp
+                ? risp.stat.avg + '/' + risp.stat.obp + '/' + risp.stat.slg
+                : 'No at-bats!'
+        );
         LOGGER.trace(formattedSplits);
-        return formattedSplits
+        return formattedSplits;
     },
 
     buildLineScoreTable: async (game, linescore) => {

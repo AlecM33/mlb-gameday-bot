@@ -144,7 +144,6 @@ module.exports = {
                 files: [new AttachmentBuilder((await commandUtil.buildWildcardTable(divisionLeaders, wildcard, leagueName)), { name: 'wildcard.png' })]
             });
         }
-
     },
 
     subscribeGamedayHandler: async (interaction) => {
