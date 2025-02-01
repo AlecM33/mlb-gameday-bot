@@ -98,6 +98,7 @@ const endpoints = {
         return 'https://statsapi.mlb.com/api/v1/teams/' + teamId;
     },
     players: () => {
+        LOGGER.debug('https://statsapi.mlb.com/api/v1/sports/1/players?fields=people,fullName,lastName,id,currentTeam,primaryPosition,name,code,abbreviation');
         return 'https://statsapi.mlb.com/api/v1/sports/1/players?fields=people,fullName,lastName,id,currentTeam,primaryPosition,name,code,abbreviation';
     },
     wildcard: () => {

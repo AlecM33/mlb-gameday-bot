@@ -96,10 +96,17 @@ module.exports = {
                 }) +
                 '\n';
         });
-        await interaction.reply({
-            ephemeral: false,
-            content: reply
-        });
+        if (reply.length === 0) {
+            await interaction.reply({
+                ephemeral: false,
+                content: 'There are no games in the next week.'
+            });
+        } else {
+            await interaction.reply({
+                ephemeral: false,
+                content: reply
+            });
+        }
     },
 
     standingsHandler: async (interaction) => {
@@ -126,10 +133,18 @@ module.exports = {
             .find(record => record.standingsType === 'wildCard' && record.league === leagueId);
         const divisionLeaders = (await mlbAPIUtil.wildcard()).records
             .find(record => record.standingsType === 'divisionLeaders' && record.league === leagueId);
-        await interaction.followUp({
-            ephemeral: false,
-            files: [new AttachmentBuilder((await commandUtil.buildWildcardTable(divisionLeaders, wildcard, leagueName)), { name: 'wildcard.png' })]
-        });
+        if (!divisionLeaders || !wildcard) {
+            await interaction.followUp({
+                ephemeral: false,
+                content: 'Wildcard standings are not available yet for this season.'
+            });
+        } else {
+            await interaction.followUp({
+                ephemeral: false,
+                files: [new AttachmentBuilder((await commandUtil.buildWildcardTable(divisionLeaders, wildcard, leagueName)), { name: 'wildcard.png' })]
+            });
+        }
+
     },
 
     subscribeGamedayHandler: async (interaction) => {
