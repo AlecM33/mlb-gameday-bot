@@ -244,7 +244,7 @@ function notifySavantDataUnavailable (messages) {
         if (description.includes('Pending...')) {
             description = description.replaceAll('Pending...', 'Not Available.');
             receivedEmbed.setDescription(description);
-            messages[i].edit({ embeds: [receivedEmbed] });t
+            messages[i].edit({ embeds: [receivedEmbed] });
         }
     }
 }
