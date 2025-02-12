@@ -5,11 +5,16 @@ const { joinImages } = require('join-images');
 const globals = require('../config/globals');
 const commandUtil = require('./command-util');
 const queries = require('../database/queries.js');
+const { constructPlayEmbed } = require('./gameday');
+const examplePlays = require('../spec/data/example-plays');
+const exampleLiveFeed = require('../spec/data/example-live-feed');
+const liveFeed = require('./livefeed');
+const currentPlayProcessor = require('./current-play-processor');
 
 module.exports = {
 
     helpHandler: async (interaction) => {
-        console.info(`HELP command invoked by guild: ${interaction.guildId}`);
+        console.info(`HELP command invoked by guild:e ${interaction.guildId}`);
         interaction.reply({ content: globals.HELP_MESSAGE, ephemeral: true });
     },
 
@@ -74,6 +79,7 @@ module.exports = {
 
     scheduleHandler: async (interaction) => {
         console.info(`SCHEDULE command invoked by guild: ${interaction.guildId}`);
+        const week = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const oneWeek = new Date();
         oneWeek.setDate(oneWeek.getDate() + 7);
         const nextWeek = await mlbAPIUtil.schedule(
@@ -86,14 +92,20 @@ module.exports = {
             const gameDate = new Date(game.gameDate);
             const teams = game.teams;
             const home = teams.home.team.id === parseInt(process.env.TEAM_ID);
-            reply += date.date.substr(6) +
-                (home ? ' vs. ' : ' @ ') + (home ? teams.away.team.name : teams.home.team.name) + ' ' +
+            const emoji = globalCache.values.emojis
+                .find(v => v.name.includes(
+                    (home ? teams.away.team.id : teams.home.team.id)
+                ));
+            reply += `${week[gameDate.getDay()]} ${date.date.substr(6)}` +
+                (home ? ' vs. ' : ' @ ') + (home ? teams.away.team.abbreviation : teams.home.team.abbreviation) +
+                ` <:${emoji.name}:${emoji.id}>` +
+                ' ' +
                 gameDate.toLocaleString('en-US', {
                     timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
                     hour: 'numeric',
                     minute: '2-digit',
                     timeZoneName: 'short'
-                }) +
+                }) + (game.gameType === 'S' ? ' (Spring Training)' : '') +
                 '\n';
         });
         if (reply.length === 0) {
@@ -187,6 +199,55 @@ module.exports = {
                 content: 'Subscribed this channel to the gameday feed.\n' +
                     'Events: ' + (scoringPlaysOnly ? '**Scoring Plays Only**' : '**All Plays**') + '\n' +
                     'Reporting Delay: **' + (reportingDelay || 0) + ' seconds**'
+            });
+        }
+    },
+
+    testGamedayReportingHandler: async (interaction) => {
+        console.info(`TEST GAMEDAY REPORTING command invoked by guild: ${interaction.guildId}`);
+        if (!interaction.member.roles.cache.some(role => globals.ADMIN_ROLES.includes(role.name))) {
+            await interaction.reply({
+                ephemeral: true,
+                content: 'You do not have permission to use this command.'
+            });
+            return;
+        }
+        const play = interaction.options.getString('play');
+        const feed = liveFeed.init(exampleLiveFeed);
+        if (!interaction.replied) {
+            await interaction.reply({
+                ephemeral: true,
+                embeds: [constructPlayEmbed((() => {
+                    if (play === 'Home Run') {
+                        return currentPlayProcessor.process(
+                            examplePlays.homeRun,
+                            feed,
+                            { name: 'angels_108', id: '1339072522619977770' },
+                            { name: 'brewers_158', id: '1339072560049950760' }
+                        );
+                    } else if (play === 'Steal') {
+                        return currentPlayProcessor.process(
+                            examplePlays.steal,
+                            feed,
+                            { name: 'angels_108', id: '1339072522619977770' },
+                            { name: 'brewers_158', id: '1339072560049950760' }
+                        );
+                    } else if (play === 'Challenge') {
+                        return currentPlayProcessor.process(
+                            examplePlays.inProgressChallenge,
+                            feed,
+                            { name: 'angels_108', id: '1339072522619977770' },
+                            { name: 'brewers_158', id: '1339072560049950760' }
+                        );
+                    }
+                })(),
+                feed,
+                true,
+                '#BA0021',
+                '#FFC52F',
+                { name: 'angels_108', id: '1339072522619977770' },
+                { name: 'brewers_158', id: '1339072560049950760' }
+                )]
             });
         }
     },

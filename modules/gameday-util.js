@@ -40,6 +40,12 @@ module.exports = {
         }
     },
 
+    getTeamEmojis: () => {
+        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
+        globalCache.values.game.homeTeamEmoji = globalCache.values.emojis.find(e => e.name.includes(feed.homeTeamId()));
+        globalCache.values.game.awayTeamEmoji = globalCache.values.emojis.find(e => e.name.includes(feed.awayTeamId()));
+    },
+
     getDueUp: () => {
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         const linescore = feed.linescore();

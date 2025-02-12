@@ -6,11 +6,14 @@ const mockResponses = require('./data/mock-responses');
 const globalCache = require('../modules/global-cache');
 const { EmbedBuilder } = require('discord.js');
 const liveFeed = require('../modules/livefeed');
+const examplePlays = require('./data/example-plays');
+const currentPlayProcessor = require('../modules/current-play-processor');
 
 describe('gameday', () => {
     describe('#statusPoll', () => {
         beforeEach(() => {
             spyOn(gamedayUtil, 'getConstrastingEmbedColors').and.stub();
+            spyOn(gamedayUtil, 'getTeamEmojis').and.stub();
             spyOn(mlbAPIUtil, 'liveFeed').and.callFake((gamePk, fields) => {
                 return {};
             });
@@ -142,7 +145,7 @@ describe('gameday', () => {
             ];
             spyOn(EmbedBuilder, 'from').and.returnValue(mockEmbed);
             spyOn(mockEmbed, 'setDescription').and.callThrough();
-            gameday.processMatchingPlay(
+            await gameday.processMatchingPlay(
                 {
                     play_id: 'abc',
                     xba: '.320'
@@ -154,6 +157,86 @@ describe('gameday', () => {
             );
             expect(mockEmbed.setDescription).toHaveBeenCalledWith('xBA: .320');
             expect(mockEmbed.setDescription).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    describe('#constructPlayEmbed', () => {
+        beforeAll(() => {
+            globalCache.values.emojis = [
+                { name: 'red_sox_111', id: '1339069901545017446' },
+                { name: 'angels_108', id: '1339072522619977770' },
+                { name: 'astros_117', id: '1339072529632989224' },
+                { name: 'athletics_133', id: '1339072538684293140' },
+                { name: 'blue_jays_141', id: '1339072546431172638' },
+                { name: 'braves_144', id: '1339072553217560656' },
+                { name: 'brewers_158', id: '1339072560049950760' },
+                { name: 'cardinals_138', id: '1339072566920216606' },
+                { name: 'cubs_112', id: '1339072574663168051' },
+                { name: 'dbacks_109', id: '1339072581453746300' },
+                { name: 'dodgers_119', id: '1339072589183582238' },
+                { name: 'giants_137', id: '1339072596171558912' },
+                { name: 'guardians_114', id: '1339072602408484917' },
+                { name: 'mariners_136', id: '1339072610041856090' },
+                { name: 'marlins_146', id: '1339072616295829504' },
+                { name: 'mets_121', id: '1339072623182876766' },
+                { name: 'nationals_120', id: '1339072630644408360' },
+                { name: 'padres_135', id: '1339072638496280627' },
+                { name: 'phillies_143', id: '1339072647673413783' },
+                { name: 'pirates_134', id: '1339072655097200681' },
+                { name: 'rangers_140', id: '1339072662030520410' },
+                { name: 'rays_139', id: '1339072669647110184' },
+                { name: 'reds_113', id: '1339072695303934057' },
+                { name: 'rockies_115', id: '1339072703197614171' },
+                { name: 'royals_118', id: '1339072710579327099' },
+                { name: 'tigers_116', id: '1339072718028673126' },
+                { name: 'twins_142', id: '1339072728329748544' },
+                { name: 'white_sox_145', id: '1339072738308132967' },
+                { name: 'yankees_147', id: '1339072748126863470' },
+                { name: 'orioles_110', id: '1339073056810864721' }
+            ];
+            globalCache.values.game.currentLiveFeed = require('./data/example-live-feed');
+            gamedayUtil.getTeamEmojis();
+        });
+        beforeEach(() => {});
+
+        it('should title the embed with no emojis for a scoring play', async () => {
+            const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
+            const embed = gameday.constructPlayEmbed(
+                currentPlayProcessor.process(
+                    examplePlays.homeRun,
+                    feed,
+                    { name: 'angels_108', id: '1339072522619977770' },
+                    { name: 'brewers_158', id: '1339072560049950760' }
+                ),
+                feed,
+                true,
+                '#BA0021',
+                '#FFC52F',
+                { name: 'angels_108', id: '1339072522619977770' },
+                { name: 'brewers_158', id: '1339072560049950760' }
+            );
+
+            expect(embed.data.title).toEqual('TOP 9, MIL vs. LAA - Scoring Play ❗');
+        });
+
+        it('should include the score and emojis in the title for non-scoring plays', async () => {
+            const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
+            const embed = gameday.constructPlayEmbed(
+                currentPlayProcessor.process(
+                    examplePlays.steal,
+                    feed,
+                    { name: 'angels_108', id: '1339072522619977770' },
+                    { name: 'brewers_158', id: '1339072560049950760' }
+                ),
+                feed,
+                true,
+                '#BA0021',
+                '#FFC52F',
+                { name: 'angels_108', id: '1339072522619977770' },
+                { name: 'brewers_158', id: '1339072560049950760' }
+            );
+
+            expect(embed.data.title).toEqual('TOP 9, <:brewers_158:1339072560049950760> MIL 3 - 5 LAA <:angels_108:1339072522619977770>');
         });
     });
 });
