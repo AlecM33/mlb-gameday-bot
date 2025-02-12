@@ -14,7 +14,7 @@ const currentPlayProcessor = require('./current-play-processor');
 module.exports = {
 
     helpHandler: async (interaction) => {
-        console.info(`HELP command invoked by guild:e ${interaction.guildId}`);
+        console.info(`HELP command invoked by guild: ${interaction.guildId}`);
         interaction.reply({ content: globals.HELP_MESSAGE, ephemeral: true });
     },
 
