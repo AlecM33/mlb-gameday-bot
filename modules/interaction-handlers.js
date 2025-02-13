@@ -5,6 +5,11 @@ const { joinImages } = require('join-images');
 const globals = require('../config/globals');
 const commandUtil = require('./command-util');
 const queries = require('../database/queries.js');
+const { constructPlayEmbed } = require('./gameday');
+const examplePlays = require('../spec/data/example-plays');
+const exampleLiveFeed = require('../spec/data/example-live-feed');
+const liveFeed = require('./livefeed');
+const currentPlayProcessor = require('./current-play-processor');
 
 module.exports = {
 
@@ -74,6 +79,7 @@ module.exports = {
 
     scheduleHandler: async (interaction) => {
         console.info(`SCHEDULE command invoked by guild: ${interaction.guildId}`);
+        const week = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const oneWeek = new Date();
         oneWeek.setDate(oneWeek.getDate() + 7);
         const nextWeek = await mlbAPIUtil.schedule(
@@ -86,14 +92,20 @@ module.exports = {
             const gameDate = new Date(game.gameDate);
             const teams = game.teams;
             const home = teams.home.team.id === parseInt(process.env.TEAM_ID);
-            reply += date.date.substr(6) +
-                (home ? ' vs. ' : ' @ ') + (home ? teams.away.team.name : teams.home.team.name) + ' ' +
+            const emoji = globalCache.values.emojis
+                .find(v => v.name.includes(
+                    (home ? teams.away.team.id : teams.home.team.id)
+                ));
+            reply += `${week[gameDate.getDay()]} ${date.date.substr(6)}` +
+                (home ? ' vs. ' : ' @ ') + (home ? teams.away.team.abbreviation : teams.home.team.abbreviation) +
+                ` <:${emoji.name}:${emoji.id}>` +
+                ' ' +
                 gameDate.toLocaleString('en-US', {
                     timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
                     hour: 'numeric',
                     minute: '2-digit',
                     timeZoneName: 'short'
-                }) +
+                }) + (game.gameType === 'S' ? ' (Spring Training)' : '') +
                 '\n';
         });
         if (reply.length === 0) {
@@ -187,6 +199,55 @@ module.exports = {
                 content: 'Subscribed this channel to the gameday feed.\n' +
                     'Events: ' + (scoringPlaysOnly ? '**Scoring Plays Only**' : '**All Plays**') + '\n' +
                     'Reporting Delay: **' + (reportingDelay || 0) + ' seconds**'
+            });
+        }
+    },
+
+    testGamedayReportingHandler: async (interaction) => {
+        console.info(`TEST GAMEDAY REPORTING command invoked by guild: ${interaction.guildId}`);
+        if (!interaction.member.roles.cache.some(role => globals.ADMIN_ROLES.includes(role.name))) {
+            await interaction.reply({
+                ephemeral: true,
+                content: 'You do not have permission to use this command.'
+            });
+            return;
+        }
+        const play = interaction.options.getString('play');
+        const feed = liveFeed.init(exampleLiveFeed);
+        if (!interaction.replied) {
+            await interaction.reply({
+                ephemeral: true,
+                embeds: [constructPlayEmbed((() => {
+                    if (play === 'Home Run') {
+                        return currentPlayProcessor.process(
+                            examplePlays.homeRun,
+                            feed,
+                            { name: 'angels_108', id: '1339072522619977770' },
+                            { name: 'brewers_158', id: '1339072560049950760' }
+                        );
+                    } else if (play === 'Steal') {
+                        return currentPlayProcessor.process(
+                            examplePlays.steal,
+                            feed,
+                            { name: 'angels_108', id: '1339072522619977770' },
+                            { name: 'brewers_158', id: '1339072560049950760' }
+                        );
+                    } else if (play === 'Challenge') {
+                        return currentPlayProcessor.process(
+                            examplePlays.inProgressChallenge,
+                            feed,
+                            { name: 'angels_108', id: '1339072522619977770' },
+                            { name: 'brewers_158', id: '1339072560049950760' }
+                        );
+                    }
+                })(),
+                feed,
+                true,
+                '#BA0021',
+                '#FFC52F',
+                { name: 'angels_108', id: '1339072522619977770' },
+                { name: 'brewers_158', id: '1339072560049950760' }
+                )]
             });
         }
     },
@@ -412,13 +473,17 @@ module.exports = {
         console.info(`PITCHER command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
         const playerName = interaction.options.getString('player')?.trim();
+        const statType = interaction.options.getString('stat_type');
         const playerResult = await commandUtil.getPlayerFromUserInputOrLiveFeed(playerName, interaction, 'Pitcher');
         const pitcher = playerResult.player;
         if (!pitcher && !playerName) {
             await interaction.followUp('No game is live right now!');
             return;
+        } else if (playerName && !pitcher) {
+            await interaction.followUp('I didn\'t find a player with a close enough match to your input (use first and last name).');
+            return;
         }
-        const pitcherInfo = await commandUtil.hydrateProbable(pitcher.id);
+        const pitcherInfo = await commandUtil.hydrateProbable(pitcher.id, (statType || 'R'));
         const attachment = new AttachmentBuilder(Buffer.from(pitcherInfo.spot), { name: 'spot.png' });
         const replyOptions = {
             ephemeral: false,
@@ -434,7 +499,8 @@ module.exports = {
                     pitcherInfo.pitchingStats.seasonAdvanced,
                     pitcherInfo.pitchingStats.sabermetrics,
                     true
-                ))],
+                ),
+                (statType || 'R'))],
             components: [],
             content: ''
         };
@@ -445,13 +511,17 @@ module.exports = {
         console.info(`BATTER command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
         const playerName = interaction.options.getString('player')?.trim();
+        const statType = interaction.options.getString('stat_type');
         const playerResult = await commandUtil.getPlayerFromUserInputOrLiveFeed(playerName, interaction, 'Batter');
         const batter = playerResult.player;
         if (!batter && !playerName) {
             await interaction.followUp('No game is live right now!');
             return;
+        } else if (playerName && !batter) {
+            await interaction.followUp('I didn\'t find a player with a close enough match to your input (use first and last name).');
+            return;
         }
-        const batterInfo = await commandUtil.hydrateHitter(batter.id);
+        const batterInfo = await commandUtil.hydrateHitter(batter.id, (statType || 'R'));
         const attachment = new AttachmentBuilder(Buffer.from(batterInfo.spot), { name: 'spot.png' });
         const replyOptions = {
             ephemeral: false,
@@ -463,7 +533,8 @@ module.exports = {
                 commandUtil.formatSplits(
                     batterInfo.stats.stats.find(stat => stat.type.displayName === 'season'),
                     batterInfo.stats.stats.find(stat => stat.type.displayName === 'statSplits'),
-                    batterInfo.stats.stats.find(stat => stat.type.displayName === 'lastXGames'))
+                    batterInfo.stats.stats.find(stat => stat.type.displayName === 'lastXGames'), (statType || 'R')),
+                (statType || 'R')
             )],
             components: [],
             content: ''
@@ -484,7 +555,7 @@ module.exports = {
         const text = await mlbAPIUtil.savantPage(batter.id, 'hitting');
         const statcastData = commandUtil.getStatcastData(text);
         if (statcastData.mostRecentStatcast && statcastData.mostRecentMetricYear && statcastData.metricSummaryJSON) {
-            const batterInfo = await commandUtil.hydrateHitter(batter.id);
+            const batterInfo = await commandUtil.hydrateHitter(batter.id, 'R');
             const savantAttachment = new AttachmentBuilder((await commandUtil.buildBatterSavantTable(
                 statcastData.mostRecentStatcast,
                 statcastData.metricSummaryJSON[statcastData.mostRecentMetricYear.toString()],
@@ -492,7 +563,7 @@ module.exports = {
             const replyOptions = {
                 ephemeral: false,
                 files: [savantAttachment],
-                embeds: [commandUtil.getBatterEmbed(batter, batterInfo, !playerName, null, true)],
+                embeds: [commandUtil.getBatterEmbed(batter, batterInfo, !playerName, null, null, true)],
                 components: [],
                 content: ''
             };
@@ -517,7 +588,7 @@ module.exports = {
         const text = await mlbAPIUtil.savantPage(pitcher.id, 'pitching');
         const statcastData = commandUtil.getStatcastData(text);
         if (statcastData.mostRecentStatcast && statcastData.mostRecentMetricYear && statcastData.metricSummaryJSON) {
-            const pitcherInfo = await commandUtil.hydrateProbable(pitcher.id);
+            const pitcherInfo = await commandUtil.hydrateProbable(pitcher.id, 'R');
             const savantAttachment = new AttachmentBuilder((await commandUtil.buildPitcherSavantTable(
                 statcastData.mostRecentStatcast,
                 statcastData.metricSummaryJSON[statcastData.mostRecentMetricYear.toString()],
@@ -525,7 +596,7 @@ module.exports = {
             const replyOptions = {
                 ephemeral: false,
                 files: [savantAttachment],
-                embeds: [commandUtil.getPitcherEmbed(pitcher, pitcherInfo, !playerName, null, true)],
+                embeds: [commandUtil.getPitcherEmbed(pitcher, pitcherInfo, !playerName, null, null, true)],
                 components: [],
                 content: ''
             };

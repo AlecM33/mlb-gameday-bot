@@ -1,9 +1,8 @@
 const globalCache = require('./global-cache');
 const globals = require('../config/globals');
-const liveFeed = require('./livefeed');
 
 module.exports = {
-    process: (currentPlayJSON) => {
+    process: (currentPlayJSON, feed, homeTeamEmoji, awayTeamEmoji) => {
         let reply = '';
         if (!globalCache.values.game.startReported
             && currentPlayJSON.playEvents?.find(event => event?.details?.description === 'Status Change - In Progress')) {
@@ -25,7 +24,7 @@ module.exports = {
             }
             if (!currentPlayJSON.reviewDetails?.inProgress
                 && (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details?.isScoringPlay)) {
-                reply = addScore(reply, currentPlayJSON);
+                reply = addScore(reply, currentPlayJSON, feed, homeTeamEmoji, awayTeamEmoji);
             }
             if (!currentPlayJSON.about?.hasReview) {
                 if (currentPlayJSON.playEvents) {
@@ -61,9 +60,8 @@ module.exports = {
     }
 };
 
-function addScore (reply, currentPlayJSON) {
+function addScore (reply, currentPlayJSON, feed, homeTeamEmoji, awayTeamEmoji) {
     reply += '\n';
-    const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
     let homeScore, awayScore;
     if (currentPlayJSON.result) {
         homeScore = currentPlayJSON.result.homeScore;
@@ -73,10 +71,10 @@ function addScore (reply, currentPlayJSON) {
         awayScore = currentPlayJSON.details.awayScore;
     }
     reply += (feed.halfInning() === 'top'
-        ? '# _' + feed.awayAbbreviation() + ' ' + awayScore + '_, ' +
-        feed.homeAbbreviation() + ' ' + homeScore
-        : '# ' + feed.awayAbbreviation() + ' ' + awayScore + ', _' +
-        feed.homeAbbreviation() + ' ' + homeScore + '_');
+        ? '# ' + `<:${awayTeamEmoji.name}:${awayTeamEmoji.id}>` + ' _' + feed.awayAbbreviation() + ' ' + awayScore + '_, ' +
+        feed.homeAbbreviation() + ' ' + homeScore + ` <:${homeTeamEmoji.name}:${homeTeamEmoji.id}>`
+        : '# ' + `<:${awayTeamEmoji.name}:${awayTeamEmoji.id}> ` + feed.awayAbbreviation() + ' ' + awayScore + ', _' +
+        feed.homeAbbreviation() + ' ' + homeScore + '_' + ` <:${homeTeamEmoji.name}:${homeTeamEmoji.id}>`);
 
     return reply;
 }

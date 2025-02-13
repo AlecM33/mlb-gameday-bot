@@ -1,6 +1,7 @@
 const currentPlayProcessor = require('../modules/current-play-processor');
 const globalCache = require('../modules/global-cache');
 const examplePlays = require('./data/example-plays');
+const liveFeed = require('../modules/livefeed');
 
 describe('current-play-processor', () => {
     beforeAll(() => {
@@ -8,10 +9,15 @@ describe('current-play-processor', () => {
     });
     describe('#process', () => {
         it('should correctly process a home run', async () => {
-            const result = await currentPlayProcessor.process(examplePlays.homeRun);
+            const result = await currentPlayProcessor.process(
+                examplePlays.homeRun,
+                liveFeed.init(globalCache.values.game.currentLiveFeed),
+                { name: 'angels_108', id: '1339072522619977770' },
+                { name: 'brewers_158', id: '1339072560049950760' }
+            );
             expect(result.reply).toMatch(/Brice Turang homers \(4\) on a fly ball to right center field\./);
-            expect(result.reply).toMatch(/# _MIL 3_/);
-            expect(result.reply).toMatch(/LAA 5/);
+            expect(result.reply).toMatch(/# <:brewers_158:1339072560049950760> _MIL 3_/);
+            expect(result.reply).toMatch(/LAA 5 <:angels_108:1339072522619977770>/);
             expect(result.reply).toMatch(/Exit Velo: 105\.5 mph \uD83D\uDD25\uD83D\uDD25/);
             expect(result.reply).toMatch(/Launch Angle: 24°/);
             expect(result.reply).toMatch(/Distance: 419 ft./);
@@ -27,7 +33,12 @@ describe('current-play-processor', () => {
         });
 
         it('should correctly process a steal', async () => {
-            const result = await currentPlayProcessor.process(examplePlays.steal);
+            const result = await currentPlayProcessor.process(
+                examplePlays.steal,
+                liveFeed.init(globalCache.values.game.currentLiveFeed),
+                { name: 'angels_108', id: '1339072522619977770' },
+                { name: 'brewers_158', id: '1339072560049950760' }
+            );
             expect(result.reply).toMatch(/Sal Frelick steals \(9\) 2nd base\./);
             expect(result.reply).not.toMatch(/## LAA now leads 5-3/);
             expect(result.reply).not.toMatch(/Exit Velo/);
@@ -45,12 +56,22 @@ describe('current-play-processor', () => {
         });
 
         it('should not produce a reply for a blacklisted event', async () => {
-            const result = await currentPlayProcessor.process(examplePlays.defensiveSwitch);
+            const result = await currentPlayProcessor.process(
+                examplePlays.defensiveSwitch,
+                liveFeed.init(globalCache.values.game.currentLiveFeed),
+                { name: 'angels_108', id: '1339072522619977770' },
+                { name: 'brewers_158', id: '1339072560049950760' }
+            );
             expect(result.reply).toEqual('');
         });
 
         it('should correctly process a challenged play', async () => {
-            const result = currentPlayProcessor.process(examplePlays.resolvedChallenge);
+            const result = currentPlayProcessor.process(
+                examplePlays.resolvedChallenge,
+                liveFeed.init(globalCache.values.game.currentLiveFeed),
+                { name: 'angels_108', id: '1339072522619977770' },
+                { name: 'brewers_158', id: '1339072560049950760' }
+            );
             expect(result.reply).toMatch(/Brewers challenged \(tag play\), call on the field was upheld: Blake Perkins reaches on a fielder's choice out, shortstop Zach Neto to third baseman Luis Guillorme\. {3}Gary Sánchez out at 3rd\./);
             expect(result.reply).not.toMatch(/Exit Velo/);
             expect(result.reply).not.toMatch(/Launch Angle/);
