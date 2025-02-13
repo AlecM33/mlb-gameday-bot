@@ -8,7 +8,16 @@ module.exports = {
         .addStringOption(option =>
             option.setName('player')
                 .setDescription('An active player\'s name.')
-                .setRequired(false)),
+                .setRequired(false))
+        .addStringOption(option =>
+            option.setName('stat_type')
+                .setDescription('Regular Season (default), Postseason, or Spring Training?')
+                .setRequired(false)
+                .addChoices(
+                    { name: 'Regular Season', value: 'R' },
+                    { name: 'Postseason', value: 'P' },
+                    { name: 'Spring Training', value: 'S' }
+                )),
     async execute (interaction) {
         try {
             await interactionHandlers.batterHandler(interaction);

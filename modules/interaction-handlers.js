@@ -473,13 +473,17 @@ module.exports = {
         console.info(`PITCHER command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
         const playerName = interaction.options.getString('player')?.trim();
+        const statType = interaction.options.getString('stat_type');
         const playerResult = await commandUtil.getPlayerFromUserInputOrLiveFeed(playerName, interaction, 'Pitcher');
         const pitcher = playerResult.player;
         if (!pitcher && !playerName) {
             await interaction.followUp('No game is live right now!');
             return;
+        } else if (playerName && !pitcher) {
+            await interaction.followUp('I didn\'t find a player with a close enough match to your input (use first and last name).');
+            return;
         }
-        const pitcherInfo = await commandUtil.hydrateProbable(pitcher.id);
+        const pitcherInfo = await commandUtil.hydrateProbable(pitcher.id, (statType || 'R'));
         const attachment = new AttachmentBuilder(Buffer.from(pitcherInfo.spot), { name: 'spot.png' });
         const replyOptions = {
             ephemeral: false,
@@ -495,7 +499,8 @@ module.exports = {
                     pitcherInfo.pitchingStats.seasonAdvanced,
                     pitcherInfo.pitchingStats.sabermetrics,
                     true
-                ))],
+                ),
+                (statType || 'R'))],
             components: [],
             content: ''
         };
@@ -506,13 +511,17 @@ module.exports = {
         console.info(`BATTER command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
         const playerName = interaction.options.getString('player')?.trim();
+        const statType = interaction.options.getString('stat_type');
         const playerResult = await commandUtil.getPlayerFromUserInputOrLiveFeed(playerName, interaction, 'Batter');
         const batter = playerResult.player;
         if (!batter && !playerName) {
             await interaction.followUp('No game is live right now!');
             return;
+        } else if (playerName && !batter) {
+            await interaction.followUp('I didn\'t find a player with a close enough match to your input (use first and last name).');
+            return;
         }
-        const batterInfo = await commandUtil.hydrateHitter(batter.id);
+        const batterInfo = await commandUtil.hydrateHitter(batter.id, (statType || 'R'));
         const attachment = new AttachmentBuilder(Buffer.from(batterInfo.spot), { name: 'spot.png' });
         const replyOptions = {
             ephemeral: false,
@@ -524,7 +533,8 @@ module.exports = {
                 commandUtil.formatSplits(
                     batterInfo.stats.stats.find(stat => stat.type.displayName === 'season'),
                     batterInfo.stats.stats.find(stat => stat.type.displayName === 'statSplits'),
-                    batterInfo.stats.stats.find(stat => stat.type.displayName === 'lastXGames'))
+                    batterInfo.stats.stats.find(stat => stat.type.displayName === 'lastXGames'), (statType || 'R')),
+                (statType || 'R')
             )],
             components: [],
             content: ''
@@ -586,7 +596,7 @@ module.exports = {
             const replyOptions = {
                 ephemeral: false,
                 files: [savantAttachment],
-                embeds: [commandUtil.getPitcherEmbed(pitcher, pitcherInfo, !playerName, null, true)],
+                embeds: [commandUtil.getPitcherEmbed(pitcher, pitcherInfo, !playerName, null, null, true)],
                 components: [],
                 content: ''
             };

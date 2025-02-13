@@ -17,7 +17,6 @@
     "discord.js": "^14.16.0",
     "jasmine": "^5.1.0",
     "join-images": "^1.1.5",
-    "js-levenshtein": "^1.1.6",
     "jsdom": "^24.1.0",
     "pg": "^8.12.0",
     "puppeteer": "^22.10.0",

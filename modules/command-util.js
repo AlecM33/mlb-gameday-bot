@@ -7,7 +7,7 @@ const globals = require('../config/globals');
 const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_LEVEL.INFO);
 const chroma = require('chroma-js');
 const ztable = require('ztable');
-const levenshtein = require('js-levenshtein');
+const levenshtein = require('./levenshtein');
 const { performance } = require('perf_hooks');
 const liveFeed = require('./livefeed');
 
@@ -46,7 +46,7 @@ module.exports = {
         table.removeBorder();
         return await getScreenshotOfHTMLTables([table]);
     },
-    hydrateProbable: async (probable) => {
+    hydrateProbable: async (probable, statType) => {
         const [spot, savant, people] = await Promise.all([
             new Promise((resolve, reject) => {
                 if (probable) {
@@ -62,7 +62,7 @@ module.exports = {
             mlbAPIUtil.savantPitchData(probable),
             new Promise((resolve, reject) => {
                 if (probable) {
-                    resolve(mlbAPIUtil.pitcher(probable, 3));
+                    resolve(mlbAPIUtil.pitcher(probable, 3, statType));
                 } else {
                     resolve(undefined);
                 }
@@ -74,12 +74,12 @@ module.exports = {
             spot,
             fullName: people?.people[0].fullName,
             pitchMix: savant instanceof Error ? savant : getPitchCollections(new jsdom.JSDOM(savant)),
-            pitchingStats: parsePitchingStats(people),
+            pitchingStats: parsePitchingStats(people, statType),
             handedness: people?.people[0].pitchHand?.code
         };
     },
 
-    hydrateHitter: async (hitter) => {
+    hydrateHitter: async (hitter, statType) => {
         const [spot, stats] = await Promise.all([
             new Promise((resolve, reject) => {
                 if (hitter) {
@@ -94,7 +94,7 @@ module.exports = {
             }),
             new Promise((resolve, reject) => {
                 if (hitter) {
-                    resolve(mlbAPIUtil.hitter(hitter));
+                    resolve(mlbAPIUtil.hitter(hitter, statType));
                 } else {
                     resolve(undefined);
                 }
@@ -108,7 +108,7 @@ module.exports = {
         };
     },
 
-    formatSplits: (season, splitStats, lastXGamesStats) => {
+    formatSplits: (season, splitStats, lastXGamesStats, statType) => {
         const vsLeft = (splitStats.splits.find(split => split?.split?.code === 'vl' && !split.team)
             || splitStats.splits.find(split => split?.split?.code === 'vl'));
         const vsRight = (splitStats.splits.find(split => split?.split?.code === 'vr' && !split.team)
@@ -117,26 +117,36 @@ module.exports = {
         const risp = (splitStats.splits.find(split => split?.split?.code === 'risp' && !split.team)
             || splitStats.splits.find(split => split?.split?.code === 'risp')
         );
-        const lastXGames = (lastXGamesStats.splits.find(split => !split.team) || lastXGamesStats.splits[0]);
-        const seasonStats = (season.splits.find(split => !split.team) || season.splits[0]);
-        const formattedSplits = '\n### ' + seasonStats.season + ' Season Stats:\n### ' +
-            seasonStats.stat.avg + '/' + seasonStats.stat.obp + '/' + seasonStats.stat.slg + ', ' + seasonStats.stat.homeRuns + ' HR, ' + seasonStats.stat.rbi + ' RBIs\n' +
-            '**Last 7 Games**' + (lastXGames ? ' (' + lastXGames.stat.plateAppearances + ' ABs)\n' : '\n') + (
+        const lastXGames = (lastXGamesStats?.splits.find(split => !split.team) || lastXGamesStats?.splits[0]);
+        const seasonStats = (season?.splits.find(split => !split.team) || season?.splits[0]);
+        const formattedSplits = '\n### ' + (seasonStats?.season || 'Current') + ` ${(() => {
+            switch (statType) {
+                case 'R':
+                    return 'Regular Season';
+                case 'P':
+                    return 'Postseason';
+                case 'S':
+                    return 'Spring Training';
+            }
+        })()}:\n### ` + (seasonStats
+            ? `${seasonStats.stat.avg}/${seasonStats.stat.obp}/${seasonStats.stat.slg} (${seasonStats.stat.ops} OPS), ${seasonStats.stat.homeRuns} HR, ${seasonStats.stat.rbi} RBIs\n`
+            : 'No at-bats.\n'
+        ) + '**Last 7 Games**' + (lastXGames ? ' (' + lastXGames.stat.plateAppearances + ' ABs)\n' : '\n') + (
             lastXGames
-                ? lastXGames.stat.avg + '/' + lastXGames.stat.obp + '/' + lastXGames.stat.slg
-                : 'No at-bats!'
+                ? lastXGames.stat.avg + '/' + lastXGames.stat.obp + '/' + lastXGames.stat.slg + ` (${lastXGames.stat.ops} OPS)`
+                : 'No at-bats.'
         ) + '\n\n**vs. Righties**' + (vsRight ? ' (' + vsRight.stat.plateAppearances + ' ABs)\n' : '\n') + (
             vsRight
-                ? vsRight.stat.avg + '/' + vsRight.stat.obp + '/' + vsRight.stat.slg
-                : 'No at-bats!'
+                ? vsRight.stat.avg + '/' + vsRight.stat.obp + '/' + vsRight.stat.slg + ` (${vsRight.stat.ops} OPS)`
+                : 'No at-bats.'
         ) + '\n\n**vs. Lefties**' + (vsLeft ? ' (' + vsLeft.stat.plateAppearances + ' ABs)\n' : '\n') + (
             vsLeft
-                ? vsLeft.stat.avg + '/' + vsLeft.stat.obp + '/' + vsLeft.stat.slg
-                : 'No at-bats!'
+                ? vsLeft.stat.avg + '/' + vsLeft.stat.obp + '/' + vsLeft.stat.slg + ` (${vsLeft.stat.ops} OPS)`
+                : 'No at-bats.'
         ) + '\n\n**with RISP**' + (risp ? ' (' + risp.stat.plateAppearances + ' ABs)\n' : '\n') + (
             risp
-                ? risp.stat.avg + '/' + risp.stat.obp + '/' + risp.stat.slg
-                : 'No at-bats!'
+                ? risp.stat.avg + '/' + risp.stat.obp + '/' + risp.stat.slg + ` (${risp.stat.ops} OPS)`
+                : 'No at-bats.'
         );
         LOGGER.trace(formattedSplits);
         return formattedSplits;
@@ -640,7 +650,7 @@ module.exports = {
             reply += `BB: ${lastThree.baseOnBalls}, `;
             reply += `HR: ${lastThree.homeRuns}\n`;
         }
-        reply += '**Season:** \n';
+        reply += '**All Games:** \n';
         if (!pitchingStats) {
             reply += 'G: 0, ';
             reply += 'W-L: -, ';
@@ -651,13 +661,15 @@ module.exports = {
             reply += `W-L: ${pitchingStats.wins}-${pitchingStats.losses}, `;
             reply += `ERA: ${pitchingStats.era}, `;
             reply += `WHIP: ${pitchingStats.whip} `;
-            if (includeExtra && seasonAdvanced && sabermetrics) {
+            if (includeExtra && (seasonAdvanced || sabermetrics)) {
                 reply += '\n...\n';
                 reply += `IP: ${pitchingStats.inningsPitched}\n`;
                 reply += `K/BB: ${seasonAdvanced.strikesoutsToWalks}\n`;
                 reply += `BABIP: ${seasonAdvanced.babip}\n`;
                 reply += `SLG: ${seasonAdvanced.slg}\n`;
-                reply += `WAR: ${sabermetrics.war.toFixed(2)}\n`;
+                if (sabermetrics) { // not available if filtering by postseason only
+                    reply += `WAR: ${sabermetrics.war.toFixed(2)}\n`;
+                }
                 reply += `Saves/Opps: ${pitchingStats.saves}/${pitchingStats.saveOpportunities}`;
             }
         }
@@ -725,8 +737,8 @@ module.exports = {
         let smallestDistance = Infinity;
         allPlayers.people.forEach(p => {
             const currentName = removeDiacritics(`${p.fullName}`.toLowerCase());
-            const distance = levenshtein(currentName, normalizedPlayerName);
-            if (distance <= smallestDistance
+            const distance = levenshtein.distance(currentName, normalizedPlayerName, globals.MAX_LEVENSHTEIN_DISTANCE);
+            if (distance <= globals.MAX_LEVENSHTEIN_DISTANCE && distance <= smallestDistance
                 && (
                     (type === 'Pitcher' && p.primaryPosition.name === 'Pitcher')
                     || (type === 'Batter' && p.primaryPosition.name !== 'Pitcher')
@@ -744,7 +756,7 @@ module.exports = {
         return matchingPlayers;
     },
 
-    getPitcherEmbed: (pitcher, pitcherInfo, isLiveGame, description, savantMode = false) => {
+    getPitcherEmbed: (pitcher, pitcherInfo, isLiveGame, description, statType = 'R', savantMode = false) => {
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         if (isLiveGame) {
             const abbreviations = {
@@ -759,9 +771,22 @@ module.exports = {
             const embed = new EmbedBuilder()
                 .setTitle(halfInning.toUpperCase() + ' ' + inning + ', ' +
                     abbreviations.away + ' vs. ' + abbreviations.home + ': Current Pitcher')
-                .setDescription('## ' + (pitcherInfo.handedness
+                .setDescription('### ' + (pitcherInfo.handedness
                     ? pitcherInfo.handedness + 'HP **'
-                    : '**') + (pitcher.fullName || 'TBD') + '** (' + abbreviation + ')' + (description || ''))
+                    : '**') + (pitcher.fullName || 'TBD') +
+                        '** (' + abbreviation + `): ${pitcherInfo.pitchingStats.yearOfStats || 'Current'} ${(() => {
+                    if (savantMode) {
+                        return '';
+                    }
+                    switch (statType) {
+                        case 'R':
+                            return 'Regular Season';
+                        case 'P':
+                            return 'Postseason';
+                        case 'S':
+                            return 'Spring Training';
+                    }
+                })()}` + (description || ''))
                 .setImage('attachment://savant.png')
                 .setColor((halfInning === 'top'
                     ? globalCache.values.game.homeTeamColor
@@ -777,7 +802,19 @@ module.exports = {
             const embed = new EmbedBuilder()
                 .setTitle((pitcherInfo.handedness
                     ? pitcherInfo.handedness + 'HP '
-                    : '') + pitcher.fullName)
+                    : '') + pitcher.fullName + `: ${pitcherInfo.pitchingStats.yearOfStats || 'Current'} ${(() => {
+                    if (savantMode) { 
+                        return '';
+                    }
+                    switch (statType) {
+                        case 'R':
+                            return 'Regular Season';
+                        case 'P':
+                            return 'Postseason';
+                        case 'S':
+                            return 'Spring Training';
+                    }
+                })()}`)
                 .setImage('attachment://savant.png')
                 .setColor(globals.TEAMS.find(team => team.id === pitcher.currentTeam.id).primaryColor);
 
@@ -793,7 +830,7 @@ module.exports = {
         }
     },
 
-    getBatterEmbed: (batter, batterInfo, isLiveGame, description, savantMode = false) => {
+    getBatterEmbed: (batter, batterInfo, isLiveGame, description, statType = 'R', savantMode = false) => {
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         let expandedBatter;
         if (isLiveGame) {
@@ -862,7 +899,7 @@ module.exports = {
             }
         } else {
             currentLiveFeed = globalCache.values.game.currentLiveFeed;
-            if (currentLiveFeed && currentLiveFeed.gameData.status.abstractGameState === 'Live') {
+            if (currentLiveFeed && currentLiveFeed.gameData.status.abstractGameState === 'Final') {
                 player = type === 'Pitcher'
                     ? currentLiveFeed.liveData.plays.currentPlay.matchup.pitcher
                     : currentLiveFeed.liveData.plays.currentPlay.matchup.batter;
@@ -909,20 +946,37 @@ function mapStandings (standings, wildcard = false) {
 }
 
 function getPitchCollections (dom) {
+    const years = [];
     const pitches = [];
     const percentages = [];
     const MPHs = [];
     const battingAvgsAgainst = [];
     dom.window.document
-        .querySelectorAll('tbody tr td:nth-child(2)').forEach(el => pitches.push(el.textContent.trim()));
+        .querySelectorAll('tbody tr td:nth-child(1)').forEach(el => years.push(el.textContent.trim()));
     dom.window.document
-        .querySelectorAll('tbody tr td:nth-child(6)').forEach(el => percentages.push(el.textContent.trim()));
+        .querySelectorAll('tbody tr td:nth-child(2)').forEach((el, key) => {
+            if (years[key] === years[0]) {
+                pitches.push(el.textContent.trim());
+            }
+        });
     dom.window.document
-        .querySelectorAll('tbody tr td:nth-child(7)').forEach(el => MPHs.push(el.textContent.trim()));
+        .querySelectorAll('tbody tr td:nth-child(6)').forEach((el, key) => {
+            if (years[key] === years[0]) {
+                percentages.push(el.textContent.trim());
+            }
+        });
     dom.window.document
-        .querySelectorAll('tbody tr td:nth-child(18)').forEach(el => battingAvgsAgainst.push(
-            (el.textContent.trim().length > 0 ? el.textContent.trim() : 'N/A')
-        ));
+        .querySelectorAll('tbody tr td:nth-child(7)').forEach((el, key) => {
+            if (years[key] === years[0]) {
+                MPHs.push(el.textContent.trim());
+            }
+        });
+    dom.window.document
+        .querySelectorAll('tbody tr td:nth-child(18)').forEach((el, key) => {
+            if (years[key] === years[0]) {
+                battingAvgsAgainst.push((el.textContent.trim().length > 0 ? el.textContent.trim() : 'N/A'));
+            }
+        });
     return [pitches, percentages, MPHs, battingAvgsAgainst];
 }
 
@@ -954,13 +1008,18 @@ async function resolveDoubleHeaderSelection (interaction) {
     }
 }
 
-function parsePitchingStats (people) {
+function parsePitchingStats (people, statType) {
     return {
-        season: people?.people[0]?.stats?.find(stat => stat?.type?.displayName === 'season')?.splits[0]?.stat,
-        lastXGames: people?.people[0]?.stats?.find(stat => stat?.type?.displayName === 'lastXGames')?.splits[0]?.stat,
-        seasonAdvanced: people?.people[0]?.stats?.find(stat => stat?.type?.displayName === 'seasonAdvanced')?.splits[0]?.stat,
-        sabermetrics: people?.people[0]?.stats?.find(stat => stat?.type?.displayName === 'sabermetrics')?.splits[0]?.stat
+        yearOfStats: findSplit(people?.people[0]?.stats?.find(stat => stat?.type?.displayName === 'season'))?.season,
+        season: findSplit(people?.people[0]?.stats?.find(stat => stat?.type?.displayName === 'season'))?.stat,
+        lastXGames: findSplit(people?.people[0]?.stats?.find(stat => stat?.type?.displayName === 'lastXGames'))?.stat,
+        seasonAdvanced: findSplit(people?.people[0]?.stats?.find(stat => stat?.type?.displayName === 'seasonAdvanced'))?.stat,
+        sabermetrics: findSplit(people?.people[0]?.stats?.find(stat => stat?.type?.displayName === 'sabermetrics'))?.stat
     };
+}
+
+function findSplit (stat) {
+    return stat?.splits?.find(s => !s.team) || stat?.splits[0];
 }
 
 /* This is not the best solution, admittedly. We are building an HTML version of the table in a headless browser, styling
