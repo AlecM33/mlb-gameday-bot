@@ -555,7 +555,7 @@ module.exports = {
         const text = await mlbAPIUtil.savantPage(batter.id, 'hitting');
         const statcastData = commandUtil.getStatcastData(text);
         if (statcastData.mostRecentStatcast && statcastData.mostRecentMetricYear && statcastData.metricSummaryJSON) {
-            const batterInfo = await commandUtil.hydrateHitter(batter.id);
+            const batterInfo = await commandUtil.hydrateHitter(batter.id, 'R');
             const savantAttachment = new AttachmentBuilder((await commandUtil.buildBatterSavantTable(
                 statcastData.mostRecentStatcast,
                 statcastData.metricSummaryJSON[statcastData.mostRecentMetricYear.toString()],
@@ -563,7 +563,7 @@ module.exports = {
             const replyOptions = {
                 ephemeral: false,
                 files: [savantAttachment],
-                embeds: [commandUtil.getBatterEmbed(batter, batterInfo, !playerName, null, true)],
+                embeds: [commandUtil.getBatterEmbed(batter, batterInfo, !playerName, null, null, true)],
                 components: [],
                 content: ''
             };
@@ -588,7 +588,7 @@ module.exports = {
         const text = await mlbAPIUtil.savantPage(pitcher.id, 'pitching');
         const statcastData = commandUtil.getStatcastData(text);
         if (statcastData.mostRecentStatcast && statcastData.mostRecentMetricYear && statcastData.metricSummaryJSON) {
-            const pitcherInfo = await commandUtil.hydrateProbable(pitcher.id);
+            const pitcherInfo = await commandUtil.hydrateProbable(pitcher.id, 'R');
             const savantAttachment = new AttachmentBuilder((await commandUtil.buildPitcherSavantTable(
                 statcastData.mostRecentStatcast,
                 statcastData.metricSummaryJSON[statcastData.mostRecentMetricYear.toString()],

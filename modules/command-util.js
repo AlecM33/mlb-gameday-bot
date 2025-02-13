@@ -899,7 +899,7 @@ module.exports = {
             }
         } else {
             currentLiveFeed = globalCache.values.game.currentLiveFeed;
-            if (currentLiveFeed && currentLiveFeed.gameData.status.abstractGameState === 'Final') {
+            if (currentLiveFeed && currentLiveFeed.gameData.status.abstractGameState === 'Live') {
                 player = type === 'Pitcher'
                     ? currentLiveFeed.liveData.plays.currentPlay.matchup.pitcher
                     : currentLiveFeed.liveData.plays.currentPlay.matchup.batter;
