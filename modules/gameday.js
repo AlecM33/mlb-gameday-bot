@@ -9,7 +9,7 @@ const liveFeed = require('./livefeed');
 const gamedayUtil = require('./gameday-util');
 
 module.exports = {
-    statusPoll, subscribe, processAndPushPlay, pollForSavantData, processMatchingPlay
+    statusPoll, subscribe, processAndPushPlay, pollForSavantData, processMatchingPlay, sendMessage, sendDelayedMessage, constructPlayEmbed
 };
 
 async function statusPoll (bot) {
@@ -36,6 +36,7 @@ async function statusPoll (bot) {
                 globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(inProgressGame.gamePk);
                 globalCache.values.game.currentGamePk = inProgressGame.gamePk;
                 gamedayUtil.getConstrastingEmbedColors();
+                gamedayUtil.getTeamEmojis();
                 module.exports.subscribe(bot, inProgressGame, nearestGames);
             } else {
                 setTimeout(pollingFunction, globals.SLOW_POLL_INTERVAL);
@@ -123,21 +124,37 @@ async function reportPlays (bot, gamePk) {
         const lastAtBat = feed.allPlays()
             .find((play) => play.about.atBatIndex === atBatIndex - 1);
         if (lastAtBat && lastAtBat.about.hasReview) { // a play that's been challenged. We should report updates on it.
-            await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat), gamePk, atBatIndex - 1);
+            await processAndPushPlay(bot, currentPlayProcessor.process(
+                lastAtBat,
+                feed,
+                globalCache.values.game.homeTeamEmoji,
+                globalCache.values.game.awayTeamEmoji
+            ), gamePk, atBatIndex - 1);
         /* the below block detects and handles if we missed the result of an at-bat due to the data moving too fast.
          Sometimes it progresses to the next at bat quite quickly. */
         } else if (lastReportedCompleteAtBatIndex !== null
             && (atBatIndex - lastReportedCompleteAtBatIndex > 1)) {
             LOGGER.debug('Missed at-bat index: ' + atBatIndex - 1);
             await reportAnyMissedEvents(lastAtBat, bot, gamePk, atBatIndex - 1);
-            await processAndPushPlay(bot, currentPlayProcessor.process(lastAtBat), gamePk, atBatIndex - 1);
+            await processAndPushPlay(bot, currentPlayProcessor.process(
+                lastAtBat,
+                feed,
+                globalCache.values.game.homeTeamEmoji,
+                globalCache.values.game.awayTeamEmoji
+            ), gamePk, atBatIndex - 1);
         }
     }
     await reportAnyMissedEvents(currentPlay, bot, gamePk, atBatIndex);
-    await processAndPushPlay(bot, currentPlayProcessor.process(currentPlay), gamePk, atBatIndex);
+    await processAndPushPlay(bot, currentPlayProcessor.process(
+        currentPlay,
+        feed,
+        globalCache.values.game.homeTeamEmoji,
+        globalCache.values.game.awayTeamEmoji
+    ), gamePk, atBatIndex);
 }
 
 async function reportAnyMissedEvents (atBat, bot, gamePk, atBatIndex) {
+    const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
     const missedEventsToReport = atBat.playEvents?.filter(event => globals.EVENT_WHITELIST.includes(event?.details?.eventType)
         && !globalCache.values.game.reportedDescriptions
             .find(reportedDescription => reportedDescription.description === event?.details?.description
@@ -145,7 +162,12 @@ async function reportAnyMissedEvents (atBat, bot, gamePk, atBatIndex) {
             )
     );
     for (const missedEvent of missedEventsToReport) {
-        await processAndPushPlay(bot, currentPlayProcessor.process(missedEvent), gamePk, atBatIndex);
+        await processAndPushPlay(bot, currentPlayProcessor.process(
+            missedEvent,
+            feed,
+            globalCache.values.game.homeTeamEmoji,
+            globalCache.values.game.awayTeamEmoji
+        ), gamePk, atBatIndex);
     }
 }
 
@@ -162,20 +184,15 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle =
         if (play.isComplete) {
             globalCache.values.game.lastReportedCompleteAtBatIndex = atBatIndex;
         }
-        const embed = new EmbedBuilder()
-            .setDescription(play.reply + (play.isOut && play.outs === 3 && !gamedayUtil.didGameEnd(play.homeScore, play.awayScore) ? gamedayUtil.getDueUp() : ''))
-            .setColor((feed.halfInning() === 'top'
-                ? globalCache.values.game.awayTeamColor
-                : globalCache.values.game.homeTeamColor
-            ));
-        if (includeTitle) {
-            embed.setTitle(gamedayUtil.deriveHalfInning(feed.halfInning()) + ' ' +
-                feed.inning() + ', ' +
-                feed.awayAbbreviation() + (play.isScoringPlay
-                ? ' vs. '
-                : ' ' + play.awayScore + ' - ' + play.homeScore + ' ') +
-                feed.homeAbbreviation() + (play.isScoringPlay ? ' - Scoring Play \u2757' : ''));
-        }
+        const embed = constructPlayEmbed(
+            play,
+            feed,
+            includeTitle,
+            globalCache.values.game.homeTeamColor,
+            globalCache.values.game.awayTeamColor,
+            globalCache.values.game.homeTeamEmoji,
+            globalCache.values.game.awayTeamEmoji
+        );
         const messages = [];
         for (const channelSubscription of globalCache.values.subscribedChannels) {
             const returnedChannel = await bot.channels.fetch(channelSubscription.channel_id);
@@ -183,7 +200,7 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle =
                 LOGGER.debug('Skipping - against the channel\'s preference');
             } else {
                 if (channelSubscription.delay === 0 || play.isStartEvent) {
-                    await sendMessage(returnedChannel, embed, messages);
+                    await module.exports.sendMessage(returnedChannel, embed, messages);
                 } else {
                     LOGGER.debug('Waiting ' + channelSubscription.delay + ' seconds for channel: ' + channelSubscription.channel_id);
                     await sendDelayedMessage(play, gamePk, channelSubscription, returnedChannel, embed);
@@ -194,6 +211,30 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle =
             await maybePopulateAdvancedStatcastMetrics(play, messages, gamePk);
         }
     }
+}
+
+function constructPlayEmbed (play, feed, includeTitle, homeTeamColor, awayTeamColor, homeTeamEmoji, awayTeamEmoji) {
+    const embed = new EmbedBuilder()
+        .setDescription(play.reply + (play.isOut && play.outs === 3 && !gamedayUtil.didGameEnd(play.homeScore, play.awayScore) ? gamedayUtil.getDueUp() : ''))
+        .setColor((feed.halfInning() === 'top'
+            ? awayTeamColor
+            : homeTeamColor
+        ));
+    if (includeTitle) {
+        embed.setTitle(`${gamedayUtil.deriveHalfInning(feed.halfInning())} ${feed.inning()}, ` +
+            (play.isScoringPlay
+                ? `${feed.awayAbbreviation()}`
+                : `<:${awayTeamEmoji.name}:${awayTeamEmoji.id}> ${feed.awayAbbreviation()}`) +
+            (play.isScoringPlay
+                ? ' vs. '
+                : ' ' + play.awayScore + ' - ' + play.homeScore + ' ') +
+            (play.isScoringPlay
+                ? `${feed.homeAbbreviation()}`
+                : `${feed.homeAbbreviation()} <:${homeTeamEmoji.name}:${homeTeamEmoji.id}>`) +
+            (play.isScoringPlay ? ' - Scoring Play \u2757' : ''));
+    }
+
+    return embed;
 }
 
 async function sendMessage (returnedChannel, embed, messages) {

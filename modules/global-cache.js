@@ -2,6 +2,7 @@ const values = {
     nearestGames: null,
     currentGames: null,
     subscribedChannels: [],
+    emojis: null,
     game: {
         currentLiveFeed: null,
         currentGamePk: null,
@@ -12,6 +13,8 @@ const values = {
         reportedDescriptions: [],
         homeTeamColor: null,
         awayTeamColor: null,
+        homeTeamEmoji: null,
+        awayTeamEmoji: null,
         finished: false,
         lastSocketMessageTimestamp: null,
         lastSocketMessageLength: null
@@ -28,6 +31,8 @@ function resetGameCache () {
     values.game.reportedDescriptions = [];
     values.game.homeTeamColor = null;
     values.game.awayTeamColor = null;
+    values.game.homeTeamEmoji = null;
+    values.game.awayTeamEmoji = null;
     values.game.finished = false;
     values.game.lastSocketMessageTimestamp = null;
     values.game.lastSocketMessageLength = null;

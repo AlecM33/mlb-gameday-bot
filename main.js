@@ -27,6 +27,10 @@ for (const file of commandFiles) {
 
 BOT.once('ready', async () => {
     LOGGER.info('Ready!');
+    BOT.application.emojis.fetch().then(emojis => {
+        LOGGER.info('Fetched application emojis.');
+        globalCache.values.emojis = Array.from(emojis.values());
+    })
     globalCache.values.subscribedChannels = await queries.getAllSubscribedChannels();
     LOGGER.info('Subscribed channels: ' + JSON.stringify(globalCache.values.subscribedChannels, null, 2));
     globalCache.values.browser = new ReusableBrowser();

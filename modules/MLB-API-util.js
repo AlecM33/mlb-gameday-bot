@@ -12,27 +12,32 @@ const endpoints = {
         LOGGER.debug('https://statsapi.mlb.com/api/v1/schedule?hydrate=lineups&sportId=1&gamePk=' + gamePk + '&teamId=' + teamId);
         return 'https://statsapi.mlb.com/api/v1/schedule?hydrate=lineups&sportId=1&gamePk=' + gamePk + '&teamId=' + teamId;
     },
-    hitter: (personId) => {
-        LOGGER.debug(`https://statsapi.mlb.com/api/v1/people?personIds=${personId}&hydrate=stats(type=[season,statSplits,lastXGames],group=hitting,gameType=R,sitCodes=[vl,vr,risp],limit=7)`);
-        return `https://statsapi.mlb.com/api/v1/people?personIds=${personId}&hydrate=stats(type=[season,statSplits,lastXGames],group=hitting,gameType=R,sitCodes=[vl,vr,risp],limit=7)`;
+    hitter: (personId, statType) => {
+        LOGGER.debug(`https://statsapi.mlb.com/api/v1/people?personIds=${personId}&hydrate=stats(type=[season,statSplits,lastXGames],group=hitting,gameType=${statType},sitCodes=[vl,vr,risp],limit=7)`);
+        return `https://statsapi.mlb.com/api/v1/people?personIds=${personId}&hydrate=stats(type=[season,statSplits,lastXGames],group=hitting,gameType=${statType},sitCodes=[vl,vr,risp],limit=7)`;
     },
-    pitcher: (personId, lastXGamesLimit) => {
-        return `https://statsapi.mlb.com/api/v1/people?personIds=${personId}&hydrate=stats(type=[season,lastXGames,sabermetrics,seasonAdvanced,expectedStatistics],groups=pitching,limit=${lastXGamesLimit})`;
+    pitcher: (personId, lastXGamesLimit, statType) => {
+        LOGGER.debug(`https://statsapi.mlb.com/api/v1/people?personIds=${personId}&hydrate=stats(type=[season,lastXGames,sabermetrics,seasonAdvanced,expectedStatistics],groups=pitching,limit=${lastXGamesLimit},gameType=${statType})`);
+        return `https://statsapi.mlb.com/api/v1/people?personIds=${personId}&hydrate=stats(type=[season,lastXGames,sabermetrics,seasonAdvanced,expectedStatistics],groups=pitching,limit=${lastXGamesLimit},gameType=${statType})`;
     },
     liveFeed: (gamePk, fields = []) => {
         LOGGER.debug('https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live' + (fields.length > 0 ? '?fields=' + fields.join() : ''));
         return 'https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live' + (fields.length > 0 ? '?fields=' + fields.join() : '');
     },
     wsLiveFeed: (gamePk, updateId) => {
+        LOGGER.debug('https://ws.statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live?language=en&pushUpdateId=' + updateId);
         return 'https://ws.statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live?language=en&pushUpdateId=' + updateId;
     },
     liveFeedAtTimestamp: (gamePk, timestamp) => {
+        LOGGER.debug('https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live?timecode=' + timestamp);
         return 'https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live?timecode=' + timestamp;
     },
     matchup: (gamePk) => {
+        LOGGER.debug('https://bdfed.stitch.mlbinfra.com/bdfed/matchup/' + gamePk + '?statList=avg&statList=atBats&statList=homeRuns&statList=rbi&statList=ops');
         return 'https://bdfed.stitch.mlbinfra.com/bdfed/matchup/' + gamePk + '?statList=avg&statList=atBats&statList=homeRuns&statList=rbi&statList=ops';
     },
     spot: (personId) => {
+        LOGGER.debug('https://midfield.mlbstatic.com/v1/people/' + personId + '/spots/120');
         return 'https://midfield.mlbstatic.com/v1/people/' + personId + '/spots/120';
     },
     standings: (leagueId) => {
@@ -40,13 +45,17 @@ const endpoints = {
         return 'https://statsapi.mlb.com/api/v1/standings?leagueId=' + leagueId;
     },
     playMetrics: (gamePk) => {
+        LOGGER.debug('https://bdfed.stitch.mlbinfra.com/bdfed/playMetrics/' + gamePk +
+            '?keyMoments=true&scoringPlays=true&homeRuns=true&strikeouts=true&hardHits=true&highLeverage=false&leadChange=true&winProb=true');
         return 'https://bdfed.stitch.mlbinfra.com/bdfed/playMetrics/' + gamePk +
             '?keyMoments=true&scoringPlays=true&homeRuns=true&strikeouts=true&hardHits=true&highLeverage=false&leadChange=true&winProb=true';
     },
     websocketSubscribe: (gamePk) => {
+        LOGGER.debug('wss://ws.statsapi.mlb.com/api/v1/game/push/subscribe/gameday/' + gamePk);
         return 'wss://ws.statsapi.mlb.com/api/v1/game/push/subscribe/gameday/' + gamePk;
     },
     timestamps: (gamePk) => {
+        LOGGER.debug('https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live/timestamps');
         return 'https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live/timestamps';
     },
     websocketQueryUpdateId: (gamePk, updateId, timestamp) => {
@@ -58,28 +67,35 @@ const endpoints = {
         return 'https://statsapi.mlb.com/api/v1/game/' + gamePk + '/linescore';
     },
     liveFeedBoxScoreNamesOnly: (gamePk) => {
+        LOGGER.debug('https://ws.statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live?fields=gameData,players,boxscoreName');
         return 'https://ws.statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live?fields=gameData,players,boxscoreName';
     },
     savantPitchData: (personId) => {
         LOGGER.debug('https://baseballsavant.mlb.com/player-services/statcast-pitches-breakdown?playerId=' + personId +
-            '&position=1&hand=&pitchBreakdown=pitches&timeFrame=yearly&season=' + new Date().getFullYear() + '&pitchType=&count=&updatePitches=true');
+            '&position=1&hand=&pitchBreakdown=pitches&timeFrame=yearly&pitchType=&count=&updatePitches=true&gameType=RP');
         return 'https://baseballsavant.mlb.com/player-services/statcast-pitches-breakdown?playerId=' + personId +
-            '&position=1&hand=&pitchBreakdown=pitches&timeFrame=yearly&season=' + new Date().getFullYear() + '&pitchType=&count=&updatePitches=true';
+            '&position=1&hand=&pitchBreakdown=pitches&timeFrame=yearly&pitchType=&count=&updatePitches=true&gameType=RP';
     },
     savantPage: (personId, type) => {
+        LOGGER.debug(`https://baseballsavant.mlb.com/savant-player/${personId}?stats=statcast-r-${type}-mlb`);
         return `https://baseballsavant.mlb.com/savant-player/${personId}?stats=statcast-r-${type}-mlb`;
     },
     xParks: (gamePk, playId) => {
+        LOGGER.debug('https://baseballsavant.mlb.com/gamefeed/x-parks/' + gamePk + '/' + playId);
         return 'https://baseballsavant.mlb.com/gamefeed/x-parks/' + gamePk + '/' + playId;
     },
     content: (gamePk) => {
+        LOGGER.debug('https://statsapi.mlb.com/api/v1/game/' + gamePk + '/content');
         return 'https://statsapi.mlb.com/api/v1/game/' + gamePk + '/content';
     },
     liveFeedSlimPlays: (gamePk) => {
+        LOGGER.debug('https://statsapi.mlb.com/api/v1.1/game/' + gamePk +
+            '/feed/live?fields=liveData,scoringPlays,plays,allPlays,about,halfInning,atBatIndex,result,description,playEvents,about,details,description');
         return 'https://statsapi.mlb.com/api/v1.1/game/' + gamePk +
             '/feed/live?fields=liveData,scoringPlays,plays,allPlays,about,halfInning,atBatIndex,result,description,playEvents,about,details,description';
     },
     statusCheck: (gamePk) => {
+        LOGGER.debug('https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live?fields=gamePk,gameData,status,abstractGameState,statusCode');
         return 'https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live?fields=gamePk,gameData,status,abstractGameState,statusCode';
     },
     people: (personIds) => {
@@ -95,6 +111,7 @@ const endpoints = {
         return 'https://baseballsavant.mlb.com/gf?game_pk=' + gamePk;
     },
     team: (teamId) => {
+        LOGGER.debug('https://statsapi.mlb.com/api/v1/teams/' + teamId);
         return 'https://statsapi.mlb.com/api/v1/teams/' + teamId;
     },
     players: () => {
@@ -102,6 +119,9 @@ const endpoints = {
         return 'https://statsapi.mlb.com/api/v1/sports/1/players?fields=people,fullName,lastName,id,currentTeam,primaryPosition,name,code,abbreviation';
     },
     wildcard: () => {
+        LOGGER.debug('https://bdfed.stitch.mlbinfra.com/bdfed/transform-mlb-standings?&splitPcts=false&numberPcts=false&standingsView=division&sortTemplate=3&season=' +
+            (new Date().getFullYear()) + '&leagueIds=103,104&standingsTypes=wildCard&contextTeamId=&date=' +
+            ((new Date()).toISOString().split('T')[0]) + '&hydrateAlias=noSchedule&sortDivisions=201,202,200,204,205,203&sortLeagues=103,104,115,114&sortSports=1');
         return 'https://bdfed.stitch.mlbinfra.com/bdfed/transform-mlb-standings?&splitPcts=false&numberPcts=false&standingsView=division&sortTemplate=3&season=' +
             (new Date().getFullYear()) + '&leagueIds=103,104&standingsTypes=wildCard&contextTeamId=&date=' +
             ((new Date()).toISOString().split('T')[0]) + '&hydrateAlias=noSchedule&sortDivisions=201,202,200,204,205,203&sortLeagues=103,104,115,114&sortSports=1';
@@ -249,14 +269,14 @@ module.exports = {
             return {};
         }
     },
-    hitter: async (personId) => {
-        return (await fetch(endpoints.hitter(personId))).json();
+    hitter: async (personId, statType) => {
+        return (await fetch(endpoints.hitter(personId, statType))).json();
     },
     team: async (teamId) => {
         return (await fetch(endpoints.team(teamId))).json();
     },
-    pitcher: async (personId, lastXGamesLimit) => {
-        return (await fetch(endpoints.pitcher(personId, lastXGamesLimit))).json();
+    pitcher: async (personId, lastXGamesLimit, statType) => {
+        return (await fetch(endpoints.pitcher(personId, lastXGamesLimit, statType))).json();
     },
     players: async () => {
         return (await fetch(endpoints.players())).json();
