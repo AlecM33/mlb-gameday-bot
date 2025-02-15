@@ -222,22 +222,22 @@ module.exports = {
                         return currentPlayProcessor.process(
                             examplePlays.homeRun,
                             feed,
-                            globalCache.values.emojis.find(e => e.name.includes("angels")),
-                            globalCache.values.emojis.find(e => e.name.includes("brewers"))
+                            globalCache.values.emojis.find(e => e.name.includes('angels')),
+                            globalCache.values.emojis.find(e => e.name.includes('brewers'))
                         );
                     } else if (play === 'Steal') {
                         return currentPlayProcessor.process(
                             examplePlays.steal,
                             feed,
-                            globalCache.values.emojis.find(e => e.name.includes("angels")),
-                            globalCache.values.emojis.find(e => e.name.includes("brewers"))
+                            globalCache.values.emojis.find(e => e.name.includes('angels')),
+                            globalCache.values.emojis.find(e => e.name.includes('brewers'))
                         );
                     } else if (play === 'Challenge') {
                         return currentPlayProcessor.process(
                             examplePlays.inProgressChallenge,
                             feed,
-                            globalCache.values.emojis.find(e => e.name.includes("angels")),
-                            globalCache.values.emojis.find(e => e.name.includes("brewers"))
+                            globalCache.values.emojis.find(e => e.name.includes('angels')),
+                            globalCache.values.emojis.find(e => e.name.includes('brewers'))
                         );
                     }
                 })(),
