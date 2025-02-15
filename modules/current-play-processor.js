@@ -18,7 +18,7 @@ module.exports = {
         let lastEvent;
         if (currentPlayJSON.about?.isComplete
             || globals.EVENT_WHITELIST.includes((currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType))) {
-            reply += getDescription(currentPlayJSON);
+            reply += getDescription(currentPlayJSON, feed);
             if (currentPlayJSON.result?.isOut || currentPlayJSON.details?.isOut) {
                 reply += ' **' + currentPlayJSON.count.outs + (currentPlayJSON.count.outs > 1 ? ' outs. **' : ' out. **');
             }
@@ -109,20 +109,20 @@ function getFireEmojis (launchSpeed) {
     }
 }
 
-function getDescription (currentPlayJSON) {
+function getDescription (currentPlayJSON, feed) {
     if (parseInt(process.env.TEAM_ID) === globals.GUARDIANS
         && !currentPlayJSON.about?.hasReview
         && currentPlayJSON.result?.event === 'Home Run'
-        && guardiansBatting(currentPlayJSON)
+        && guardiansBatting(currentPlayJSON, feed)
         && currentPlayJSON.result?.description) {
         return getGuardiansHomeRunDescription(currentPlayJSON.result.description);
     }
     return (currentPlayJSON.result?.description || currentPlayJSON.details.description || '');
 }
 
-function guardiansBatting (currentPlayJSON) {
-    return (currentPlayJSON.about.halfInning === 'bottom' && globalCache.values.game.currentLiveFeed.gameData.teams.home.id === globals.GUARDIANS)
-        || (currentPlayJSON.about.halfInning === 'top' && globalCache.values.game.currentLiveFeed.gameData.teams.away.id === globals.GUARDIANS);
+function guardiansBatting (currentPlayJSON, feed) {
+    return (currentPlayJSON.about.halfInning === 'bottom' && feed.gameData.teams.home.id === globals.GUARDIANS)
+        || (currentPlayJSON.about.halfInning === 'top' && feed.gameData.teams.away.id === globals.GUARDIANS);
 }
 
 function getGuardiansHomeRunDescription (description) {
