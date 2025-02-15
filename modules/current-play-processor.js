@@ -121,8 +121,8 @@ function getDescription (currentPlayJSON, feed) {
 }
 
 function guardiansBatting (currentPlayJSON, feed) {
-    return (currentPlayJSON.about.halfInning === 'bottom' && feed.gameData.teams.home.id === globals.GUARDIANS)
-        || (currentPlayJSON.about.halfInning === 'top' && feed.gameData.teams.away.id === globals.GUARDIANS);
+    return (currentPlayJSON.about.halfInning === 'bottom' && feed.homeTeamId() === globals.GUARDIANS)
+        || (currentPlayJSON.about.halfInning === 'top' && feed.awayTeamId() === globals.GUARDIANS);
 }
 
 function getGuardiansHomeRunDescription (description) {
