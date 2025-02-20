@@ -76,7 +76,7 @@ module.exports = {
     TEAM_COLOR_CONTRAST_RATIO: 1.5,
     HOME_RUN_PARKS_MIN: 5,
     HOME_RUN_PARKS_MAX: 25,
-    MAX_LEVENSHTEIN_DISTANCE: 2,
+    MAX_LEVENSHTEIN_DISTANCE: 3,
     EVENTS: [
         "Double",
         "Double Play",
