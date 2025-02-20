@@ -551,6 +551,9 @@ module.exports = {
         if (!batter && !playerName) {
             await interaction.followUp('No game is live right now!');
             return;
+        } else if (playerName && !batter) {
+            await interaction.followUp('I didn\'t find a player with a close enough match to your input (use first and last name).');
+            return;
         }
         const text = await mlbAPIUtil.savantPage(batter.id, 'hitting');
         const statcastData = commandUtil.getStatcastData(text);
