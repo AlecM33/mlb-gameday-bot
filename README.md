@@ -58,7 +58,7 @@ This will assume you are somewhat familiar with Node.js and developing Discord b
 The bot is dependent on a short list of environment variables. When these are populated appropriately, simply running `npm start` or your own Node command should get the bot running fine. These variables are:
 
 - CLIENT_ID - your bot's client ID, AKA application ID.
-- DATABASE_STRING - a connection string for a PostgreSQL database instance. That database should have the schema contained here in the file `database/schema.sql`. If requiring SSL, you'll need to place your cert in database/certs.
+- DATABASE_STRING - a connection string for a PostgreSQL database instance. **Obligatory 'this is sensitive' - be careful where you store it**. That database should have the schema contained here in the file `database/schema.sql`. If requiring SSL, you'll need to place your cert in database/certs.
 - LOG_LEVEL - your chosen log level. 
 - TEAM_ID - the team you want to follow. These match those of the "teams" resource in the MLB stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1 . They are also stored statically in `config/globals.js`. Every command will be configured for that team.
 - TOKEN - your bot's authentication token. **Obligatory 'this is sensitive' - be careful where you store it**

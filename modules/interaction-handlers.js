@@ -1,4 +1,4 @@
-const { AttachmentBuilder, EmbedBuilder } = require('discord.js');
+const { AttachmentBuilder, EmbedBuilder, PermissionsBitField } = require('discord.js');
 const globalCache = require('./global-cache');
 const mlbAPIUtil = require('./MLB-API-util');
 const { joinImages } = require('join-images');
@@ -98,7 +98,7 @@ module.exports = {
                 ));
             reply += `${week[gameDate.getDay()]} ${date.date.substr(6)}` +
                 (home ? ' vs. ' : ' @ ') + (home ? teams.away.team.abbreviation : teams.home.team.abbreviation) +
-                ` <:${emoji.name}:${emoji.id}>` +
+                `${emoji ? ` <:${emoji.name}:${emoji.id}>` : ''}` +
                 ' ' +
                 gameDate.toLocaleString('en-US', {
                     timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
@@ -160,7 +160,7 @@ module.exports = {
 
     subscribeGamedayHandler: async (interaction) => {
         console.info(`SUBSCRIBE GAMEDAY command invoked by guild: ${interaction.guildId}`);
-        if (!interaction.member.roles.cache.some(role => globals.ADMIN_ROLES.includes(role.name))) {
+        if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
             await interaction.reply({
                 ephemeral: true,
                 content: 'You do not have permission to subscribe channels to the Gameday feed.'
@@ -205,7 +205,7 @@ module.exports = {
 
     testGamedayReportingHandler: async (interaction) => {
         console.info(`TEST GAMEDAY REPORTING command invoked by guild: ${interaction.guildId}`);
-        if (!interaction.member.roles.cache.some(role => globals.ADMIN_ROLES.includes(role.name))) {
+        if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
             await interaction.reply({
                 ephemeral: true,
                 content: 'You do not have permission to use this command.'
@@ -245,8 +245,8 @@ module.exports = {
                 true,
                 '#BA0021',
                 '#FFC52F',
-                { name: 'angels_108', id: '1339072522619977770' },
-                { name: 'brewers_158', id: '1339072560049950760' }
+                globalCache.values.emojis.find(e => e.name.includes('angels')),
+                globalCache.values.emojis.find(e => e.name.includes('brewers'))
                 )]
             });
         }
@@ -254,7 +254,7 @@ module.exports = {
 
     gamedayPreferenceHandler: async (interaction) => {
         console.info(`GAMEDAY PREFERENCE command invoked by guild: ${interaction.guildId}`);
-        if (!interaction.member.roles.cache.some(role => globals.ADMIN_ROLES.includes(role.name))) {
+        if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
             await interaction.reply({
                 ephemeral: true,
                 content: 'You do not have permission to use this command.'
@@ -301,7 +301,7 @@ module.exports = {
 
     unSubscribeGamedayHandler: async (interaction) => {
         console.info(`UNSUBSCRIBE GAMEDAY command invoked by guild: ${interaction.guildId}`);
-        if (!interaction.member.roles.cache.some(role => globals.ADMIN_ROLES.includes(role.name))) {
+        if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
             await interaction.reply({
                 ephemeral: true,
                 content: 'You do not have permission to un-subscribe channels to the Gameday feed.'

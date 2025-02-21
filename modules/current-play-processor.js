@@ -71,10 +71,10 @@ function addScore (reply, currentPlayJSON, feed, homeTeamEmoji, awayTeamEmoji) {
         awayScore = currentPlayJSON.details.awayScore;
     }
     reply += (feed.halfInning() === 'top'
-        ? '# ' + `<:${awayTeamEmoji.name}:${awayTeamEmoji.id}>` + ' _' + feed.awayAbbreviation() + ' ' + awayScore + '_, ' +
-        feed.homeAbbreviation() + ' ' + homeScore + ` <:${homeTeamEmoji.name}:${homeTeamEmoji.id}>`
-        : '# ' + `<:${awayTeamEmoji.name}:${awayTeamEmoji.id}> ` + feed.awayAbbreviation() + ' ' + awayScore + ', _' +
-        feed.homeAbbreviation() + ' ' + homeScore + '_' + ` <:${homeTeamEmoji.name}:${homeTeamEmoji.id}>`);
+        ? '# ' + insertEmojiIfPresent(awayTeamEmoji) + ' _' + feed.awayAbbreviation() + ' ' + awayScore + '_, ' +
+        feed.homeAbbreviation() + ' ' + homeScore + ` ${insertEmojiIfPresent(homeTeamEmoji)}`
+        : '# ' + `${insertEmojiIfPresent(awayTeamEmoji)} ` + feed.awayAbbreviation() + ' ' + awayScore + ', _' +
+        feed.homeAbbreviation() + ' ' + homeScore + '_' + ` ${insertEmojiIfPresent(homeTeamEmoji)}`);
 
     return reply;
 }
@@ -153,4 +153,8 @@ function getHomeRunCall (player, partOfField, scorers, hrNumber) {
     ];
 
     return calls[Math.floor(Math.random() * calls.length)];
+}
+
+function insertEmojiIfPresent (emoji) {
+    return (emoji ? `<:${emoji.name}:${emoji.id}>` : '');
 }
