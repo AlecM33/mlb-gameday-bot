@@ -222,13 +222,13 @@ function constructPlayEmbed (play, feed, includeTitle, homeTeamColor, awayTeamCo
         ));
     if (includeTitle) {
         embed.setTitle(`${gamedayUtil.deriveHalfInning(feed.halfInning())} ${feed.inning()}, ` +
-            (play.isScoringPlay
+            (play.isScoringPlay || !awayTeamEmoji
                 ? `${feed.awayAbbreviation()}`
                 : `<:${awayTeamEmoji.name}:${awayTeamEmoji.id}> ${feed.awayAbbreviation()}`) +
             (play.isScoringPlay
                 ? ' vs. '
                 : ' ' + play.awayScore + ' - ' + play.homeScore + ' ') +
-            (play.isScoringPlay
+            (play.isScoringPlay || !homeTeamEmoji
                 ? `${feed.homeAbbreviation()}`
                 : `${feed.homeAbbreviation()} <:${homeTeamEmoji.name}:${homeTeamEmoji.id}>`) +
             (play.isScoringPlay ? ' - Scoring Play \u2757' : ''));
