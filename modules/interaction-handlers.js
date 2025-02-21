@@ -98,7 +98,7 @@ module.exports = {
                 ));
             reply += `${week[gameDate.getDay()]} ${date.date.substr(6)}` +
                 (home ? ' vs. ' : ' @ ') + (home ? teams.away.team.abbreviation : teams.home.team.abbreviation) +
-                ` <:${emoji.name}:${emoji.id}>` +
+                `${emoji ? ` <:${emoji.name}:${emoji.id}>` : ''}` +
                 ' ' +
                 gameDate.toLocaleString('en-US', {
                     timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
@@ -245,8 +245,8 @@ module.exports = {
                 true,
                 '#BA0021',
                 '#FFC52F',
-                { name: 'angels_108', id: '1339072522619977770' },
-                { name: 'brewers_158', id: '1339072560049950760' }
+                globalCache.values.emojis.find(e => e.name.includes('angels')),
+                globalCache.values.emojis.find(e => e.name.includes('brewers'))
                 )]
             });
         }
