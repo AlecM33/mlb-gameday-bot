@@ -64,6 +64,19 @@ The bot is dependent on a short list of environment variables. When these are po
 - TOKEN - your bot's authentication token. **Obligatory 'this is sensitive' - be careful where you store it**
 - TIME_ZONE - Your chosen time zone. Defaults to EST. Time zone names correspond to the Zone and Link names of the [IANA Time Zone Database](https://www.iana.org/time-zones), such as "UTC", "Asia/Shanghai", "Asia/Kolkata", and "America/New_York". Additionally, time zones can be given as UTC offsets in the format "±hh:mm", "±hhmm", or "±hh", for example as "+01:00", "-2359", or "+23".
 
+### Optional - add emojis!
+
+Discord allows applications to have up to 2,000 custom emojis. I have integrated team logo emojis into the app, to be used with
+commands such as `/schedule`:
+
+![schedule with emojis](images/screenshots/schedule_emojis.png)
+
+On the page for your application in the Discord Dev Portal, there is a section for Emojis. There you can upload images.
+I recommend you use those I have stored here under /images/spots. Upload all 30, preserving the names. That should be all
+that's necessary to start seeing them show up - they will be fetched when the bot starts up.
+
+![emojis dev portal](images/screenshots/emojis_dev_portal.png)
+
 If the bot starts up successfully, the start-up logs look something like the following (subject to your log level):
 ```
 LOG    Fri, 28 Jun 2024 20:34:39 GMT :  Ready!
