@@ -141,9 +141,10 @@ module.exports = {
         const team = await mlbAPIUtil.team(process.env.TEAM_ID);
         const leagueId = team.teams[0].league.id;
         const leagueName = team.teams[0].league.name;
-        const wildcard = (await mlbAPIUtil.wildcard()).records
+        const leagueStandings = await mlbAPIUtil.wildcard();
+        const wildcard = leagueStandings.records
             .find(record => record.standingsType === 'wildCard' && record.league === leagueId);
-        const divisionLeaders = (await mlbAPIUtil.wildcard()).records
+        const divisionLeaders = leagueStandings.records
             .find(record => record.standingsType === 'divisionLeaders' && record.league === leagueId);
         if (!divisionLeaders || !wildcard) {
             await interaction.followUp({

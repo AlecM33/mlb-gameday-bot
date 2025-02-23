@@ -925,22 +925,22 @@ function mapStandings (standings, wildcard = false) {
             homeRecord: (teamRecord.record_home
                 ? teamRecord.record_home
                 : (() => {
-                    const home = teamRecord.records.splitRecords.find(record => record.type === 'home');
-                    return home.wins + '-' + home.losses;
+                    const home = teamRecord.records?.splitRecords?.find(record => record.type === 'home');
+                    return home ? home.wins + '-' + home.losses : '-';
                 })()),
             awayRecord: (teamRecord.record_away
                 ? teamRecord.record_away
                 : (() => {
-                    const away = teamRecord.records.splitRecords.find(record => record.type === 'away');
-                    return away.wins + '-' + away.losses;
+                    const away = teamRecord.records?.splitRecords?.find(record => record.type === 'away');
+                    return away ? away.wins + '-' + away.losses : '-';
                 })()),
             lastTen: (teamRecord.record_lastTen
                 ? teamRecord.record_lastTen
                 : (() => {
-                    const l10 = teamRecord.records.splitRecords.find(record => record.type === 'lastTen');
-                    return l10.wins + '-' + l10.losses;
+                    const l10 = teamRecord.records?.splitRecords?.find(record => record.type === 'lastTen');
+                    return l10 ? l10.wins + '-' + l10.losses : '-';
                 })()),
-            streak: teamRecord.streak
+            streak: teamRecord.streak || '-'
         };
     });
 }
