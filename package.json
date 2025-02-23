@@ -6,6 +6,7 @@
   "scripts": {
     "test": "jasmine",
     "start": "NODE_ENV=production && node deploy-commands.js && node main.js",
+    "start:dev": "SET NODE_ENV=development && node main.js",
     "heroku-postbuild": "mkdir ./.cache && mv /app/.cache/puppeteer ./.cache"
   },
   "author": "",

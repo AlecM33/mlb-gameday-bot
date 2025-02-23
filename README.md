@@ -55,7 +55,7 @@ My instance of the bot for the Cleveland Guardians is private. The bot is only d
 
 This will assume you are somewhat familiar with Node.js and developing Discord bots.
 
-The bot is dependent on a short list of environment variables. When these are populated appropriately, simply running `npm start` or your own Node command should get the bot running fine. These variables are:
+The bot is dependent on a short list of environment variables. When these are populated appropriately, simply running `npm start` (or `npm run start:dev` for the development environment) should get the bot running. These variables are:
 
 - CLIENT_ID - your bot's client ID, AKA application ID.
 - DATABASE_STRING - a connection string for a PostgreSQL database instance. **Obligatory 'this is sensitive' - be careful where you store it**. That database should have the schema contained here in the file `database/schema.sql`. If requiring SSL, you'll need to place your cert in database/certs.
