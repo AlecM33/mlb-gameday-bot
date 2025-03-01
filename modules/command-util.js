@@ -119,7 +119,7 @@ module.exports = {
         );
         const lastXGames = (lastXGamesStats?.splits.find(split => !split.team) || lastXGamesStats?.splits[0]);
         const seasonStats = (season?.splits.find(split => !split.team) || season?.splits[0]);
-        const formattedSplits = '\n### ' + (seasonStats?.season || 'Current') + ` ${(() => {
+        const formattedSplits = '\n### ' + (seasonStats?.season || 'Latest') + ` ${(() => {
             switch (statType) {
                 case 'R':
                     return 'Regular Season';
@@ -774,17 +774,17 @@ module.exports = {
                 .setDescription('### ' + (pitcherInfo.handedness
                     ? pitcherInfo.handedness + 'HP **'
                     : '**') + (pitcher.fullName || 'TBD') +
-                        '** (' + abbreviation + `): ${pitcherInfo.pitchingStats.yearOfStats || 'Current'} ${(() => {
+                        '** (' + abbreviation + `): ${pitcherInfo.pitchingStats.yearOfStats || 'Latest'} ${(() => {
                     if (savantMode) {
-                        return '';
+                        return 'Percentile Rankings';
                     }
                     switch (statType) {
                         case 'R':
-                            return 'Regular Season';
+                            return 'Regular Season\n';
                         case 'P':
-                            return 'Postseason';
+                            return 'Postseason\n';
                         case 'S':
-                            return 'Spring Training';
+                            return 'Spring Training\n';
                     }
                 })()}` + (description || ''))
                 .setImage('attachment://savant.png')
@@ -802,9 +802,9 @@ module.exports = {
             const embed = new EmbedBuilder()
                 .setTitle((pitcherInfo.handedness
                     ? pitcherInfo.handedness + 'HP '
-                    : '') + pitcher.fullName + `: ${pitcherInfo.pitchingStats.yearOfStats || 'Current'} ${(() => {
+                    : '') + pitcher.fullName + ` (${globals.TEAMS.find(t => t.id === pitcher.currentTeam.id).abbreviation}): ${pitcherInfo.pitchingStats.yearOfStats || 'Latest'} ${(() => {
                     if (savantMode) { 
-                        return '';
+                        return 'Percentile Rankings';
                     }
                     switch (statType) {
                         case 'R':
@@ -814,7 +814,8 @@ module.exports = {
                         case 'S':
                             return 'Spring Training';
                     }
-                })()}`)
+                })()}`
+                )
                 .setImage('attachment://savant.png')
                 .setColor(globals.TEAMS.find(team => team.id === pitcher.currentTeam.id).primaryColor);
 
@@ -846,7 +847,7 @@ module.exports = {
             const inning = feed.inning();
             const embed = new EmbedBuilder()
                 .setTitle(halfInning.toUpperCase() + ' ' + inning + ', ' +
-                    abbreviations.away + ' vs. ' + abbreviations.home + ': Current Batter')
+                    abbreviations.away + ' vs. ' + abbreviations.home + ': Current Batter' + (savantMode ? ': Latest Percentile Rankings' : ''))
                 .setDescription(`### ${batter.fullName} (${abbreviation})\n ${expandedBatter.primaryPosition.abbreviation} | Bats ${expandedBatter.batSide.description} ${(description || '')}`)
                 .setImage('attachment://savant.png')
                 .setColor((halfInning === 'top'
@@ -861,7 +862,7 @@ module.exports = {
             return embed;
         } else {
             const embed = new EmbedBuilder()
-                .setTitle(`${batter.fullName} (${globals.TEAMS.find(team => team.id === batter.currentTeam.id).abbreviation})`)
+                .setTitle(`${batter.fullName} (${globals.TEAMS.find(team => team.id === batter.currentTeam.id).abbreviation})` + (savantMode ? ': Latest Percentile Rankings' : ''))
                 .setDescription(`${batter.primaryPosition.abbreviation} | Bats ${batterInfo.stats.batSide.description}`)
                 .setImage('attachment://savant.png')
                 .setColor(globals.TEAMS.find(team => team.id === batter.currentTeam.id).primaryColor);

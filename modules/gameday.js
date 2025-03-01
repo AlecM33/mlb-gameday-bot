@@ -239,18 +239,31 @@ function constructPlayEmbed (play, feed, includeTitle, homeTeamColor, awayTeamCo
 
 async function sendMessage (returnedChannel, embed, messages) {
     LOGGER.debug('Sending!');
-    const message = await returnedChannel.send({
-        embeds: [embed]
-    });
+    let message;
+    try {
+        message = await returnedChannel.send({
+            embeds: [embed]
+        });
+    } catch (e) {
+        LOGGER.error(e);
+        return;
+    }
     messages.push(message);
 }
 
 async function sendDelayedMessage (play, gamePk, channelSubscription, returnedChannel, embed) {
     setTimeout(async () => {
         LOGGER.debug('Sending!');
-        const message = await returnedChannel.send({
-            embeds: [embed]
-        });
+        let message;
+        try {
+            message = await returnedChannel.send({
+                embeds: [embed]
+            });
+        } catch (e) {
+            LOGGER.error(e);
+            return;
+        }
+
         /* TODO: savant polling will be done for each delayed message individually. Not ideal, but shouldn't be too bad.
             In any case, there's an opportunity for non-delayed messages to cache the info for delayed messages.
          */

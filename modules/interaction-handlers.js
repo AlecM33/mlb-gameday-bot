@@ -534,7 +534,9 @@ module.exports = {
                 commandUtil.formatSplits(
                     batterInfo.stats.stats.find(stat => stat.type.displayName === 'season'),
                     batterInfo.stats.stats.find(stat => stat.type.displayName === 'statSplits'),
-                    batterInfo.stats.stats.find(stat => stat.type.displayName === 'lastXGames'), (statType || 'R')),
+                    batterInfo.stats.stats.find(stat => stat.type.displayName === 'lastXGames'),
+                    (statType || 'R')
+                ),
                 (statType || 'R')
             )],
             components: [],
@@ -600,7 +602,7 @@ module.exports = {
             const replyOptions = {
                 ephemeral: false,
                 files: [savantAttachment],
-                embeds: [commandUtil.getPitcherEmbed(pitcher, pitcherInfo, !playerName, null, null, true)],
+                embeds: [commandUtil.getPitcherEmbed(pitcher, pitcherInfo, !playerName, null, 'R', true)],
                 components: [],
                 content: ''
             };
