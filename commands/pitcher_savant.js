@@ -8,7 +8,13 @@ module.exports = {
         .addStringOption(option =>
             option.setName('player')
                 .setDescription('An active player\'s name.')
-                .setRequired(false)),
+                .setRequired(false))
+        .addIntegerOption(option =>
+            option.setName('year')
+                .setDescription('Which season?')
+                .setRequired(false)
+                .setMinValue(new Date().getFullYear() - 10)
+                .setMaxValue(new Date().getFullYear())),
     async execute (interaction) {
         try {
             await interactionHandlers.pitcherSavantHandler(interaction);
