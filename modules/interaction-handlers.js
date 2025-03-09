@@ -32,8 +32,8 @@ module.exports = {
         }
         const matchup = await mlbAPIUtil.matchup(game.gamePk);
         const probables = matchup.probables;
-        const hydratedHomeProbable = await commandUtil.hydrateProbable(probables.homeProbable);
-        const hydratedAwayProbable = await commandUtil.hydrateProbable(probables.awayProbable);
+        const hydratedHomeProbable = await commandUtil.hydrateProbable(probables.homeProbable, matchup.probables.gameType);
+        const hydratedAwayProbable = await commandUtil.hydrateProbable(probables.awayProbable, matchup.probables.gameType);
         joinImages([hydratedHomeProbable.spot, hydratedAwayProbable.spot],
             { direction: 'horizontal', offset: 10, margin: 0, color: 'transparent' })
             .then(async (img) => {
@@ -50,7 +50,8 @@ module.exports = {
                             hydratedHomeProbable.pitchMix,
                             hydratedHomeProbable.pitchingStats.lastXGames,
                             hydratedHomeProbable.pitchingStats.seasonAdvanced,
-                            hydratedHomeProbable.pitchingStats.sabermetrics
+                            hydratedHomeProbable.pitchingStats.sabermetrics,
+                            matchup.probables.gameType
                         ),
                         inline: true
                     })
@@ -63,7 +64,8 @@ module.exports = {
                             hydratedAwayProbable.pitchMix,
                             hydratedAwayProbable.pitchingStats.lastXGames,
                             hydratedAwayProbable.pitchingStats.seasonAdvanced,
-                            hydratedAwayProbable.pitchingStats.sabermetrics
+                            hydratedAwayProbable.pitchingStats.sabermetrics,
+                            matchup.probables.gameType
                         ),
                         inline: true
                     });
@@ -492,6 +494,7 @@ module.exports = {
                     pitcherInfo.pitchingStats.lastXGames,
                     pitcherInfo.pitchingStats.seasonAdvanced,
                     pitcherInfo.pitchingStats.sabermetrics,
+                    (statType || 'R'),
                     true
                 ),
                 (statType || 'R'),
