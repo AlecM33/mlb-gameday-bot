@@ -640,11 +640,11 @@ module.exports = {
         });
     },
 
-    buildPitchingStatsMarkdown: (pitchingStats, pitchMix, lastThree, seasonAdvanced, sabermetrics, includeExtra = false) => {
+    buildPitchingStatsMarkdown: (pitchingStats, pitchMix, lastThree, seasonAdvanced, sabermetrics, gameType, includeExtra = false) => {
         let reply = '';
 
         if (lastThree) {
-            reply += '\n**Recent Games:** \n';
+            reply += `\n**Recent Games${resolveGameType(gameType)}:** \n`;
             reply += `G: ${lastThree.gamesPlayed}, `;
             reply += `ERA: ${lastThree.era}, `;
             reply += `Hits: ${lastThree.hits}, `;
@@ -652,7 +652,7 @@ module.exports = {
             reply += `BB: ${lastThree.baseOnBalls}, `;
             reply += `HR: ${lastThree.homeRuns}\n`;
         }
-        reply += '**All Games:** \n';
+        reply += `**All Games${resolveGameType(gameType)}:** \n`;
         if (!pitchingStats) {
             reply += 'G: 0, ';
             reply += 'W-L: -, ';
@@ -730,9 +730,9 @@ module.exports = {
             liveFeed.gameData.teams.home.abbreviation + ' ' + homeScore + '**');
     },
 
-    getClosestPlayers: async (playerName, type) => {
+    getClosestPlayers: async (playerName, type, season) => {
         const startTime = performance.now();
-        const allPlayers = await mlbAPIUtil.players();
+        const allPlayers = await mlbAPIUtil.players(season);
         const removeDiacritics = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         const normalizedPlayerName = removeDiacritics(playerName.toLowerCase());
         let matchingPlayers = [];
@@ -881,10 +881,10 @@ module.exports = {
         }
     },
 
-    getPlayerFromUserInputOrLiveFeed: async (playerName, interaction, type) => {
+    getPlayerFromUserInputOrLiveFeed: async (playerName, interaction, type, season) => {
         let player, currentLiveFeed, shouldEditReply, pendingChoice;
         if (playerName) {
-            const players = await module.exports.getClosestPlayers(playerName, type);
+            const players = await module.exports.getClosestPlayers(playerName, type, season);
             if (players.length > 1) {
                 pendingChoice = await module.exports.resolvePlayerSelection(players.slice(0, 5), interaction);
                 const idString = pendingChoice?.customId;
@@ -914,6 +914,24 @@ module.exports = {
             pendingChoice,
             shouldEditReply
         };
+    },
+
+    resolvePlayer: async (interaction, playerName, playerType) => {
+        const playerResult = await module.exports.getPlayerFromUserInputOrLiveFeed(
+            playerName,
+            interaction,
+            playerType,
+            interaction.options.getInteger('year') || new Date().getFullYear()
+        );
+        if (!playerResult.player && !playerName) {
+            await interaction.followUp('No game is live right now!');
+            return;
+        } else if (playerName && !playerResult.player) {
+            await interaction.followUp('I didn\'t find a player with a close enough match to your input (use first and last name).');
+            return;
+        }
+
+        return playerResult;
     }
 };
 
@@ -1242,5 +1260,16 @@ function getDivisionAbbreviation (division) {
         return 'W';
     } else {
         return 'C';
+    }
+}
+
+function resolveGameType (gameType) {
+    switch (gameType) {
+        case 'R':
+            return '';
+        case 'P':
+            return ' (Postseason)';
+        case 'S':
+            return ' (Spring Training)';
     }
 }
