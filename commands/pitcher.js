@@ -9,6 +9,12 @@ module.exports = {
             option.setName('player')
                 .setDescription('An active player\'s name.')
                 .setRequired(false))
+        .addIntegerOption(option =>
+            option.setName('year')
+                .setDescription('Which season?')
+                .setRequired(false)
+                .setMinValue(new Date().getFullYear() - 10)
+                .setMaxValue(new Date().getFullYear()))
         .addStringOption(option =>
             option.setName('stat_type')
                 .setDescription('Regular Season (default), Postseason, or Spring Training?')
