@@ -484,7 +484,7 @@ module.exports = {
             await interaction.followUp('I didn\'t find a player with a close enough match to your input (use first and last name).');
             return;
         }
-        const pitcherInfo = await commandUtil.hydrateProbable(pitcher.id, (statType || 'R'));
+        const pitcherInfo = await commandUtil.hydrateProbable(pitcher.id, (statType || 'R'), (interaction.options.getInteger('year') || new Date().getFullYear()));
         const attachment = new AttachmentBuilder(Buffer.from(pitcherInfo.spot), { name: 'spot.png' });
         const replyOptions = {
             ephemeral: false,
@@ -501,7 +501,9 @@ module.exports = {
                     pitcherInfo.pitchingStats.sabermetrics,
                     true
                 ),
-                (statType || 'R'))],
+                (statType || 'R'),
+                false,
+                interaction.options.getInteger('year'))],
             components: [],
             content: ''
         };
@@ -522,7 +524,7 @@ module.exports = {
             await interaction.followUp('I didn\'t find a player with a close enough match to your input (use first and last name).');
             return;
         }
-        const batterInfo = await commandUtil.hydrateHitter(batter.id, (statType || 'R'));
+        const batterInfo = await commandUtil.hydrateHitter(batter.id, (statType || 'R'), interaction.options.getInteger('year'));
         const attachment = new AttachmentBuilder(Buffer.from(batterInfo.spot), { name: 'spot.png' });
         const replyOptions = {
             ephemeral: false,
@@ -537,7 +539,9 @@ module.exports = {
                     batterInfo.stats.stats.find(stat => stat.type.displayName === 'lastXGames'),
                     (statType || 'R')
                 ),
-                (statType || 'R')
+                (statType || 'R'),
+                false,
+                interaction.options.getInteger('year')
             )],
             components: [],
             content: ''
@@ -559,24 +563,24 @@ module.exports = {
             return;
         }
         const text = await mlbAPIUtil.savantPage(batter.id, 'hitting');
-        const statcastData = commandUtil.getStatcastData(text);
-        if (statcastData.mostRecentStatcast && statcastData.mostRecentMetricYear && statcastData.metricSummaryJSON) {
+        const statcastData = commandUtil.getStatcastData(text, interaction.options.getInteger('year'));
+        if (statcastData.matchingStatcast && statcastData.matchingMetricYear && statcastData.metricSummaryJSON) {
             const batterInfo = await commandUtil.hydrateHitter(batter.id, 'R');
             const savantAttachment = new AttachmentBuilder((await commandUtil.buildBatterSavantTable(
-                statcastData.mostRecentStatcast,
-                statcastData.metricSummaryJSON[statcastData.mostRecentMetricYear.toString()],
+                statcastData.matchingStatcast,
+                statcastData.metricSummaryJSON[statcastData.matchingMetricYear.toString()],
                 batterInfo.spot)), { name: 'savant.png' });
             const replyOptions = {
                 ephemeral: false,
                 files: [savantAttachment],
-                embeds: [commandUtil.getBatterEmbed(batter, batterInfo, !playerName, null, null, true)],
+                embeds: [commandUtil.getBatterEmbed(batter, batterInfo, !playerName, null, null, true, interaction.options.getInteger('year'))],
                 components: [],
                 content: ''
             };
             await (playerResult.shouldEditReply ? interaction.editReply(replyOptions) : interaction.followUp(replyOptions));
         } else {
             await interaction.followUp({
-                content: 'There was a problem fetching the savant metrics for this player.'
+                content: 'There is no statcast data for this player for the chosen season.'
             });
         }
     },
@@ -592,24 +596,24 @@ module.exports = {
             return;
         }
         const text = await mlbAPIUtil.savantPage(pitcher.id, 'pitching');
-        const statcastData = commandUtil.getStatcastData(text);
-        if (statcastData.mostRecentStatcast && statcastData.mostRecentMetricYear && statcastData.metricSummaryJSON) {
+        const statcastData = commandUtil.getStatcastData(text, interaction.options.getInteger('year'));
+        if (statcastData.matchingStatcast && statcastData.matchingMetricYear && statcastData.metricSummaryJSON) {
             const pitcherInfo = await commandUtil.hydrateProbable(pitcher.id, 'R');
             const savantAttachment = new AttachmentBuilder((await commandUtil.buildPitcherSavantTable(
-                statcastData.mostRecentStatcast,
-                statcastData.metricSummaryJSON[statcastData.mostRecentMetricYear.toString()],
+                statcastData.matchingStatcast,
+                statcastData.metricSummaryJSON[statcastData.matchingMetricYear.toString()],
                 pitcherInfo.spot)), { name: 'savant.png' });
             const replyOptions = {
                 ephemeral: false,
                 files: [savantAttachment],
-                embeds: [commandUtil.getPitcherEmbed(pitcher, pitcherInfo, !playerName, null, 'R', true)],
+                embeds: [commandUtil.getPitcherEmbed(pitcher, pitcherInfo, !playerName, null, 'R', true, interaction.options.getInteger('year'))],
                 components: [],
                 content: ''
             };
             await (playerResult.shouldEditReply ? interaction.editReply(replyOptions) : interaction.followUp(replyOptions));
         } else {
             await interaction.followUp({
-                content: 'There was a problem fetching the savant metrics for this player.'
+                content: 'There is no statcast data for this player for the chosen season.'
             });
         }
     },

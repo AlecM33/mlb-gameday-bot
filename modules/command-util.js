@@ -46,7 +46,7 @@ module.exports = {
         table.removeBorder();
         return await getScreenshotOfHTMLTables([table]);
     },
-    hydrateProbable: async (probable, statType) => {
+    hydrateProbable: async (probable, statType, season = (new Date().getFullYear())) => {
         const [spot, savant, people] = await Promise.all([
             new Promise((resolve, reject) => {
                 if (probable) {
@@ -59,10 +59,10 @@ module.exports = {
                 }
                 reject(new Error('There was a problem getting the player spot.'));
             }),
-            mlbAPIUtil.savantPitchData(probable),
+            mlbAPIUtil.savantPitchData(probable, season),
             new Promise((resolve, reject) => {
                 if (probable) {
-                    resolve(mlbAPIUtil.pitcher(probable, 3, statType));
+                    resolve(mlbAPIUtil.pitcher(probable, 3, statType, season));
                 } else {
                     resolve(undefined);
                 }
@@ -79,7 +79,7 @@ module.exports = {
         };
     },
 
-    hydrateHitter: async (hitter, statType) => {
+    hydrateHitter: async (hitter, statType, season = new Date().getFullYear()) => {
         const [spot, stats] = await Promise.all([
             new Promise((resolve, reject) => {
                 if (hitter) {
@@ -94,7 +94,7 @@ module.exports = {
             }),
             new Promise((resolve, reject) => {
                 if (hitter) {
-                    resolve(mlbAPIUtil.hitter(hitter, statType));
+                    resolve(mlbAPIUtil.hitter(hitter, statType, season));
                 } else {
                     resolve(undefined);
                 }
@@ -285,21 +285,23 @@ module.exports = {
         return (await getScreenshotOfHTMLTables([table]));
     },
 
-    getStatcastData: (savantText) => {
+    getStatcastData: (savantText, season) => {
         const statcast = /statcast: \[(?<statcast>.+)],/.exec(savantText)?.groups.statcast;
         const metricSummaries = /metricSummaryStats: {(?<metricSummaries>.+)},/.exec(savantText)?.groups.metricSummaries;
         if (statcast) {
             try {
                 const statcastJSON = JSON.parse('[' + statcast + ']');
                 const metricSummaryJSON = JSON.parse('{' + metricSummaries + '}');
-                const mostRecentStatcast = statcastJSON.findLast(set => set.year != null);
+                const matchingStatcast = season ? statcastJSON.find(set => set.year === season) : statcastJSON.findLast(set => set.year != null);
                 // object properties are not guaranteed to always be in the same order, so we need to find the most recent year of data
-                const mostRecentMetricYear = Object.keys(metricSummaryJSON)
-                    .map(k => parseInt(k))
-                    .sort((a, b) => {
-                        return a < b ? 1 : -1;
-                    })[0];
-                return { mostRecentStatcast, metricSummaryJSON, mostRecentMetricYear };
+                const matchingMetricYear = season
+                    ? Object.keys(metricSummaryJSON).find(k => k === season.toString())
+                    : Object.keys(metricSummaryJSON)
+                        .map(k => parseInt(k))
+                        .sort((a, b) => {
+                            return a < b ? 1 : -1;
+                        })[0];
+                return { matchingStatcast, metricSummaryJSON, matchingMetricYear };
             } catch (e) {
                 console.error(e);
                 return {};
@@ -756,7 +758,7 @@ module.exports = {
         return matchingPlayers;
     },
 
-    getPitcherEmbed: (pitcher, pitcherInfo, isLiveGame, description, statType = 'R', savantMode = false) => {
+    getPitcherEmbed: (pitcher, pitcherInfo, isLiveGame, description, statType = 'R', savantMode = false, season = undefined) => {
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         if (isLiveGame) {
             const abbreviations = {
@@ -774,7 +776,7 @@ module.exports = {
                 .setDescription('### ' + (pitcherInfo.handedness
                     ? pitcherInfo.handedness + 'HP **'
                     : '**') + (pitcher.fullName || 'TBD') +
-                        '** (' + abbreviation + `): ${pitcherInfo.pitchingStats.yearOfStats || 'Latest'} ${(() => {
+                        '** (' + abbreviation + `): ${season || pitcherInfo.pitchingStats.yearOfStats || 'Latest'} ${(() => {
                     if (savantMode) {
                         return 'Percentile Rankings';
                     }
@@ -802,7 +804,7 @@ module.exports = {
             const embed = new EmbedBuilder()
                 .setTitle((pitcherInfo.handedness
                     ? pitcherInfo.handedness + 'HP '
-                    : '') + pitcher.fullName + ` (${globals.TEAMS.find(t => t.id === pitcher.currentTeam.id).abbreviation}): ${pitcherInfo.pitchingStats.yearOfStats || 'Latest'} ${(() => {
+                    : '') + pitcher.fullName + ` (${globals.TEAMS.find(t => t.id === pitcher.currentTeam.id).abbreviation}): ${season || pitcherInfo.pitchingStats.yearOfStats || 'Latest'} ${(() => {
                     if (savantMode) { 
                         return 'Percentile Rankings';
                     }
@@ -831,7 +833,7 @@ module.exports = {
         }
     },
 
-    getBatterEmbed: (batter, batterInfo, isLiveGame, description, statType = 'R', savantMode = false) => {
+    getBatterEmbed: (batter, batterInfo, isLiveGame, description, statType = 'R', savantMode = false, season = undefined) => {
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         let expandedBatter;
         if (isLiveGame) {
@@ -847,7 +849,7 @@ module.exports = {
             const inning = feed.inning();
             const embed = new EmbedBuilder()
                 .setTitle(halfInning.toUpperCase() + ' ' + inning + ', ' +
-                    abbreviations.away + ' vs. ' + abbreviations.home + ': Current Batter' + (savantMode ? ': Latest Percentile Rankings' : ''))
+                    abbreviations.away + ' vs. ' + abbreviations.home + ': Current Batter' + (savantMode ? `: ${season || 'Latest'} Percentile Rankings` : ''))
                 .setDescription(`### ${batter.fullName} (${abbreviation})\n ${expandedBatter.primaryPosition.abbreviation} | Bats ${expandedBatter.batSide.description} ${(description || '')}`)
                 .setImage('attachment://savant.png')
                 .setColor((halfInning === 'top'
@@ -862,7 +864,7 @@ module.exports = {
             return embed;
         } else {
             const embed = new EmbedBuilder()
-                .setTitle(`${batter.fullName} (${globals.TEAMS.find(team => team.id === batter.currentTeam.id).abbreviation})` + (savantMode ? ': Latest Percentile Rankings' : ''))
+                .setTitle(`${batter.fullName} (${globals.TEAMS.find(team => team.id === batter.currentTeam.id).abbreviation})` + (savantMode ? `: ${season || 'Latest'} Percentile Rankings` : ''))
                 .setDescription(`${batter.primaryPosition.abbreviation} | Bats ${batterInfo.stats.batSide.description}`)
                 .setImage('attachment://savant.png')
                 .setColor(globals.TEAMS.find(team => team.id === batter.currentTeam.id).primaryColor);
@@ -1144,20 +1146,23 @@ async function getScreenshotOfSavantTable (savantHTML) {
 function buildSavantSection (statCollection, metricSummaries, isPitcher = false) {
     const scale = chroma.scale(['#325aa1', '#a8c1c3', '#c91f26']);
     const sliderScale = chroma.scale(['#3661ad', '#b4cfd1', '#d8221f']);
-    statCollection.forEach(stat => {
-        if (!stat.percentile) {
-            stat.percentile = calculateRoundedPercentileFromNormalDistribution(
-                stat.metric,
-                stat.value,
-                metricSummaries[stat.metric].avg_metric,
-                metricSummaries[stat.metric].stddev_metric,
-                stat.shouldInvert
-            );
-            stat.isQualified = false;
-        } else {
-            stat.isQualified = true;
+    for (let i = 0; i < statCollection.length; i ++) {
+        if (!statCollection[i].value) { // some metrics have been added in later years, like Bat Speed. Earlier seasons will have no value.
+            continue;
         }
-    });
+        if (!statCollection[i].percentile) {
+            statCollection[i].percentile = calculateRoundedPercentileFromNormalDistribution(
+                statCollection[i].metric,
+                statCollection[i].value,
+                metricSummaries[statCollection[i].metric]?.avg_metric,
+                metricSummaries[statCollection[i].metric]?.stddev_metric,
+                statCollection[i].shouldInvert
+            );
+            statCollection[i].isQualified = false;
+        } else {
+            statCollection[i].isQualified = true;
+        }
+    }
     return statCollection.reduce((acc, value) => acc + (value.value !== null
         ? `
         <div class='savant-stat'>
