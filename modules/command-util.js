@@ -640,11 +640,11 @@ module.exports = {
         });
     },
 
-    buildPitchingStatsMarkdown: (pitchingStats, pitchMix, lastThree, seasonAdvanced, sabermetrics, includeExtra = false) => {
+    buildPitchingStatsMarkdown: (pitchingStats, pitchMix, lastThree, seasonAdvanced, sabermetrics, gameType, includeExtra = false) => {
         let reply = '';
 
         if (lastThree) {
-            reply += '\n**Recent Games:** \n';
+            reply += `\n**Recent Games${resolveGameType(gameType)}:** \n`;
             reply += `G: ${lastThree.gamesPlayed}, `;
             reply += `ERA: ${lastThree.era}, `;
             reply += `Hits: ${lastThree.hits}, `;
@@ -652,7 +652,7 @@ module.exports = {
             reply += `BB: ${lastThree.baseOnBalls}, `;
             reply += `HR: ${lastThree.homeRuns}\n`;
         }
-        reply += '**All Games:** \n';
+        reply += `**All Games${resolveGameType(gameType)}:** \n`;
         if (!pitchingStats) {
             reply += 'G: 0, ';
             reply += 'W-L: -, ';
@@ -1260,5 +1260,16 @@ function getDivisionAbbreviation (division) {
         return 'W';
     } else {
         return 'C';
+    }
+}
+
+function resolveGameType (gameType) {
+    switch (gameType) {
+        case 'R':
+            return '';
+        case 'P':
+            return ' (Postseason)';
+        case 'S':
+            return ' (Spring Training)';
     }
 }
