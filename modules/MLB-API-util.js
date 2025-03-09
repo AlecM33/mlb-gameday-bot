@@ -114,9 +114,9 @@ const endpoints = {
         LOGGER.debug('https://statsapi.mlb.com/api/v1/teams/' + teamId);
         return 'https://statsapi.mlb.com/api/v1/teams/' + teamId;
     },
-    players: () => {
-        LOGGER.debug('https://statsapi.mlb.com/api/v1/sports/1/players?fields=people,fullName,lastName,id,currentTeam,primaryPosition,name,code,abbreviation');
-        return 'https://statsapi.mlb.com/api/v1/sports/1/players?fields=people,fullName,lastName,id,currentTeam,primaryPosition,name,code,abbreviation';
+    players: (season = (new Date().getFullYear())) => {
+        LOGGER.debug(`https://statsapi.mlb.com/api/v1/sports/1/players?fields=people,fullName,lastName,id,currentTeam,primaryPosition,name,code,abbreviation&season=${season}`);
+        return `https://statsapi.mlb.com/api/v1/sports/1/players?fields=people,fullName,lastName,id,currentTeam,primaryPosition,name,code,abbreviation&season=${season}`;
     },
     wildcard: () => {
         LOGGER.debug('https://bdfed.stitch.mlbinfra.com/bdfed/transform-mlb-standings?&splitPcts=false&numberPcts=false&standingsView=division&sortTemplate=3&season=' +
@@ -278,8 +278,8 @@ module.exports = {
     pitcher: async (personId, lastXGamesLimit, statType, season) => {
         return (await fetch(endpoints.pitcher(personId, lastXGamesLimit, statType, season))).json();
     },
-    players: async () => {
-        return (await fetch(endpoints.players())).json();
+    players: async (season) => {
+        return (await fetch(endpoints.players(season))).json();
     },
     wildcard: async () => {
         return (await fetch(endpoints.wildcard())).json();

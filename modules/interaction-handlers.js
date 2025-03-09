@@ -475,22 +475,15 @@ module.exports = {
         await interaction.deferReply();
         const playerName = interaction.options.getString('player')?.trim();
         const statType = interaction.options.getString('stat_type');
-        const playerResult = await commandUtil.getPlayerFromUserInputOrLiveFeed(playerName, interaction, 'Pitcher');
-        const pitcher = playerResult.player;
-        if (!pitcher && !playerName) {
-            await interaction.followUp('No game is live right now!');
-            return;
-        } else if (playerName && !pitcher) {
-            await interaction.followUp('I didn\'t find a player with a close enough match to your input (use first and last name).');
-            return;
-        }
-        const pitcherInfo = await commandUtil.hydrateProbable(pitcher.id, (statType || 'R'), (interaction.options.getInteger('year') || new Date().getFullYear()));
+        const playerResult = await commandUtil.resolvePlayer(interaction, playerName, 'Pitcher');
+        if (!playerResult) return;
+        const pitcherInfo = await commandUtil.hydrateProbable(playerResult.player.id, (statType || 'R'), (interaction.options.getInteger('year') || new Date().getFullYear()));
         const attachment = new AttachmentBuilder(Buffer.from(pitcherInfo.spot), { name: 'spot.png' });
         const replyOptions = {
             ephemeral: false,
             files: [attachment],
             embeds: [commandUtil.getPitcherEmbed(
-                pitcher,
+                playerResult.player,
                 pitcherInfo,
                 !playerName,
                 commandUtil.buildPitchingStatsMarkdown(
@@ -515,22 +508,15 @@ module.exports = {
         await interaction.deferReply();
         const playerName = interaction.options.getString('player')?.trim();
         const statType = interaction.options.getString('stat_type');
-        const playerResult = await commandUtil.getPlayerFromUserInputOrLiveFeed(playerName, interaction, 'Batter');
-        const batter = playerResult.player;
-        if (!batter && !playerName) {
-            await interaction.followUp('No game is live right now!');
-            return;
-        } else if (playerName && !batter) {
-            await interaction.followUp('I didn\'t find a player with a close enough match to your input (use first and last name).');
-            return;
-        }
-        const batterInfo = await commandUtil.hydrateHitter(batter.id, (statType || 'R'), interaction.options.getInteger('year'));
+        const playerResult = await commandUtil.resolvePlayer(interaction, playerName, 'Batter');
+        if (!playerResult) return;
+        const batterInfo = await commandUtil.hydrateHitter(playerResult.player.id, (statType || 'R'), interaction.options.getInteger('year'));
         const attachment = new AttachmentBuilder(Buffer.from(batterInfo.spot), { name: 'spot.png' });
         const replyOptions = {
             ephemeral: false,
             files: [attachment],
             embeds: [commandUtil.getBatterEmbed(
-                batter,
+                playerResult.player,
                 batterInfo,
                 !playerName,
                 commandUtil.formatSplits(
@@ -553,19 +539,12 @@ module.exports = {
         console.info(`BATTER SAVANT command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
         const playerName = interaction.options.getString('player')?.trim();
-        const playerResult = await commandUtil.getPlayerFromUserInputOrLiveFeed(playerName, interaction, 'Batter');
-        const batter = playerResult.player;
-        if (!batter && !playerName) {
-            await interaction.followUp('No game is live right now!');
-            return;
-        } else if (playerName && !batter) {
-            await interaction.followUp('I didn\'t find a player with a close enough match to your input (use first and last name).');
-            return;
-        }
-        const text = await mlbAPIUtil.savantPage(batter.id, 'hitting');
+        const playerResult = await commandUtil.resolvePlayer(interaction, playerName, 'Batter');
+        if (!playerResult) return;
+        const text = await mlbAPIUtil.savantPage(playerResult.player.id, 'hitting');
         const statcastData = commandUtil.getStatcastData(text, interaction.options.getInteger('year'));
         if (statcastData.matchingStatcast && statcastData.matchingMetricYear && statcastData.metricSummaryJSON) {
-            const batterInfo = await commandUtil.hydrateHitter(batter.id, 'R');
+            const batterInfo = await commandUtil.hydrateHitter(playerResult.player.id, 'R');
             const savantAttachment = new AttachmentBuilder((await commandUtil.buildBatterSavantTable(
                 statcastData.matchingStatcast,
                 statcastData.metricSummaryJSON[statcastData.matchingMetricYear.toString()],
@@ -573,7 +552,7 @@ module.exports = {
             const replyOptions = {
                 ephemeral: false,
                 files: [savantAttachment],
-                embeds: [commandUtil.getBatterEmbed(batter, batterInfo, !playerName, null, null, true, interaction.options.getInteger('year'))],
+                embeds: [commandUtil.getBatterEmbed(playerResult.player, batterInfo, !playerName, null, null, true, interaction.options.getInteger('year'))],
                 components: [],
                 content: ''
             };
@@ -589,16 +568,12 @@ module.exports = {
         console.info(`PITCHER SAVANT command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
         const playerName = interaction.options.getString('player')?.trim();
-        const playerResult = await commandUtil.getPlayerFromUserInputOrLiveFeed(playerName, interaction, 'Pitcher');
-        const pitcher = playerResult.player;
-        if (!pitcher && !playerName) {
-            await interaction.followUp('No game is live right now!');
-            return;
-        }
-        const text = await mlbAPIUtil.savantPage(pitcher.id, 'pitching');
+        const playerResult = await commandUtil.resolvePlayer(interaction, playerName, 'Pitcher');
+        if (!playerResult) return;
+        const text = await mlbAPIUtil.savantPage(playerResult.player.id, 'pitching');
         const statcastData = commandUtil.getStatcastData(text, interaction.options.getInteger('year'));
         if (statcastData.matchingStatcast && statcastData.matchingMetricYear && statcastData.metricSummaryJSON) {
-            const pitcherInfo = await commandUtil.hydrateProbable(pitcher.id, 'R');
+            const pitcherInfo = await commandUtil.hydrateProbable(playerResult.player.id, 'R');
             const savantAttachment = new AttachmentBuilder((await commandUtil.buildPitcherSavantTable(
                 statcastData.matchingStatcast,
                 statcastData.metricSummaryJSON[statcastData.matchingMetricYear.toString()],
@@ -606,7 +581,7 @@ module.exports = {
             const replyOptions = {
                 ephemeral: false,
                 files: [savantAttachment],
-                embeds: [commandUtil.getPitcherEmbed(pitcher, pitcherInfo, !playerName, null, 'R', true, interaction.options.getInteger('year'))],
+                embeds: [commandUtil.getPitcherEmbed(playerResult.player, pitcherInfo, !playerName, null, 'R', true, interaction.options.getInteger('year'))],
                 components: [],
                 content: ''
             };
