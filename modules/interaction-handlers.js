@@ -513,7 +513,7 @@ module.exports = {
         const statType = interaction.options.getString('stat_type');
         const playerResult = await commandUtil.resolvePlayer(interaction, playerName, 'Batter');
         if (!playerResult) return;
-        const batterInfo = await commandUtil.hydrateHitter(playerResult.player.id, (statType || 'R'), interaction.options.getInteger('year'));
+        const batterInfo = await commandUtil.hydrateHitter(playerResult.player.id, (statType || 'R'), interaction.options.getInteger('year') || new Date().getFullYear());
         const attachment = new AttachmentBuilder(Buffer.from(batterInfo.spot), { name: 'spot.png' });
         const replyOptions = {
             ephemeral: false,
