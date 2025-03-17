@@ -1,7 +1,6 @@
 const { AttachmentBuilder, EmbedBuilder, PermissionsBitField } = require('discord.js');
 const globalCache = require('./global-cache');
 const mlbAPIUtil = require('./MLB-API-util');
-const { joinImages } = require('join-images');
 const globals = require('../config/globals');
 const commandUtil = require('./command-util');
 const queries = require('../database/queries.js');
@@ -34,7 +33,7 @@ module.exports = {
         const probables = matchup.probables;
         const hydratedHomeProbable = await commandUtil.hydrateProbable(probables.homeProbable, matchup.probables.gameType);
         const hydratedAwayProbable = await commandUtil.hydrateProbable(probables.awayProbable, matchup.probables.gameType);
-        joinImages([hydratedHomeProbable.spot, hydratedAwayProbable.spot],
+        commandUtil.joinPlayerSpots([hydratedHomeProbable.spot, hydratedAwayProbable.spot],
             { direction: 'horizontal', offset: 10, margin: 0, color: 'transparent' })
             .then(async (img) => {
                 const attachment = new AttachmentBuilder((await img.png().toBuffer()), { name: 'matchupSpots.png' });
@@ -547,11 +546,15 @@ module.exports = {
         const text = await mlbAPIUtil.savantPage(playerResult.player.id, 'hitting');
         const statcastData = commandUtil.getStatcastData(text, interaction.options.getInteger('year'));
         if (statcastData.matchingStatcast && statcastData.matchingMetricYear && statcastData.metricSummaryJSON) {
-            const batterInfo = await commandUtil.hydrateHitter(playerResult.player.id, 'R');
-            const savantAttachment = new AttachmentBuilder((await commandUtil.buildBatterSavantTable(
+            const batterInfo = await commandUtil.hydrateHitter(
+                playerResult.player.id,
+                'R',
+                interaction.options.getInteger('year') || new Date().getFullYear()
+            );
+            const savantAttachment = new AttachmentBuilder(commandUtil.buildBatterSavantTable(
                 statcastData.matchingStatcast,
                 statcastData.metricSummaryJSON[statcastData.matchingMetricYear.toString()],
-                batterInfo.spot)), { name: 'savant.png' });
+                batterInfo.spot), { name: 'savant.png' });
             const replyOptions = {
                 ephemeral: false,
                 files: [savantAttachment],
@@ -576,11 +579,15 @@ module.exports = {
         const text = await mlbAPIUtil.savantPage(playerResult.player.id, 'pitching');
         const statcastData = commandUtil.getStatcastData(text, interaction.options.getInteger('year'));
         if (statcastData.matchingStatcast && statcastData.matchingMetricYear && statcastData.metricSummaryJSON) {
-            const pitcherInfo = await commandUtil.hydrateProbable(playerResult.player.id, 'R');
-            const savantAttachment = new AttachmentBuilder((await commandUtil.buildPitcherSavantTable(
+            const pitcherInfo = await commandUtil.hydrateProbable(
+                playerResult.player.id,
+                'R',
+                interaction.options.getInteger('year') || new Date().getFullYear()
+            );
+            const savantAttachment = new AttachmentBuilder(commandUtil.buildPitcherSavantTable(
                 statcastData.matchingStatcast,
                 statcastData.metricSummaryJSON[statcastData.matchingMetricYear.toString()],
-                pitcherInfo.spot)), { name: 'savant.png' });
+                pitcherInfo.spot), { name: 'savant.png' });
             const replyOptions = {
                 ephemeral: false,
                 files: [savantAttachment],

@@ -1,0 +1,33 @@
+version: "3.8"
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-dbname}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./database:/docker-entrypoint-initdb.d
+  bot:
+    build: .
+    restart: on-failure:3
+    environment:
+      TOKEN: ${DISCORD_TOKEN}
+      NODE_ENV: ${NODE_ENV}
+      TEAM_ID: ${TEAM_ID}
+      LOG_LEVEL: ${LOG_LEVEL}
+      CLIENT_ID: ${DISCORD_CLIENT_ID}
+      DB_HOST: db
+      DB_USER: ${DB_USER:-user}
+      DB_PASSWORD: ${DB_PASSWORD:-password}
+      DB_NAME: ${DB_NAME:-dbname}
+      DATABASE_STRING: postgres://${DB_USER}:${DB_PASSWORD}@db:${DB_PORT}/${DB_NAME}
+      REQUIRE_SSL: ${REQUIRE_SSL}
+    depends_on:
+      - db
+volumes:
+  db_data:
