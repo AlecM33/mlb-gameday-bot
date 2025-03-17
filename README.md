@@ -42,26 +42,45 @@ Written in JavaScript using [Discord.js](https://discord.js.org/). Running on th
 
 The bot uses a PostgreSQL database hosted for free on the [Aiven Platform](https://aiven.io/) to keep track of the Discord channels that have subscribed to the real-time gameday feature.
 
-I make use of several useful npm packages such as `sharp`, `ascii-table`, and `reconnecting-websocket`.
-
 I integrate with the MLB stats API for a dizzying amount of data. Its documentation is limited, but there is some. Shout out to Todd Roberts and his project for getting me acquainted with some of the subtleties: https://pypi.org/project/MLB-StatsAPI/. You can also
 view the spec for the MLB's "master game object", nicknamed GUMBO, here: https://bdata-research-blog-prod.s3.amazonaws.com/uploads/2019/03/GUMBOPDF3-29.pdf. I'm also happy to answer what I can about how to use the API.
 
 # Using the bot for your own servers
 
-My instance of the bot for the Cleveland Guardians is private. The bot is only designed to follow one team at a time. If you are interested in running this bot in your own server, feel free to reach out to me and I'd be happy to help get you started. Read below for a short overview of running your own instance.
+My instance of the bot for the Cleveland Guardians is private. The bot is only designed to follow one team at a time. If you are interested in running this bot in your own server, feel free to reach out to me and I'd be happy to help get you started. Read below for an initial guide.
 
-# Running Locally + Contributing
+# Running your own copy of the bot
 
 This will assume you are somewhat familiar with Node.js and developing Discord bots.
 
-The bot is dependent on a short list of environment variables. When these are populated appropriately, simply running `npm start` (or `npm run start:dev` for the development environment) should get the bot running. These variables are:
+### Using Docker
+
+**Prerequisites:**
+- a machine with the [Docker Desktop](https://docs.docker.com/get-started/get-docker/) installed and the Docker Engine running.
+
+1. Create a file called `.env` in the root directory, and populate it with the appropriate values. The `.env.example` file contains all the required variables with placeholder values. Each one is explained below.
+    - DB_USER: the user for the postgres database
+    - DB_PASSWORD: the password for the postgres database user
+    - NODE_ENV: the node.js environment (production or development) in which to run the bot.
+    - DB_NAME: the name for the postgres database
+    - DB_PORT: the port for the postgres database
+    - DISCORD_TOKEN: your discord bot's auth token **(sensitive)**
+    - TEAM_ID: the id of the team you want the bot to follow. These match those of the "teams" resource in the MLB stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1 . They are also stored statically in `config/globals.js`. Applicable commands will be configured for that team.
+    - LOG_LEVEL: your chosen log level (info, error, warn, debug, or trace)
+    - DISCORD_CLIENT_ID: the client ID of your Discord application
+    - REQUIRE_SSL: whether the postgres database connection should require SSL.
+    - TIME_ZONE: Your chosen time zone. Defaults to EST. Time zone names correspond to the Zone and Link names of the [IANA Time Zone Database](https://www.iana.org/time-zones), such as "UTC", "Asia/Shanghai", "Asia/Kolkata", and "America/New_York". Additionally, time zones can be given as UTC offsets in the format "±hh:mm", "±hhmm", or "±hh", for example as "+01:00", "-2359", or "+23".
+2. Run `docker-compose up`
+
+### Without Docker
+
+1. Populate the following environment variables:
 
 - CLIENT_ID - your bot's client ID, AKA application ID.
-- DATABASE_STRING - a connection string for a PostgreSQL database instance. **Obligatory 'this is sensitive' - be careful where you store it**. That database should have the schema contained here in the file `database/schema.sql`. If requiring SSL, you'll need to place your cert in database/certs.
+- DATABASE_STRING - a connection string for a PostgreSQL database instance. **(sensitive)**. That database should have the schema contained here in the file `database/schema.sql`. If requiring SSL, you'll need to place your cert in database/certs.
 - LOG_LEVEL - your chosen log level. 
 - TEAM_ID - the team you want to follow. These match those of the "teams" resource in the MLB stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1 . They are also stored statically in `config/globals.js`. Every command will be configured for that team.
-- TOKEN - your bot's authentication token. **Obligatory 'this is sensitive' - be careful where you store it**
+- TOKEN - your bot's authentication token. **(sensitive)**
 - TIME_ZONE - Your chosen time zone. Defaults to EST. Time zone names correspond to the Zone and Link names of the [IANA Time Zone Database](https://www.iana.org/time-zones), such as "UTC", "Asia/Shanghai", "Asia/Kolkata", and "America/New_York". Additionally, time zones can be given as UTC offsets in the format "±hh:mm", "±hhmm", or "±hh", for example as "+01:00", "-2359", or "+23".
 
 ### Optional - add emojis!
@@ -79,38 +98,31 @@ that's necessary to start seeing them show up - they will be fetched when the bo
 
 If the bot starts up successfully, the start-up logs look something like the following (subject to your log level):
 ```
-LOG    Fri, 28 Jun 2024 20:34:39 GMT :  Ready!
-LOG    Fri, 28 Jun 2024 20:34:39 GMT :  bot successfully logged in
-LOG    Fri, 28 Jun 2024 20:34:39 GMT :  Subscribed channels: [
+LOG    Mon, 17 Mar 2025 21:13:15 GMT :  Ready!
+LOG    Mon, 17 Mar 2025 21:13:15 GMT :  bot successfully logged in
+LOG    Mon, 17 Mar 2025 21:13:15 GMT :  Subscribed channels: []
+LOG    Mon, 17 Mar 2025 21:13:15 GMT :  Games: polling...
+DEBUG  Mon, 17 Mar 2025 21:13:15 GMT :  https://statsapi.mlb.com/api/v1/schedule?hydrate=team,lineups&sportId=1&startDate=2025-03-16&endDate=2025-03-18&teamId=114
+LOG    Mon, 17 Mar 2025 21:13:15 GMT :  Fetched application emojis.
+TRACE  Mon, 17 Mar 2025 21:13:15 GMT :  Current game PKs: [
   {
-    "channel_id": "1255985809509584953",
-    "scoring_plays_only": false,
-    "delay": 0
+    "key": 779092,
+    "date": "2025-03-16",
+    "status": "F"
   },
   {
-    "channel_id": "758959662631747595",
-    "scoring_plays_only": false,
-    "delay": 10
+    "key": 778815,
+    "date": "2025-03-17",
+    "status": "P"
+  },
+  {
+    "key": 778921,
+    "date": "2025-03-18",
+    "status": "S"
   }
 ]
-LOG    Fri, 28 Jun 2024 20:34:39 GMT :  Games: polling...
-DEBUG  Fri, 28 Jun 2024 20:34:39 GMT :  https://statsapi.mlb.com/api/v1/schedule?hydrate=team,lineups&sportId=1&startDate=2024-06-27&endDate=2024-06-29&teamId=114
-LOG    Fri, 28 Jun 2024 20:34:39 GMT :  Current game PKs: [
-  {
-    "key": 746288,
-    "date": "2024-06-27"
-  },
-  {
-    "key": 746292,
-    "date": "2024-06-28"
-  },
-  {
-    "key": 746289,
-    "date": "2024-06-29"
-  }
-]
-LOG    Fri, 28 Jun 2024 20:34:39 GMT :  Refreshing nearest games in cache.
-
 ```
 
-As for contributions, I welcome suggestions on new features, improvements, etc. I also welcome proposals for collaboration. Just let me know.
+# Contributing
+
+I welcome suggestions on new features or improvements. I also welcome proposals for collaboration. Just let me know.
