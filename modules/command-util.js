@@ -78,7 +78,7 @@ module.exports = {
         return {
             spot,
             fullName: people?.people[0].fullName,
-            pitchMix: savant instanceof Error ? savant : getPitchCollections(new jsdom.JSDOM(savant)), // TODO
+            pitchMix: savant instanceof Error ? savant : getPitchCollections(new jsdom.JSDOM(savant)),
             pitchingStats: parsePitchingStats(people, statType),
             handedness: people?.people[0].pitchHand?.code
         };
