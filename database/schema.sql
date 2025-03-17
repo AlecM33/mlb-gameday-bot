@@ -1,4 +1,4 @@
-CREATE TABLE gameday_subscribe_channels(
+CREATE TABLE IF NOT EXISTS gameday_subscribe_channels(
     guild_id character varying(64) NOT NULL,
     channel_id character varying(64) NOT NULL,
     scoring_plays_only BOOLEAN NOT NULL,

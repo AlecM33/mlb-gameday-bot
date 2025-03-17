@@ -4,7 +4,6 @@ const { Client, Collection, GatewayIntentBits } = require('discord.js');
 const gameday = require('./modules/gameday');
 const globalCache = require('./modules/global-cache');
 const queries = require('./database/queries');
-const ReusableBrowser = require('./modules/classes/ReusableBrowser');
 const { LOG_LEVEL } = require('./config/globals');
 const LOGGER = require('./modules/logger')(process.env.LOG_LEVEL?.trim() || LOG_LEVEL.INFO);
 
@@ -36,7 +35,6 @@ BOT.once('ready', async () => {
     });
     globalCache.values.subscribedChannels = await queries.getAllSubscribedChannels();
     LOGGER.info('Subscribed channels: ' + JSON.stringify(globalCache.values.subscribedChannels, null, 2));
-    globalCache.values.browser = new ReusableBrowser();
     await gameday.statusPoll(BOT);
 });
 

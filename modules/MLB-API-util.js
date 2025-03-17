@@ -36,9 +36,9 @@ const endpoints = {
         LOGGER.debug('https://bdfed.stitch.mlbinfra.com/bdfed/matchup/' + gamePk + '?statList=avg&statList=atBats&statList=homeRuns&statList=rbi&statList=ops');
         return 'https://bdfed.stitch.mlbinfra.com/bdfed/matchup/' + gamePk + '?statList=avg&statList=atBats&statList=homeRuns&statList=rbi&statList=ops';
     },
-    spot: (personId) => {
-        LOGGER.debug('https://midfield.mlbstatic.com/v1/people/' + personId + '/spots/120');
-        return 'https://midfield.mlbstatic.com/v1/people/' + personId + '/spots/120';
+    spot: (personId, season) => {
+        LOGGER.debug(`https://midfield.mlbstatic.com/v1/people/${personId}/spots/120${season === new Date().getFullYear() ? '' : `?season=${season}`}`);
+        return `https://midfield.mlbstatic.com/v1/people/${personId}/spots/120${season === new Date().getFullYear() ? '' : `?season=${season}`}`;
     },
     standings: (leagueId) => {
         LOGGER.debug('https://statsapi.mlb.com/api/v1/standings?leagueId=' + leagueId);
@@ -165,8 +165,8 @@ module.exports = {
     playMetrics: async (gamePk) => {
         return (await fetch(endpoints.playMetrics(gamePk))).json();
     },
-    spot: async (personId) => {
-        return (await fetch(endpoints.spot(personId))).arrayBuffer();
+    spot: async (personId, season = new Date().getFullYear()) => {
+        return (await fetch(endpoints.spot(personId, season))).arrayBuffer();
     },
     schedule: async (startDate, endDate, teamId) => {
         return (await fetch(endpoints.schedule(startDate, endDate, teamId))).json();
