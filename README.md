@@ -55,8 +55,7 @@ This will assume you are somewhat familiar with Node.js and developing Discord b
 
 ### Using Docker
 
-**Prerequisites:**
-- a machine with the [Docker Desktop](https://docs.docker.com/get-started/get-docker/) installed and the Docker Engine running.
+Requires a machine with the [Docker Desktop](https://docs.docker.com/get-started/get-docker/) installed and the Docker Engine running.
 
 1. Create a file called `.env` in the root directory, and populate it with the appropriate values. The `.env.example` file contains all the required variables with placeholder values. Each one is explained below.
     - DB_USER: the user for the postgres database
