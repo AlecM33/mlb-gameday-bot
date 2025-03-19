@@ -46,7 +46,7 @@ module.exports = {
             ]);
         }
         table.removeBorder();
-        return await drawSimpleTables([table], 800, 350);
+        return drawSimpleTables([table], 800, 350);
     },
     hydrateProbable: async (probable, statType, season = (new Date().getFullYear())) => {
         const [spot, savant, people] = await Promise.all([
@@ -154,7 +154,7 @@ module.exports = {
         return formattedSplits;
     },
 
-    buildLineScoreTable: async (game, linescore) => {
+    buildLineScoreTable: (game, linescore) => {
         const awayAbbreviation = game.teams.away.team?.abbreviation || game.teams.away.abbreviation;
         const homeAbbreviation = game.teams.home.team?.abbreviation || game.teams.home.abbreviation;
         let innings = linescore.innings;
@@ -171,7 +171,7 @@ module.exports = {
             .concat(innings.map(inning => inning.home.runs))
             .concat(['', linescore.teams.home.runs, linescore.teams.home.hits, linescore.teams.home.errors, linescore.teams.home.leftOnBase]));
         linescoreTable.removeBorder();
-        return (await drawSimpleTables([linescoreTable], 1000, 1000));
+        return drawSimpleTables([linescoreTable], 1000, 1000);
     },
 
     buildBoxScoreTable: (game, boxScore, boxScoreNames, status, boxScoreChoiceToHandle) => {
@@ -223,7 +223,7 @@ module.exports = {
         return drawSimpleTables(tables, 600, 800);
     },
 
-    buildStandingsTable: async (standings, divisionName) => {
+    buildStandingsTable: (standings, divisionName) => {
         const centralMap = mapStandings(standings);
         const table = new AsciiTable(divisionName + '\n');
         table.setHeading('Team', 'W-L', 'GB', 'L10');
@@ -234,10 +234,10 @@ module.exports = {
             entry.lastTen
         ));
         table.removeBorder();
-        return await drawSimpleTables([table], 600, 300);
+        return drawSimpleTables([table], 600, 300);
     },
 
-    buildWildcardTable: async (divisionLeaders, wildcard, leagueName) => {
+    buildWildcardTable: (divisionLeaders, wildcard, leagueName) => {
         const divisionLeadersMap = mapStandings(divisionLeaders);
         const wildcardMap = mapStandings(wildcard, true);
         const table = new AsciiTable(leagueName + ' Wild Card \n');
@@ -273,7 +273,7 @@ module.exports = {
             );
         });
         table.removeBorder();
-        return await drawSimpleTables([table], 1000, 1000);
+        return drawSimpleTables([table], 1000, 1000);
     },
 
     getStatcastData: (savantText, season) => {
