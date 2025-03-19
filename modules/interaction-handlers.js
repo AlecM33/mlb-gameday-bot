@@ -80,7 +80,6 @@ module.exports = {
 
     scheduleHandler: async (interaction) => {
         console.info(`SCHEDULE command invoked by guild: ${interaction.guildId}`);
-        const week = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const oneWeek = new Date();
         oneWeek.setDate(oneWeek.getDate() + 7);
         const nextWeek = await mlbAPIUtil.schedule(
@@ -97,7 +96,10 @@ module.exports = {
                 .find(v => v.name.includes(
                     (home ? teams.away.team.id : teams.home.team.id)
                 ));
-            reply += `${week[gameDate.getDay()]} ${date.date.substr(6)}` +
+            reply += `${gameDate.toLocaleString('en-US', {
+                timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
+                weekday: 'short' 
+            })} ${date.date.substr(6)}` +
                 (home ? ' vs. ' : ' @ ') + (home ? teams.away.team.abbreviation : teams.home.team.abbreviation) +
                 `${emoji ? ` <:${emoji.name}:${emoji.id}>` : ''}` +
                 ' ' +
@@ -132,7 +134,7 @@ module.exports = {
             .records.find((record) => record.division.id === divisionId);
         await interaction.followUp({
             ephemeral: false,
-            files: [new AttachmentBuilder((await commandUtil.buildStandingsTable(divisionStandings, team.teams[0].division.name)), { name: 'standings.png' })]
+            files: [new AttachmentBuilder(commandUtil.buildStandingsTable(divisionStandings, team.teams[0].division.name), { name: 'standings.png' })]
         });
     },
 
@@ -155,7 +157,7 @@ module.exports = {
         } else {
             await interaction.followUp({
                 ephemeral: false,
-                files: [new AttachmentBuilder((await commandUtil.buildWildcardTable(divisionLeaders, wildcard, leagueName)), { name: 'wildcard.png' })]
+                files: [new AttachmentBuilder(commandUtil.buildWildcardTable(divisionLeaders, wildcard, leagueName), { name: 'wildcard.png' })]
             });
         }
     },
@@ -344,7 +346,7 @@ module.exports = {
             }
             const linescore = await mlbAPIUtil.linescore(game.gamePk);
             const linescoreAttachment = new AttachmentBuilder(
-                await commandUtil.buildLineScoreTable(game, linescore)
+                commandUtil.buildLineScoreTable(game, linescore)
                 , { name: 'line_score.png' });
             await commandUtil.giveFinalCommandResponse(toHandle, {
                 ephemeral: false,
@@ -381,25 +383,32 @@ module.exports = {
                 mlbAPIUtil.boxScore(game.gamePk),
                 mlbAPIUtil.liveFeedBoxScoreNamesOnly(game.gamePk)
             ]);
-            const boxscoreAttachment = new AttachmentBuilder(
-                await commandUtil.buildBoxScoreTable(game, boxScore, boxScoreNames, statusCheck.gameData.status.abstractGameState)
-                , { name: 'boxscore.png' });
-            const awayAbbreviation = game.teams.away.team?.abbreviation || game.teams.away.abbreviation;
-            const homeAbbreviation = game.teams.home.team?.abbreviation || game.teams.home.abbreviation;
-            await commandUtil.giveFinalCommandResponse(toHandle, {
-                ephemeral: false,
-                content: homeAbbreviation + ' vs. ' + awayAbbreviation +
-                    ', ' + new Date(game.gameDate).toLocaleString('default', {
-                    month: 'short',
-                    day: 'numeric',
-                    timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    timeZoneName: 'short'
-                }),
-                components: [],
-                files: [boxscoreAttachment]
-            });
+            const boxScoreChoiceToHandle = await commandUtil.getHomeAwayChoice(
+                toHandle,
+                boxScore.teams,
+                'Which team would you like to view the box score for?'
+            );
+            if (boxScoreChoiceToHandle) {
+                const boxscoreAttachment = new AttachmentBuilder(
+                    commandUtil.buildBoxScoreTable(game, boxScore, boxScoreNames, statusCheck.gameData.status.abstractGameState, boxScoreChoiceToHandle)
+                    , { name: 'boxscore.png' });
+                const awayAbbreviation = game.teams.away.team?.abbreviation || game.teams.away.abbreviation;
+                const homeAbbreviation = game.teams.home.team?.abbreviation || game.teams.home.abbreviation;
+                await commandUtil.giveFinalCommandResponse(boxScoreChoiceToHandle, {
+                    ephemeral: false,
+                    content: homeAbbreviation + ' vs. ' + awayAbbreviation +
+                        ', ' + new Date(game.gameDate).toLocaleString('default', {
+                        month: 'short',
+                        day: 'numeric',
+                        timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        timeZoneName: 'short'
+                    }) + `: **${commandUtil.getTeamDisplayString(boxScore.teams, parseInt(boxScoreChoiceToHandle.customId))} Box Score**\n`,
+                    components: [],
+                    files: [boxscoreAttachment]
+                });
+            }
         }
     },
 
@@ -423,23 +432,30 @@ module.exports = {
             } else {
                 updatedLineup = gameLineups.dates[0].games[0];
             }
-            const ourTeamLineup = updatedLineup.teams.home.team.id === parseInt(process.env.TEAM_ID)
-                ? updatedLineup.lineups?.homePlayers
-                : updatedLineup.lineups?.awayPlayers;
-            if (!ourTeamLineup) {
-                await commandUtil.giveFinalCommandResponse(toHandle, {
-                    content: commandUtil.constructGameDisplayString(game) + ' - No lineup card has been submitted for this game yet.',
+            const lineupChoiceToHandle = await commandUtil.getHomeAwayChoice(
+                toHandle,
+                updatedLineup.teams,
+                'Which team would you like to view the lineup card for?'
+            );
+            if (lineupChoiceToHandle) {
+                const teamLineup = updatedLineup.teams.home.team.id === parseInt(lineupChoiceToHandle.customId)
+                    ? updatedLineup.lineups?.homePlayers
+                    : updatedLineup.lineups?.awayPlayers;
+                if (!teamLineup) {
+                    await commandUtil.giveFinalCommandResponse(lineupChoiceToHandle, {
+                        content: commandUtil.constructGameDisplayString(game) + ' - No lineup card has been submitted for this game yet.',
+                        ephemeral: false,
+                        components: []
+                    });
+                    return;
+                }
+                await commandUtil.giveFinalCommandResponse(lineupChoiceToHandle, {
                     ephemeral: false,
-                    components: []
+                    content: commandUtil.constructGameDisplayString(game) + `: **${commandUtil.getTeamDisplayString(updatedLineup.teams, parseInt(lineupChoiceToHandle.customId))} Lineup**\n`,
+                    components: [],
+                    files: [new AttachmentBuilder(await commandUtil.getLineupCardTable(teamLineup), { name: 'lineup.png' })]
                 });
-                return;
             }
-            await commandUtil.giveFinalCommandResponse(toHandle, {
-                ephemeral: false,
-                content: commandUtil.constructGameDisplayString(game) + '\n',
-                components: [],
-                files: [new AttachmentBuilder(await commandUtil.getLineupCardTable(updatedLineup), { name: 'lineup.png' })]
-            });
         }
     },
 

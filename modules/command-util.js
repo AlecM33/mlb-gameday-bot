@@ -17,11 +17,8 @@ module.exports = {
     joinPlayerSpots: async (spots, options) => {
         return joinImages(spots, options);
     },
-    getLineupCardTable: async (game) => {
+    getLineupCardTable: async (lineup) => {
         const table = new AsciiTable();
-        const lineup = game.teams.home.team.id === parseInt(process.env.TEAM_ID)
-            ? game.lineups.homePlayers
-            : game.lineups.awayPlayers;
         const people = (await mlbAPIUtil.people(lineup.map(lineupPlayer => lineupPlayer.id))).people;
         table.setHeading(['', '', '', 'B', 'HR', 'RBI', 'SB', 'AVG', 'OPS']);
         table.setHeadingAlign(AsciiTable.RIGHT);
@@ -49,7 +46,7 @@ module.exports = {
             ]);
         }
         table.removeBorder();
-        return await drawSimpleTables([table], 800, 350);
+        return drawSimpleTables([table], 800, 350);
     },
     hydrateProbable: async (probable, statType, season = (new Date().getFullYear())) => {
         const [spot, savant, people] = await Promise.all([
@@ -157,7 +154,7 @@ module.exports = {
         return formattedSplits;
     },
 
-    buildLineScoreTable: async (game, linescore) => {
+    buildLineScoreTable: (game, linescore) => {
         const awayAbbreviation = game.teams.away.team?.abbreviation || game.teams.away.abbreviation;
         const homeAbbreviation = game.teams.home.team?.abbreviation || game.teams.home.abbreviation;
         let innings = linescore.innings;
@@ -174,12 +171,12 @@ module.exports = {
             .concat(innings.map(inning => inning.home.runs))
             .concat(['', linescore.teams.home.runs, linescore.teams.home.hits, linescore.teams.home.errors, linescore.teams.home.leftOnBase]));
         linescoreTable.removeBorder();
-        return (await drawSimpleTables([linescoreTable], 1000, 1000));
+        return drawSimpleTables([linescoreTable], 1000, 1000);
     },
 
-    buildBoxScoreTable: async (game, boxScore, boxScoreNames, status) => {
+    buildBoxScoreTable: (game, boxScore, boxScoreNames, status, boxScoreChoiceToHandle) => {
         const tables = [];
-        const players = boxScore.teams.away.team.id === parseInt(process.env.TEAM_ID)
+        const players = boxScore.teams.away.team.id === parseInt(boxScoreChoiceToHandle.customId)
             ? boxScore.teams.away.players
             : boxScore.teams.home.players;
         const sortedBattingOrder = Object.keys(players)
@@ -195,7 +192,7 @@ module.exports = {
                 };
             })
             .sort((a, b) => parseInt(a.battingOrder) > parseInt(b.battingOrder) ? 1 : -1);
-        const pitcherIDs = boxScore.teams.away.team.id === parseInt(process.env.TEAM_ID)
+        const pitcherIDs = boxScore.teams.away.team.id === parseInt(boxScoreChoiceToHandle.customId)
             ? boxScore.teams.away.pitchers
             : boxScore.teams.home.pitchers;
         const inOrderPitchers = pitcherIDs.map(pitcherID => ((pitcher) => {
@@ -223,10 +220,10 @@ module.exports = {
         pitchingTable.removeBorder();
         tables.push(boxScoreTable);
         tables.push(pitchingTable);
-        return (await drawSimpleTables(tables, 600, 800));
+        return drawSimpleTables(tables, 600, 800);
     },
 
-    buildStandingsTable: async (standings, divisionName) => {
+    buildStandingsTable: (standings, divisionName) => {
         const centralMap = mapStandings(standings);
         const table = new AsciiTable(divisionName + '\n');
         table.setHeading('Team', 'W-L', 'GB', 'L10');
@@ -237,10 +234,10 @@ module.exports = {
             entry.lastTen
         ));
         table.removeBorder();
-        return await drawSimpleTables([table], 600, 300);
+        return drawSimpleTables([table], 600, 300);
     },
 
-    buildWildcardTable: async (divisionLeaders, wildcard, leagueName) => {
+    buildWildcardTable: (divisionLeaders, wildcard, leagueName) => {
         const divisionLeadersMap = mapStandings(divisionLeaders);
         const wildcardMap = mapStandings(wildcard, true);
         const table = new AsciiTable(leagueName + ' Wild Card \n');
@@ -276,7 +273,7 @@ module.exports = {
             );
         });
         table.removeBorder();
-        return await drawSimpleTables([table], 1000, 1000);
+        return drawSimpleTables([table], 1000, 1000);
     },
 
     getStatcastData: (savantText, season) => {
@@ -610,9 +607,9 @@ module.exports = {
     },
 
     giveFinalCommandResponse: async (toHandle, options) => {
-        await (globalCache.values.game.isDoubleHeader
+        await toHandle.update
             ? toHandle.update(options)
-            : toHandle.followUp(options));
+            : toHandle.followUp(options);
     },
 
     constructGameDisplayString: (game) => {
@@ -922,7 +919,49 @@ module.exports = {
         }
 
         return playerResult;
+    },
+
+    getHomeAwayChoice: async (interaction, teams, question) => {
+        const buttons = Object.keys(teams).map(key => {
+            const emoji = globalCache.values.emojis
+                .find(v => v.name.includes(teams[key].team.id));
+            const builder = new ButtonBuilder()
+                .setCustomId(teams[key].team.id.toString())
+                .setLabel(teams[key].team.name)
+                .setStyle(ButtonStyle.Primary);
+            if (emoji) {
+                builder.setEmoji(`<:${emoji.name}:${emoji.id}>`);
+            }
+            return builder;
+        });
+        const response = interaction.deferred
+            ? await interaction.followUp({
+                content: question,
+                components: [new ActionRowBuilder().addComponents(buttons)]
+            })
+            : await interaction.update({
+                content: question,
+                components: [new ActionRowBuilder().addComponents(buttons)]
+            });
+        const collectorFilter = i => i.user.id === interaction.user.id;
+        try {
+            LOGGER.trace('awaiting');
+            return await response.awaitMessageComponent({ filter: collectorFilter, time: 20_000 });
+        } catch (e) {
+            await interaction.editReply({
+                content: 'A selection was not received within 20 seconds, so I canceled the interaction.',
+                components: []
+            });
+        }
+    },
+
+    getTeamDisplayString: (teams, chosenTeamId) => {
+        const emoji = globalCache.values.emojis
+            .find(v => v.name.includes(chosenTeamId));
+        const team = teams.home.team.id === chosenTeamId ? teams.home.team : teams.away.team;
+        return `${emoji ? `<:${emoji.name}:${emoji.id}>` : ''} ${team.name}`;
     }
+
 };
 
 function mapStandings (standings, wildcard = false) {
