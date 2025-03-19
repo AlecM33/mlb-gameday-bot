@@ -453,7 +453,7 @@ module.exports = {
                     ephemeral: false,
                     content: commandUtil.constructGameDisplayString(game) + `: **${commandUtil.getTeamDisplayString(updatedLineup.teams, parseInt(lineupChoiceToHandle.customId))} Lineup**\n`,
                     components: [],
-                    files: [new AttachmentBuilder(await commandUtil.getLineupCardTable(teamLineup), { name: 'lineup.png' })]
+                    files: [new AttachmentBuilder(await commandUtil.getLineupCardTable(teamLineup, game.gameType), { name: 'lineup.png' })]
                 });
             }
         }
