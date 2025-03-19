@@ -17,11 +17,8 @@ module.exports = {
     joinPlayerSpots: async (spots, options) => {
         return joinImages(spots, options);
     },
-    getLineupCardTable: async (game) => {
+    getLineupCardTable: async (lineup) => {
         const table = new AsciiTable();
-        const lineup = game.teams.home.team.id === parseInt(process.env.TEAM_ID)
-            ? game.lineups.homePlayers
-            : game.lineups.awayPlayers;
         const people = (await mlbAPIUtil.people(lineup.map(lineupPlayer => lineupPlayer.id))).people;
         table.setHeading(['', '', '', 'B', 'HR', 'RBI', 'SB', 'AVG', 'OPS']);
         table.setHeadingAlign(AsciiTable.RIGHT);
@@ -177,9 +174,9 @@ module.exports = {
         return (await drawSimpleTables([linescoreTable], 1000, 1000));
     },
 
-    buildBoxScoreTable: async (game, boxScore, boxScoreNames, status) => {
+    buildBoxScoreTable: (game, boxScore, boxScoreNames, status, boxScoreChoiceToHandle) => {
         const tables = [];
-        const players = boxScore.teams.away.team.id === parseInt(process.env.TEAM_ID)
+        const players = boxScore.teams.away.team.id === parseInt(boxScoreChoiceToHandle.customId)
             ? boxScore.teams.away.players
             : boxScore.teams.home.players;
         const sortedBattingOrder = Object.keys(players)
@@ -195,7 +192,7 @@ module.exports = {
                 };
             })
             .sort((a, b) => parseInt(a.battingOrder) > parseInt(b.battingOrder) ? 1 : -1);
-        const pitcherIDs = boxScore.teams.away.team.id === parseInt(process.env.TEAM_ID)
+        const pitcherIDs = boxScore.teams.away.team.id === parseInt(boxScoreChoiceToHandle.customId)
             ? boxScore.teams.away.pitchers
             : boxScore.teams.home.pitchers;
         const inOrderPitchers = pitcherIDs.map(pitcherID => ((pitcher) => {
@@ -223,7 +220,7 @@ module.exports = {
         pitchingTable.removeBorder();
         tables.push(boxScoreTable);
         tables.push(pitchingTable);
-        return (await drawSimpleTables(tables, 600, 800));
+        return drawSimpleTables(tables, 600, 800);
     },
 
     buildStandingsTable: async (standings, divisionName) => {
@@ -610,9 +607,9 @@ module.exports = {
     },
 
     giveFinalCommandResponse: async (toHandle, options) => {
-        await (globalCache.values.game.isDoubleHeader
+        await toHandle.update
             ? toHandle.update(options)
-            : toHandle.followUp(options));
+            : toHandle.followUp(options);
     },
 
     constructGameDisplayString: (game) => {
@@ -922,7 +919,49 @@ module.exports = {
         }
 
         return playerResult;
+    },
+
+    getHomeAwayChoice: async (interaction, teams, question) => {
+        const buttons = Object.keys(teams).map(key => {
+            const emoji = globalCache.values.emojis
+                .find(v => v.name.includes(teams[key].team.id));
+            const builder = new ButtonBuilder()
+                .setCustomId(teams[key].team.id.toString())
+                .setLabel(teams[key].team.name)
+                .setStyle(ButtonStyle.Primary);
+            if (emoji) {
+                builder.setEmoji(`<:${emoji.name}:${emoji.id}>`);
+            }
+            return builder;
+        });
+        const response = interaction.deferred
+            ? await interaction.followUp({
+                content: question,
+                components: [new ActionRowBuilder().addComponents(buttons)]
+            })
+            : await interaction.update({
+                content: question,
+                components: [new ActionRowBuilder().addComponents(buttons)]
+            });
+        const collectorFilter = i => i.user.id === interaction.user.id;
+        try {
+            LOGGER.trace('awaiting');
+            return await response.awaitMessageComponent({ filter: collectorFilter, time: 20_000 });
+        } catch (e) {
+            await interaction.editReply({
+                content: 'A selection was not received within 20 seconds, so I canceled the interaction.',
+                components: []
+            });
+        }
+    },
+
+    getTeamDisplayString: (teams, chosenTeamId) => {
+        const emoji = globalCache.values.emojis
+            .find(v => v.name.includes(chosenTeamId));
+        const team = teams.home.team.id === chosenTeamId ? teams.home.team : teams.away.team;
+        return `${emoji ? `<:${emoji.name}:${emoji.id}>` : ''} ${team.name}`;
     }
+
 };
 
 function mapStandings (standings, wildcard = false) {
