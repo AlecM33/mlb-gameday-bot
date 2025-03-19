@@ -17,9 +17,9 @@ module.exports = {
     joinPlayerSpots: async (spots, options) => {
         return joinImages(spots, options);
     },
-    getLineupCardTable: async (lineup) => {
+    getLineupCardTable: async (lineup, gameType) => {
         const table = new AsciiTable();
-        const people = (await mlbAPIUtil.people(lineup.map(lineupPlayer => lineupPlayer.id))).people;
+        const people = (await mlbAPIUtil.people(lineup.map(lineupPlayer => lineupPlayer.id), gameType)).people;
         table.setHeading(['', '', '', 'B', 'HR', 'RBI', 'SB', 'AVG', 'OPS']);
         table.setHeadingAlign(AsciiTable.RIGHT);
         table.setAlign(0, AsciiTable.RIGHT);

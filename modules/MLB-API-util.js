@@ -98,9 +98,9 @@ const endpoints = {
         LOGGER.debug('https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live?fields=gamePk,gameData,status,abstractGameState,statusCode');
         return 'https://statsapi.mlb.com/api/v1.1/game/' + gamePk + '/feed/live?fields=gamePk,gameData,status,abstractGameState,statusCode';
     },
-    people: (personIds) => {
-        LOGGER.debug('https://statsapi.mlb.com/api/v1/people?personIds=' + personIds.reduce((acc, value) => acc + ',' + value, '') + '&hydrate=stats(type=season,groups=hitting,pitching)');
-        return 'https://statsapi.mlb.com/api/v1/people?personIds=' + personIds.reduce((acc, value) => acc + ',' + value, '') + '&hydrate=stats(type=season,groups=hitting,pitching)';
+    people: (personIds, statType) => {
+        LOGGER.debug('https://statsapi.mlb.com/api/v1/people?personIds=' + personIds.reduce((acc, value) => acc + ',' + value, '') + `&hydrate=stats(type=season,groups=hitting,pitching,gameType=${statType})`);
+        return 'https://statsapi.mlb.com/api/v1/people?personIds=' + personIds.reduce((acc, value) => acc + ',' + value, '') + `&hydrate=stats(type=season,groups=hitting,pitching,gameType=${statType})`;
     },
     boxScore: (gamePk) => {
         LOGGER.debug('https://statsapi.mlb.com/api/v1/game/' + gamePk + '/boxscore');
@@ -233,8 +233,8 @@ module.exports = {
     lineup: async (gamePk, teamId) => {
         return (await fetch(endpoints.lineup(gamePk, teamId))).json();
     },
-    people: async (personIds) => {
-        return (await fetch(endpoints.people(personIds))).json();
+    people: async (personIds, statType) => {
+        return (await fetch(endpoints.people(personIds, statType))).json();
     },
     liveFeedBoxScoreNamesOnly: async (gamePk) => {
         return (await fetch(endpoints.liveFeedBoxScoreNamesOnly(gamePk))).json();
