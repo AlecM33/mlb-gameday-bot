@@ -232,7 +232,7 @@ module.exports = {
             "id": 110,
             "name": "Orioles",
             "primaryColor": "#DF4601",
-            "secondaryColor": "#000000",
+            "secondaryColor": "#030303", // this should be #000000, but there's a Discord bug where embeds don't display that color on mobile.
             "abbreviation": "BAL"
         },
         {
@@ -253,7 +253,7 @@ module.exports = {
             "id": 113,
             "name": "Reds",
             "primaryColor": "#C6011F",
-            "secondaryColor": "#000000",
+            "secondaryColor": "#030303", // this should be #000000, but there's a Discord bug where embeds don't display that color on mobile.
             "abbreviation": "CIN"
         },
         {
