@@ -1,8 +1,9 @@
+const { drawSimpleTables, drawSavantTables } = require('./canvas-util');
+const { joinImages } = require('join-images');
 const globalCache = require('./global-cache');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const AsciiTable = require('ascii-table');
 const mlbAPIUtil = require('./MLB-API-util');
-const jsdom = require('jsdom');
 const globals = require('../config/globals');
 const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_LEVEL.INFO);
 const chroma = require('chroma-js');
@@ -10,14 +11,15 @@ const ztable = require('ztable');
 const levenshtein = require('./levenshtein');
 const { performance } = require('perf_hooks');
 const liveFeed = require('./livefeed');
+const jsdom = require('jsdom');
 
 module.exports = {
-    getLineupCardTable: async (game) => {
+    joinPlayerSpots: async (spots, options) => {
+        return joinImages(spots, options);
+    },
+    getLineupCardTable: async (lineup, gameType) => {
         const table = new AsciiTable();
-        const lineup = game.teams.home.team.id === parseInt(process.env.TEAM_ID)
-            ? game.lineups.homePlayers
-            : game.lineups.awayPlayers;
-        const people = (await mlbAPIUtil.people(lineup.map(lineupPlayer => lineupPlayer.id))).people;
+        const people = (await mlbAPIUtil.people(lineup.map(lineupPlayer => lineupPlayer.id), gameType)).people;
         table.setHeading(['', '', '', 'B', 'HR', 'RBI', 'SB', 'AVG', 'OPS']);
         table.setHeadingAlign(AsciiTable.RIGHT);
         table.setAlign(0, AsciiTable.RIGHT);
@@ -44,13 +46,13 @@ module.exports = {
             ]);
         }
         table.removeBorder();
-        return await getScreenshotOfHTMLTables([table]);
+        return drawSimpleTables([table], 800, 350);
     },
     hydrateProbable: async (probable, statType, season = (new Date().getFullYear())) => {
         const [spot, savant, people] = await Promise.all([
             new Promise((resolve, reject) => {
                 if (probable) {
-                    resolve(mlbAPIUtil.spot(probable));
+                    resolve(mlbAPIUtil.spot(probable, season));
                 } else {
                     resolve(Buffer.from(
                         `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
@@ -83,7 +85,7 @@ module.exports = {
         const [spot, stats] = await Promise.all([
             new Promise((resolve, reject) => {
                 if (hitter) {
-                    resolve(mlbAPIUtil.spot(hitter));
+                    resolve(mlbAPIUtil.spot(hitter, season));
                 } else {
                     resolve(Buffer.from(
                         `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
@@ -152,7 +154,7 @@ module.exports = {
         return formattedSplits;
     },
 
-    buildLineScoreTable: async (game, linescore) => {
+    buildLineScoreTable: (game, linescore) => {
         const awayAbbreviation = game.teams.away.team?.abbreviation || game.teams.away.abbreviation;
         const homeAbbreviation = game.teams.home.team?.abbreviation || game.teams.home.abbreviation;
         let innings = linescore.innings;
@@ -169,23 +171,12 @@ module.exports = {
             .concat(innings.map(inning => inning.home.runs))
             .concat(['', linescore.teams.home.runs, linescore.teams.home.hits, linescore.teams.home.errors, linescore.teams.home.leftOnBase]));
         linescoreTable.removeBorder();
-        const inningState = linescore.outs < 3
-            ? (linescore.inningHalf === 'Bottom' ? 'Bot' : 'Top')
-            : (linescore.inningHalf === 'Top' ? 'Mid' : 'End');
-        return (await getScreenshotOfLineScore(
-            [linescoreTable],
-            linescore.currentInningOrdinal,
-            inningState,
-            linescore.teams.away.runs,
-            linescore.teams.home.runs,
-            awayAbbreviation,
-            homeAbbreviation
-        ));
+        return drawSimpleTables([linescoreTable], 1000, 1000);
     },
 
-    buildBoxScoreTable: async (game, boxScore, boxScoreNames, status) => {
+    buildBoxScoreTable: (game, boxScore, boxScoreNames, status, boxScoreChoiceToHandle) => {
         const tables = [];
-        const players = boxScore.teams.away.team.id === parseInt(process.env.TEAM_ID)
+        const players = boxScore.teams.away.team.id === parseInt(boxScoreChoiceToHandle.customId)
             ? boxScore.teams.away.players
             : boxScore.teams.home.players;
         const sortedBattingOrder = Object.keys(players)
@@ -201,7 +192,7 @@ module.exports = {
                 };
             })
             .sort((a, b) => parseInt(a.battingOrder) > parseInt(b.battingOrder) ? 1 : -1);
-        const pitcherIDs = boxScore.teams.away.team.id === parseInt(process.env.TEAM_ID)
+        const pitcherIDs = boxScore.teams.away.team.id === parseInt(boxScoreChoiceToHandle.customId)
             ? boxScore.teams.away.pitchers
             : boxScore.teams.home.pitchers;
         const inOrderPitchers = pitcherIDs.map(pitcherID => ((pitcher) => {
@@ -229,10 +220,10 @@ module.exports = {
         pitchingTable.removeBorder();
         tables.push(boxScoreTable);
         tables.push(pitchingTable);
-        return (await getScreenshotOfHTMLTables(tables));
+        return drawSimpleTables(tables, 600, 800);
     },
 
-    buildStandingsTable: async (standings, divisionName) => {
+    buildStandingsTable: (standings, divisionName) => {
         const centralMap = mapStandings(standings);
         const table = new AsciiTable(divisionName + '\n');
         table.setHeading('Team', 'W-L', 'GB', 'L10');
@@ -243,10 +234,10 @@ module.exports = {
             entry.lastTen
         ));
         table.removeBorder();
-        return (await getScreenshotOfHTMLTables([table]));
+        return drawSimpleTables([table], 600, 300);
     },
 
-    buildWildcardTable: async (divisionLeaders, wildcard, leagueName) => {
+    buildWildcardTable: (divisionLeaders, wildcard, leagueName) => {
         const divisionLeadersMap = mapStandings(divisionLeaders);
         const wildcardMap = mapStandings(wildcard, true);
         const table = new AsciiTable(leagueName + ' Wild Card \n');
@@ -282,7 +273,7 @@ module.exports = {
             );
         });
         table.removeBorder();
-        return (await getScreenshotOfHTMLTables([table]));
+        return drawSimpleTables([table], 1000, 1000);
     },
 
     getStatcastData: (savantText, season) => {
@@ -310,7 +301,7 @@ module.exports = {
         return {};
     },
 
-    buildBatterSavantTable: async (statcast, metricSummaries, spot) => {
+    buildBatterSavantTable: (statcast, metricSummaries, spot) => {
         const value = [
             {
                 label: 'Batting Run Value',
@@ -449,25 +440,24 @@ module.exports = {
                 percentile: statcast.percent_speed_order
             }
         ];
-        const html = `
-            <div id='savant-table'>` +
-            `<img src="data:image/jpeg;base64, ${
-                Buffer.from(spot).toString('base64')
-            }" alt="alt text" />` +
-            '<h3>Value</h3>' +
-            buildSavantSection(value, metricSummaries) +
-            '<h3>Hitting</h3>' +
-            buildSavantSection(hitting, metricSummaries) +
-            (fielding.find(stat => stat.value !== null) ? '<h3>Fielding</h3>' + buildSavantSection(fielding, metricSummaries) : '') +
-            (catching.find(stat => stat.value !== null) ? '<h3>Catching</h3>' + buildSavantSection(catching, metricSummaries) : '') +
-            '<h3>Running</h3>' +
-            buildSavantSection(running, metricSummaries) +
-            '</div>';
 
-        return (await getScreenshotOfSavantTable(html));
+        return drawSavantTables([
+            addAdditionalDataToStats(value, metricSummaries),
+            addAdditionalDataToStats(hitting, metricSummaries),
+            (fielding.find(stat => stat.value !== null) ? addAdditionalDataToStats(fielding, metricSummaries) : undefined),
+            (catching.find(stat => stat.value !== null) ? addAdditionalDataToStats(catching, metricSummaries) : undefined),
+            addAdditionalDataToStats(running, metricSummaries)
+        ],
+        [
+            'Value',
+            'Hitting',
+            'Fielding',
+            'Catching',
+            'Running'
+        ], spot);
     },
 
-    buildPitcherSavantTable: async (statcast, metricSummaries, spot) => {
+    buildPitcherSavantTable: (statcast, metricSummaries, spot) => {
         const value = [
             {
                 label: 'Pitching Run Value',
@@ -569,18 +559,15 @@ module.exports = {
                 percentile: statcast.percent_rank_fastball_extension
             }
         ];
-        const html = `
-            <div id='savant-table'>` +
-            `<img src="data:image/jpeg;base64, ${
-                Buffer.from(spot).toString('base64')
-            }" alt="alt text" />` +
-            '<h3>Value</h3>' +
-            buildSavantSection(value, metricSummaries, true) +
-            '<h3>Pitching</h3>' +
-            buildSavantSection(pitching, metricSummaries, true) +
-            '</div>';
 
-        return (await getScreenshotOfSavantTable(html));
+        return drawSavantTables([
+            addAdditionalDataToStats(value, metricSummaries),
+            addAdditionalDataToStats(pitching, metricSummaries)
+        ],
+        [
+            'Value',
+            'Pitching'
+        ], spot);
     },
 
     screenInteraction: async (interaction) => {
@@ -620,9 +607,9 @@ module.exports = {
     },
 
     giveFinalCommandResponse: async (toHandle, options) => {
-        await (globalCache.values.game.isDoubleHeader
+        await toHandle.update
             ? toHandle.update(options)
-            : toHandle.followUp(options));
+            : toHandle.followUp(options);
     },
 
     constructGameDisplayString: (game) => {
@@ -932,7 +919,49 @@ module.exports = {
         }
 
         return playerResult;
+    },
+
+    getHomeAwayChoice: async (interaction, teams, question) => {
+        const buttons = Object.keys(teams).map(key => {
+            const emoji = globalCache.values.emojis
+                .find(v => v.name.includes(teams[key].team.id));
+            const builder = new ButtonBuilder()
+                .setCustomId(teams[key].team.id.toString())
+                .setLabel(teams[key].team.name)
+                .setStyle(ButtonStyle.Primary);
+            if (emoji) {
+                builder.setEmoji(`<:${emoji.name}:${emoji.id}>`);
+            }
+            return builder;
+        });
+        const response = interaction.deferred
+            ? await interaction.followUp({
+                content: question,
+                components: [new ActionRowBuilder().addComponents(buttons)]
+            })
+            : await interaction.update({
+                content: question,
+                components: [new ActionRowBuilder().addComponents(buttons)]
+            });
+        const collectorFilter = i => i.user.id === interaction.user.id;
+        try {
+            LOGGER.trace('awaiting');
+            return await response.awaitMessageComponent({ filter: collectorFilter, time: 20_000 });
+        } catch (e) {
+            await interaction.editReply({
+                content: 'A selection was not received within 20 seconds, so I canceled the interaction.',
+                components: []
+            });
+        }
+    },
+
+    getTeamDisplayString: (teams, chosenTeamId) => {
+        const emoji = globalCache.values.emojis
+            .find(v => v.name.includes(chosenTeamId));
+        const team = teams.home.team.id === chosenTeamId ? teams.home.team : teams.away.team;
+        return `${emoji ? `<:${emoji.name}:${emoji.id}>` : ''} ${team.name}`;
     }
+
 };
 
 function mapStandings (standings, wildcard = false) {
@@ -1043,129 +1072,11 @@ function findSplit (stat) {
     return stat?.splits?.find(s => !s.team) || stat?.splits[0];
 }
 
-/* This is not the best solution, admittedly. We are building an HTML version of the table in a headless browser, styling
-it how we want, and taking a screenshot of that, attaching it to the reply as a .png. Why? Trying to simply reply with ASCII
-is subject to formatting issues on phone screens, which rudely break up the characters and make the tables look like gibberish.
- */
-async function getScreenshotOfHTMLTables (tables) {
-    const browser = globalCache.values.browser;
-    const page = await browser.getCurrentPage();
-    await page.setContent(`
-            <pre id="boxscore" style="background-color: #151820;
-                color: whitesmoke;
-                padding: 15px;
-                font-size: 20px;
-                width: fit-content;">` +
-        tables.reduce((acc, value) => acc + value.toString() + '\n\n', '') +
-        '</pre>');
-    const element = await page.waitForSelector('#boxscore');
-    const buffer = await element.screenshot({
-        type: 'png',
-        omitBackground: false
-    });
-    return buffer;
-}
-
-async function getScreenshotOfSavantTable (savantHTML) {
-    const browser = globalCache.values.browser;
-    const page = await browser.getCurrentPage();
-    await page.setContent(
-        `
-        <style>
-            #savant-table {
-                background-color: #151820;
-                color: whitesmoke;
-                font-size: 25px;
-                font-family: 'Segoe UI', sans-serif;
-                width: 70%;
-                display: flex;
-                padding: 17px 57.5px 17px 40px;
-                flex-direction: column;
-                align-items: center;
-            }
-            .savant-stat {
-                display: flex;
-                width: 100%;
-                justify-content: space-between;
-                margin: 5px 0;
-                align-items: center;
-            }
-            .value {
-                margin-right: 22.5px;
-            }
-            .savant-stat-pitcher {
-                margin: 12px 0;
-            }
-            h3 {
-                font-size: 25px;
-                font-weight: bold;
-                width: 100%;
-                text-align: center;
-                margin: 5px 0;
-            }
-            #savant-table h3:not(:first-child) {
-                margin: 5px 0;
-            }
-            .percentile {
-                width: 35px;
-                height: 35px;
-                font-size: 0.7em;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-weight: bold;
-                border-radius: 50%;
-                position: absolute;
-                top: 50%;
-                left: -20px;
-                transform: translateY(-50%);
-            }
-            .percentile-slider-not-qualified {
-                background-image: repeating-linear-gradient(
-                        -45deg,
-                        transparent,
-                        transparent 3px,
-                        rgba(0, 0, 0, 0.95) 3px,
-                        rgba(0, 0, 0, 0.95) 6px
-                );
-            }
-            .percentile-not-qualified {
-                display: none;
-            }
-            .stat-values {
-                display: flex;
-                width: 9.5em;
-                justify-content: space-between;
-                align-items: center;
-            }
-            .percentile-slider {
-                position: relative;
-                width: 150px;
-                height: 0.75em;
-                background: #80808045;
-            }
-            .percentile-slider-portion {
-                position: absolute;
-                width: 100%;
-                height: 100%;
-            }
-        </style>` +
-        savantHTML
-    );
-    LOGGER.trace((await page.content()));
-    const element = await page.waitForSelector('#savant-table');
-    const buffer = await element.screenshot({
-        type: 'png',
-        omitBackground: false
-    });
-    return buffer;
-}
-
-function buildSavantSection (statCollection, metricSummaries, isPitcher = false) {
+function addAdditionalDataToStats (statCollection, metricSummaries) {
     const scale = chroma.scale(['#325aa1', '#a8c1c3', '#c91f26']);
     const sliderScale = chroma.scale(['#3661ad', '#b4cfd1', '#d8221f']);
     for (let i = 0; i < statCollection.length; i ++) {
-        if (!statCollection[i].value) { // some metrics have been added in later years, like Bat Speed. Earlier seasons will have no value.
+        if (statCollection[i].value === null || statCollection[i].value === undefined) { // some metrics have been added in later years, like Bat Speed. Earlier seasons will have no value.
             continue;
         }
         if (!statCollection[i].percentile) {
@@ -1180,68 +1091,11 @@ function buildSavantSection (statCollection, metricSummaries, isPitcher = false)
         } else {
             statCollection[i].isQualified = true;
         }
-    }
-    return statCollection.reduce((acc, value) => acc + (value.value !== null
-        ? `
-        <div class='savant-stat'>
-            <div class='label'>${value.label}</div>
-            <div class='stat-values'>
-                <div class='value'>${value.value}</div>
-                <div class='percentile-slider'>
-                    <div class='percentile-slider-portion ${value.isQualified ? '' : 'percentile-slider-not-qualified'}'
-                     style='background-color: ${sliderScale(value.percentile / 100)}; width: ${(value.percentile / 100) * 150}px'></div>
-                    <div class='percentile ${value.isQualified ? '' : 'percentile-not-qualified'}'
-                     style='background-color: ${scale(value.percentile / 100)}; left: ${-17.5 + (value.percentile / 100) * 150}px '>${value.percentile || ' '}
-                    </div>
-                </div>
-            </div>
-        </div>`
-        : ''), '');
-}
 
-async function getScreenshotOfLineScore (tables, inning, half, awayScore, homeScore, awayAbbreviation, homeAbbreviation) {
-    const browser = globalCache.values.browser;
-    const page = await browser.getCurrentPage();
-    await page.setContent(`
-            <style>
-                #home-score, #away-score, #home-abb, #away-abb {
-                    font-size: 35px;
-                }
-                #boxscore {
-                    margin: 0;
-                }
-                #header-inning {
-                    font-size: 16px;
-                }
-            </style>
-            <div id="line-score-container" style="
-                    background-color: #151820;
-                    color: whitesmoke;
-                    padding: 15px;
-                    font-size: 20px;
-                    width: fit-content;">
-                <div id="line-score-header" style="display: flex;
-                    width: 100%;
-                    justify-content: space-evenly;
-                    align-items: center;
-                    font-family: monospace;
-                    margin-bottom: 2em;">
-                    <div id="away-abb">` + awayAbbreviation + `</div>
-                    <div id="away-score">` + awayScore + `</div>
-                    <div id="header-inning">` + half + ' ' + inning + `</div>
-                    <div id="home-score">` + homeScore + `</div>
-                    <div id="home-abb">` + homeAbbreviation + `</div>
-                </div>
-                <pre id="boxscore">` +
-        tables.reduce((acc, value) => acc + value.toString() + '\n\n', '') +
-        `</pre>
-            </div>`);
-    const element = await page.waitForSelector('#line-score-container');
-    const buffer = await element.screenshot({
-        type: 'png',
-        omitBackground: false
-    });
-    return buffer;
+        statCollection[i].sliderColor = sliderScale(statCollection[i].percentile / 100);
+        statCollection[i].circleColor = scale(statCollection[i].percentile / 100);
+    }
+    return statCollection;
 }
 
 function calculateRoundedPercentileFromNormalDistribution (metric, value, mean, standardDeviation, shouldInvert) {

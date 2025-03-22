@@ -43,6 +43,7 @@ async function statusPoll (bot) {
             }
         } catch (e) {
             LOGGER.error(e);
+            setTimeout(pollingFunction, globals.SLOW_POLL_INTERVAL);
         }
     };
     await pollingFunction();

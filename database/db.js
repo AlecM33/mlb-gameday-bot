@@ -4,7 +4,7 @@ const path = require('path');
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_STRING?.trim(),
-    ssl: process.env.NODE_ENV.trim() !== 'development'
+    ssl: process.env.REQUIRE_SSL === 'true'
         ? {
             rejectUnauthorized: true,
             ca: fs.readFileSync(path.join(__dirname, '/certs/ca.pem')).toString()
