@@ -1099,6 +1099,9 @@ function addAdditionalDataToStats (statCollection, metricSummaries) {
 }
 
 function calculateRoundedPercentileFromNormalDistribution (metric, value, mean, standardDeviation, shouldInvert) {
+    if (standardDeviation === 0) { // This scenario indicates all the values are equal to the mean. This was observed for "Baserunning Run Value" early in the year. This prevents us from diving by 0 in this case.
+        return 50;
+    }
     if (typeof value === 'string') {
         value = parseFloat(value);
     }
