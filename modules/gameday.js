@@ -200,16 +200,19 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle =
             if (!play.isScoringPlay && channelSubscription.scoring_plays_only) {
                 LOGGER.debug('Skipping - against the channel\'s preference');
             } else {
+                const message = { channel: returnedChannel, play, delayed: false, doneEditing: false };
                 if (channelSubscription.delay === 0 || play.isStartEvent) {
-                    await module.exports.sendMessage(returnedChannel, embed, messages);
+                    message.discordMessage = await module.exports.sendMessage(returnedChannel, embed);
                 } else {
                     LOGGER.debug('Waiting ' + channelSubscription.delay + ' seconds for channel: ' + channelSubscription.channel_id);
-                    await sendDelayedMessage(play, gamePk, channelSubscription, returnedChannel, embed);
+                    message.delayed = true;
+                    sendDelayedMessage(play, gamePk, channelSubscription, returnedChannel, embed, message);
                 }
+                messages.push(message);
             }
         }
         if (messages.length > 0) {
-            await maybePopulateAdvancedStatcastMetrics(play, messages, gamePk);
+            await maybePopulateAdvancedStatcastMetrics(play, messages, gamePk, embed);
         }
     }
 }
@@ -238,7 +241,7 @@ function constructPlayEmbed (play, feed, includeTitle, homeTeamColor, awayTeamCo
     return embed;
 }
 
-async function sendMessage (returnedChannel, embed, messages) {
+async function sendMessage (returnedChannel, embed) {
     LOGGER.debug('Sending!');
     let message;
     try {
@@ -249,72 +252,61 @@ async function sendMessage (returnedChannel, embed, messages) {
         LOGGER.error(e);
         return;
     }
-    messages.push(message);
+    return message;
 }
 
-async function sendDelayedMessage (play, gamePk, channelSubscription, returnedChannel, embed) {
+function sendDelayedMessage (play, gamePk, channelSubscription, returnedChannel, embed, message) {
     setTimeout(async () => {
         LOGGER.debug('Sending!');
-        let message;
         try {
-            message = await returnedChannel.send({
+            message.discordMessage = await returnedChannel.send({
                 embeds: [embed]
             });
         } catch (e) {
             LOGGER.error(e);
-            return;
         }
-
-        /* TODO: savant polling will be done for each delayed message individually. Not ideal, but shouldn't be too bad.
-            In any case, there's an opportunity for non-delayed messages to cache the info for delayed messages.
-         */
-        await maybePopulateAdvancedStatcastMetrics(play, [message], gamePk);
     }, channelSubscription.delay * 1000);
 }
 
-async function maybePopulateAdvancedStatcastMetrics (play, messages, gamePk) {
+async function maybePopulateAdvancedStatcastMetrics (play, messages, gamePk, embed) {
     if (play.isInPlay && play.metricsAvailable) {
         if (play.playId) {
             try {
                 // xBA and HR/Park for balls in play is available on a delay via baseballsavant.
-                await pollForSavantData(gamePk, play.playId, messages, play.hitDistance);
+                await pollForSavantData(gamePk, play.playId, messages, play.hitDistance, embed);
             } catch (e) {
                 LOGGER.error('There was a problem polling for savant data!');
                 LOGGER.error(e);
-                notifySavantDataUnavailable(messages);
+                notifySavantDataUnavailable(messages, embed);
             }
         } else {
             LOGGER.info('Play has no play ID.');
-            notifySavantDataUnavailable(messages);
+            notifySavantDataUnavailable(messages, embed);
         }
     } else {
         LOGGER.debug('Skipping savant poll - not in play or metrics unavailable.');
     }
 }
 
-function notifySavantDataUnavailable (messages) {
+function notifySavantDataUnavailable (messages, embed) {
     for (let i = 0; i < messages.length; i ++) {
-        const receivedEmbed = EmbedBuilder.from(messages[i].embeds[0]);
-        let description = messages[i].embeds[0].description;
-        if (description.includes('Pending...')) {
-            description = description.replaceAll('Pending...', 'Not Available.');
-            receivedEmbed.setDescription(description);
-            messages[i].edit({ embeds: [receivedEmbed] });
+        embed.data.description = embed.data.description.replaceAll('Pending...', 'Not Available.');
+        if (messages[i].discordMessage) {
+            messages[i].discordMessage.edit({ embeds: [embed] });
         }
     }
 }
 
-async function pollForSavantData (gamePk, playId, messages, hitDistance) {
+async function pollForSavantData (gamePk, playId, messages, hitDistance, embed) {
     let attempts = 1;
     let currentInterval = globals.SAVANT_POLLING_INTERVAL;
-    const messageTrackers = messages.map(message => { return { id: message.id, done: false }; });
     console.time('xBA: ' + playId);
     console.time('Bat Speed: ' + playId);
     if (hitDistance >= globals.HOME_RUN_BALLPARKS_MIN_DISTANCE) {
         console.time('HR/Park: ' + playId);
     }
     const pollingFunction = async () => {
-        if (messageTrackers.every(messageTracker => messageTracker.done)) {
+        if (messages.every(m => m.doneEditing)) {
             LOGGER.debug('Savant: all messages done.');
             return;
         }
@@ -326,65 +318,69 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance) {
             if (matchingPlay && (matchingPlay.xba
                 || matchingPlay.contextMetrics?.homeRunBallparks !== undefined
                 || matchingPlay.batSpeed !== undefined)) {
-                await module.exports.processMatchingPlay(matchingPlay, messages, messageTrackers, playId, hitDistance);
+                await module.exports.processMatchingPlay(matchingPlay, messages, playId, hitDistance, embed);
             }
             attempts ++;
             currentInterval = currentInterval + globals.SAVANT_POLLING_BACKOFF_INCREASE;
             setTimeout(async () => { await pollingFunction(); }, currentInterval);
         } else {
             LOGGER.debug('max savant polling attempts reached for: ' + playId);
-            notifySavantDataUnavailable(messages);
+            notifySavantDataUnavailable(messages, embed);
         }
     };
     await pollingFunction();
 }
 
-async function processMatchingPlay (matchingPlay, messages, messageTrackers, playId, hitDistance) {
+async function processMatchingPlay (matchingPlay, messages, playId, hitDistance, embed) {
     const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
     for (let i = 0; i < messages.length; i ++) {
-        const receivedEmbed = EmbedBuilder.from(messages[i].embeds[0]);
-        let description = messages[i].embeds[0].description;
-        if (matchingPlay.xba && description.includes('xBA: Pending...')) {
-            LOGGER.debug('Editing with xba: ' + playId);
-            console.timeEnd('xBA: ' + playId);
-            description = description.replaceAll('xBA: Pending...', 'xBA: ' + matchingPlay.xba +
-                (matchingPlay.is_barrel === 1 ? ' \uD83D\uDFE2 (Barreled)' : ''));
-            receivedEmbed.setDescription(description);
-            messages[i].edit({
-                embeds: [receivedEmbed]
-            }).then((m) => LOGGER.trace('Edited: ' + m.id)).catch((e) => console.error(e));
+        if (matchingPlay.xba) {
+            if (embed.data.description.includes('xBA: Pending...')) {
+                LOGGER.debug('Editing with xba: ' + playId);
+                console.timeEnd('xBA: ' + playId);
+                embed.data.description = embed.data.description.replaceAll('xBA: Pending...', 'xBA: ' + matchingPlay.xba +
+                    (matchingPlay.is_barrel === 1 ? ' \uD83D\uDFE2 (Barreled)' : ''));
+            }
+            if (messages[i].discordMessage && !messages[i].doneEditing) { // will not be defined for a delayed message that has not sent yet.
+                messages[i].discordMessage.edit({
+                    embeds: [embed]
+                }).then((m) => LOGGER.trace('Edited: ' + m.id)).catch((e) => console.error(e));
+            }
         }
-        if (matchingPlay.batSpeed && description.includes('Bat Speed: Pending...')) {
-            LOGGER.debug('Editing with Bat Speed: ' + playId);
-            console.timeEnd('Bat Speed: ' + playId);
-            description = description.replaceAll('Bat Speed: Pending...', 'Bat Speed: ' + matchingPlay.batSpeed + ' mph' +
-                (matchingPlay.isSword ? ' \u2694\uFE0F (Sword)' : '') +
-                (matchingPlay.batSpeed >= 75.0 ? ' \u26A1' : ''));
-            receivedEmbed.setDescription(description);
-            messages[i].edit({
-                embeds: [receivedEmbed]
-            }).then((m) => LOGGER.trace('Edited: ' + m.id)).catch((e) => console.error(e));
-            if (hitDistance && hitDistance < globals.HOME_RUN_BALLPARKS_MIN_DISTANCE && matchingPlay.xba) {
-                LOGGER.debug('Found xba and bat speed, done polling for: ' + playId);
-                messageTrackers.find(tracker => tracker.id === messages[i].id).done = true;
+        if (matchingPlay.batSpeed) {
+            if (embed.data.description.includes('Bat Speed: Pending...')) {
+                LOGGER.debug('Editing with Bat Speed: ' + playId);
+                console.timeEnd('Bat Speed: ' + playId);
+                embed.data.description = embed.data.description.replaceAll('Bat Speed: Pending...', 'Bat Speed: ' + matchingPlay.batSpeed + ' mph' +
+                    (matchingPlay.isSword ? ' \u2694\uFE0F (Sword)' : '') +
+                    (matchingPlay.batSpeed >= 75.0 ? ' \u26A1' : ''));
+            }
+            if (messages[i].discordMessage && !messages[i].doneEditing) {
+                messages[i].discordMessage.edit({
+                    embeds: [embed]
+                }).then((m) => LOGGER.trace('Edited: ' + m.id)).catch((e) => console.error(e));
+                if (hitDistance && hitDistance < globals.HOME_RUN_BALLPARKS_MIN_DISTANCE && matchingPlay.xba) {
+                    messages[i].doneEditing = true;
+                }
             }
         }
         if (hitDistance && hitDistance >= globals.HOME_RUN_BALLPARKS_MIN_DISTANCE
-            && matchingPlay.contextMetrics.homeRunBallparks !== undefined
-            && description.includes('HR/Park: Pending...')) {
-            LOGGER.debug('Editing with HR/Park: ' + playId);
-            console.timeEnd('HR/Park: ' + playId);
-            const homeRunBallParksDescription = 'HR/Park: ' + matchingPlay.contextMetrics.homeRunBallparks + '/30' +
-                (matchingPlay.contextMetrics.homeRunBallparks === 30 ? '\u203C\uFE0F' : '') +
-                (await gamedayUtil.getXParks(feed.gamePk(), playId, matchingPlay.contextMetrics.homeRunBallparks));
-            description = description.replaceAll('HR/Park: Pending...', homeRunBallParksDescription);
-            receivedEmbed.setDescription(description);
-            messages[i].edit({
-                embeds: [receivedEmbed]
-            }).then((m) => LOGGER.trace('Edited: ' + m.id)).catch((e) => console.error(e));
-            if (matchingPlay.xba && matchingPlay.batSpeed !== undefined) {
-                LOGGER.debug('Found all metrics: done polling for: ' + playId);
-                messageTrackers.find(tracker => tracker.id === messages[i].id).done = true;
+            && matchingPlay.contextMetrics.homeRunBallparks !== undefined) {
+            if (embed.data.description.includes('HR/Park: Pending...')) {
+                LOGGER.debug('Editing with HR/Park: ' + playId);
+                console.timeEnd('HR/Park: ' + playId);
+                const homeRunBallParksDescription = 'HR/Park: ' + matchingPlay.contextMetrics.homeRunBallparks + '/30' +
+                    (matchingPlay.contextMetrics.homeRunBallparks === 30 ? '\u203C\uFE0F' : '') +
+                    (await gamedayUtil.getXParks(feed.gamePk(), playId, matchingPlay.contextMetrics.homeRunBallparks));
+                embed.data.description = embed.data.description.replaceAll('HR/Park: Pending...', homeRunBallParksDescription);
+            }
+            if (messages[i].discordMessage && !messages[i].doneEditing) {
+                messages[i].discordMessage.edit({
+                    embeds: [embed]
+                }).then((m) => LOGGER.trace('Edited: ' + m.id)).catch((e) => console.error(e));
+                if (matchingPlay.xba && matchingPlay.batSpeed !== undefined) {
+                    messages[i].doneEditing = true;
+                }
             }
         }
     }
