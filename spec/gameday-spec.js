@@ -4,7 +4,6 @@ const mlbAPIUtil = require('../modules/MLB-API-util');
 const globals = require('../config/globals');
 const mockResponses = require('./data/mock-responses');
 const globalCache = require('../modules/global-cache');
-const { EmbedBuilder } = require('discord.js');
 const liveFeed = require('../modules/livefeed');
 const examplePlays = require('./data/example-plays');
 const currentPlayProcessor = require('../modules/current-play-processor');
@@ -55,12 +54,12 @@ describe('gameday', () => {
                 resolve => resolve(mockResponses.savantGameFeed)
             ));
             spyOn(gameday, 'processMatchingPlay').and.callFake((
-                matchingPlay, messages, messageTrackers, playId, hitDistance
+                matchingPlay, messages, playId, hitDistance, embed
             ) => {
-                messageTrackers.forEach(mt => mt.done = true);
+                messages.forEach(m => m.doneEditing = true);
             });
             jasmine.clock().install();
-            await gameday.pollForSavantData(1, 'abc', [{}, {}], 350);
+            await gameday.pollForSavantData(1, 'abc', [{}, {}], 350, null);
             jasmine.clock().tick(globals.SAVANT_POLLING_INTERVAL);
             expect(mlbAPIUtil.savantGameFeed).toHaveBeenCalledTimes(1);
             expect(gameday.processMatchingPlay).toHaveBeenCalled();
@@ -72,9 +71,9 @@ describe('gameday', () => {
                 resolve => resolve(mockResponses.savantGameFeed)
             ));
             spyOn(gameday, 'processMatchingPlay').and.callFake((
-                matchingPlay, messages, messageTrackers, playId, hitDistance
+                matchingPlay, messages, playId, hitDistance, embed
             ) => {
-                messageTrackers.forEach(mt => mt.done = true);
+                messages.forEach(m => m.doneEditing = true);
             });
             jasmine.clock().install();
             await gameday.pollForSavantData(1, 'xyz', [{}, {}], 350);
@@ -92,24 +91,26 @@ describe('gameday', () => {
             });
         });
         it('should edit all messages with xBA and HR/Park and mark them as done', async () => {
-            const mockSetDescription = (description) => {};
             spyOn(gamedayUtil, 'getXParks').and.returnValue('');
             const mockEmbed = {
-                description: 'xBA: Pending...\nHR/Park: Pending...',
-                setDescription: mockSetDescription
+                data: {
+                    description: 'xBA: Pending...\nHR/Park: Pending...'
+                }
             };
             const messages = [
                 {
-                    embeds: [{ description: 'xBA: Pending...\nHR/Park: Pending...' }],
-                    edit: () => { return new Promise(resolve => resolve({ id: 'message-id-1' })); }
+                    discordMessage: {
+                        edit: () => { return new Promise(resolve => resolve({ id: 'message-id-1' })); }
+                    }
                 },
                 {
-                    embeds: [{ description: 'xBA: Pending...\nHR/Park: Pending...' }],
-                    edit: () => { return new Promise(resolve => resolve({ id: 'message-id-2' })); }
+                    discordMessage: {
+                        edit: () => { return new Promise(resolve => resolve({ id: 'message-id-1' })); }
+                    }
                 }
             ];
-            spyOn(EmbedBuilder, 'from').and.returnValue(mockEmbed);
-            spyOn(mockEmbed, 'setDescription').and.callThrough();
+            spyOn(messages[0].discordMessage, 'edit').and.callThrough();
+            spyOn(messages[1].discordMessage, 'edit').and.callThrough();
             await gameday.processMatchingPlay(
                 {
                     play_id: 'abc',
@@ -119,44 +120,48 @@ describe('gameday', () => {
                     }
                 },
                 messages,
-                [{ done: false }, { done: false }],
                 'abc',
-                450
+                450,
+                mockEmbed
             );
-            expect(mockEmbed.setDescription).toHaveBeenCalledWith('xBA: .320\nHR/Park: 28/30');
-            expect(mockEmbed.setDescription).toHaveBeenCalledWith('xBA: .320\nHR/Park: Pending...');
-            expect(mockEmbed.setDescription).toHaveBeenCalledTimes(4);
+            expect(mockEmbed.data.description).toEqual('xBA: .320\nHR/Park: 28/30');
+            expect(messages[0].discordMessage.edit).toHaveBeenCalledTimes(2);
+            expect(messages[1].discordMessage.edit).toHaveBeenCalledTimes(2);
         });
         it('should edit all messages with xBA, but not HR/Park, and mark them as done', async () => {
-            const mockSetDescription = (description) => {};
             const mockEmbed = {
-                description: 'xBA: Pending...\nHR/Park: Pending...',
-                setDescription: mockSetDescription
+                data: {
+                    description: 'xBA: Pending...'
+                }
             };
             const messages = [
                 {
-                    embeds: [{ description: 'xBA: Pending...' }],
-                    edit: () => { return new Promise(resolve => resolve({ id: 'message-id-1' })); }
+                    discordMessage: {
+                        edit: () => { return new Promise(resolve => resolve({ id: 'message-id-1' })); }
+                    }
                 },
                 {
-                    embeds: [{ description: 'xBA: Pending...' }],
-                    edit: () => { return new Promise(resolve => resolve({ id: 'message-id-2' })); }
+                    discordMessage: {
+                        edit: () => { return new Promise(resolve => resolve({ id: 'message-id-1' })); }
+                    }
                 }
             ];
-            spyOn(EmbedBuilder, 'from').and.returnValue(mockEmbed);
-            spyOn(mockEmbed, 'setDescription').and.callThrough();
+            spyOn(messages[0].discordMessage, 'edit').and.callThrough();
+            spyOn(messages[1].discordMessage, 'edit').and.callThrough();
             await gameday.processMatchingPlay(
                 {
                     play_id: 'abc',
                     xba: '.320'
                 },
                 messages,
-                [{ done: false }, { done: false }],
                 'abc',
-                299
+                299,
+                mockEmbed
+
             );
-            expect(mockEmbed.setDescription).toHaveBeenCalledWith('xBA: .320');
-            expect(mockEmbed.setDescription).toHaveBeenCalledTimes(2);
+            expect(mockEmbed.data.description).toEqual('xBA: .320');
+            expect(messages[0].discordMessage.edit).toHaveBeenCalledTimes(1);
+            expect(messages[1].discordMessage.edit).toHaveBeenCalledTimes(1);
         });
     });
 

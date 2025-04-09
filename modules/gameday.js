@@ -202,10 +202,11 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle =
             } else {
                 const message = { channel: returnedChannel, play, delayed: false, doneEditing: false };
                 if (channelSubscription.delay === 0 || play.isStartEvent) {
-                    message.discordMessage = await module.exports.sendMessage(returnedChannel, embed);
+                    await module.exports.sendMessage(returnedChannel, embed, message);
                 } else {
                     LOGGER.debug('Waiting ' + channelSubscription.delay + ' seconds for channel: ' + channelSubscription.channel_id);
                     message.delayed = true;
+                    message.doneEditing = true; // since it has not been sent, don't yet consider it for editing with statcast metrics.
                     sendDelayedMessage(play, gamePk, channelSubscription, returnedChannel, embed, message);
                 }
                 messages.push(message);
@@ -241,18 +242,16 @@ function constructPlayEmbed (play, feed, includeTitle, homeTeamColor, awayTeamCo
     return embed;
 }
 
-async function sendMessage (returnedChannel, embed) {
+async function sendMessage (returnedChannel, embed, message) {
     LOGGER.debug('Sending!');
-    let message;
     try {
-        message = await returnedChannel.send({
+        message.discordMessage = await returnedChannel.send({
             embeds: [embed]
         });
     } catch (e) {
         LOGGER.error(e);
-        return;
+        message.doneEditing = true;
     }
-    return message;
 }
 
 function sendDelayedMessage (play, gamePk, channelSubscription, returnedChannel, embed, message) {
@@ -262,6 +261,7 @@ function sendDelayedMessage (play, gamePk, channelSubscription, returnedChannel,
             message.discordMessage = await returnedChannel.send({
                 embeds: [embed]
             });
+            message.doneEditing = false; // now that it has been sent, it may need edited with statcast metrics.
         } catch (e) {
             LOGGER.error(e);
         }
@@ -292,11 +292,24 @@ function notifySavantDataUnavailable (messages, embed) {
     for (let i = 0; i < messages.length; i ++) {
         embed.data.description = embed.data.description.replaceAll('Pending...', 'Not Available.');
         if (messages[i].discordMessage) {
-            messages[i].discordMessage.edit({ embeds: [embed] });
+            messages[i].discordMessage.edit({
+                embeds: [embed]
+            }).then((m) => LOGGER.trace('Edited: ' + m.id)).catch((e) => {
+                console.error(e);
+                messages[i].doneEditing = true;
+            });
+            messages[i].doneEditing = true;
         }
     }
 }
 
+/* We will continue polling for a given play until either:
+    a) all sent messages have been edited with all our selected, applicable metrics. At that point, we may still have
+       delayed messages that have not been sent yet. That is fine - when they are sent, they will just post the current
+       state of the embed, which will include all the metrics we edited already-sent messages with.
+    b) the polling limit is reached, at which point any missing data will be marked as unavailable. Bat speed in particular
+       can take a long time to be populated, and in some cases seems to never populate.
+*/
 async function pollForSavantData (gamePk, playId, messages, hitDistance, embed) {
     let attempts = 1;
     let currentInterval = globals.SAVANT_POLLING_INTERVAL;
@@ -307,7 +320,7 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance, embed) 
     }
     const pollingFunction = async () => {
         if (messages.every(m => m.doneEditing)) {
-            LOGGER.debug('Savant: all messages done.');
+            LOGGER.debug(`Savant: all sent messages done for: ${playId}.`);
             return;
         }
         if (attempts < globals.SAVANT_POLLING_ATTEMPTS) {
@@ -331,6 +344,10 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance, embed) 
     await pollingFunction();
 }
 
+/* Takes a "play" from the baseball savant game feed and attempts to update any already-sent Discord messages with the metrics.
+    Notably, the list of messages can include messages with a reporting delay that have not yet been sent. We only attempt
+    to edit messages that have been sent.
+*/
 async function processMatchingPlay (matchingPlay, messages, playId, hitDistance, embed) {
     const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
     for (let i = 0; i < messages.length; i ++) {
@@ -341,10 +358,16 @@ async function processMatchingPlay (matchingPlay, messages, playId, hitDistance,
                 embed.data.description = embed.data.description.replaceAll('xBA: Pending...', 'xBA: ' + matchingPlay.xba +
                     (matchingPlay.is_barrel === 1 ? ' \uD83D\uDFE2 (Barreled)' : ''));
             }
-            if (messages[i].discordMessage && !messages[i].doneEditing) { // will not be defined for a delayed message that has not sent yet.
+            if (messages[i].discordMessage && !messages[i].xbaEdited) { // will not be defined for a delayed message that has not sent yet.
                 messages[i].discordMessage.edit({
                     embeds: [embed]
-                }).then((m) => LOGGER.trace('Edited: ' + m.id)).catch((e) => console.error(e));
+                }).then((m) => {
+                    LOGGER.trace('xBA Edited: ' + m.id);
+                    messages[i].xbaEdited = true;
+                }).catch((e) => {
+                    console.error(e);
+                    messages[i].doneEditing = true;
+                });
             }
         }
         if (matchingPlay.batSpeed) {
@@ -355,10 +378,16 @@ async function processMatchingPlay (matchingPlay, messages, playId, hitDistance,
                     (matchingPlay.isSword ? ' \u2694\uFE0F (Sword)' : '') +
                     (matchingPlay.batSpeed >= 75.0 ? ' \u26A1' : ''));
             }
-            if (messages[i].discordMessage && !messages[i].doneEditing) {
+            if (messages[i].discordMessage && !messages[i].batSpeedEdited) {
                 messages[i].discordMessage.edit({
                     embeds: [embed]
-                }).then((m) => LOGGER.trace('Edited: ' + m.id)).catch((e) => console.error(e));
+                }).then((m) => {
+                    LOGGER.trace('Bat Speed Edited: ' + m.id);
+                    messages[i].batSpeedEdited = true;
+                }).catch((e) => {
+                    console.error(e);
+                    messages[i].doneEditing = true;
+                });
                 if (hitDistance && hitDistance < globals.HOME_RUN_BALLPARKS_MIN_DISTANCE && matchingPlay.xba) {
                     messages[i].doneEditing = true;
                 }
@@ -374,10 +403,16 @@ async function processMatchingPlay (matchingPlay, messages, playId, hitDistance,
                     (await gamedayUtil.getXParks(feed.gamePk(), playId, matchingPlay.contextMetrics.homeRunBallparks));
                 embed.data.description = embed.data.description.replaceAll('HR/Park: Pending...', homeRunBallParksDescription);
             }
-            if (messages[i].discordMessage && !messages[i].doneEditing) {
+            if (messages[i].discordMessage && !messages[i].homeRunBallparksEdited) {
                 messages[i].discordMessage.edit({
                     embeds: [embed]
-                }).then((m) => LOGGER.trace('Edited: ' + m.id)).catch((e) => console.error(e));
+                }).then((m) => {
+                    LOGGER.trace('HR/Park Edited: ' + m.id);
+                    messages[i].homeRunBallParksEdited = true;
+                }).catch((e) => {
+                    console.error(e);
+                    messages[i].doneEditing = true;
+                });
                 if (matchingPlay.xba && matchingPlay.batSpeed !== undefined) {
                     messages[i].doneEditing = true;
                 }
