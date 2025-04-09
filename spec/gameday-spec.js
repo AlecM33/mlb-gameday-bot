@@ -100,12 +100,14 @@ describe('gameday', () => {
             const messages = [
                 {
                     discordMessage: {
-                        edit: () => { return new Promise(resolve => resolve({ id: 'message-id-1' })); }
+                        edit: () => { return new Promise(resolve => resolve({ id: 'message-id-1' })); },
+                        embeds: [structuredClone(mockEmbed)]
                     }
                 },
                 {
                     discordMessage: {
-                        edit: () => { return new Promise(resolve => resolve({ id: 'message-id-1' })); }
+                        edit: () => { return new Promise(resolve => resolve({ id: 'message-id-1' })); },
+                        embeds: [structuredClone(mockEmbed)]
                     }
                 }
             ];
@@ -137,12 +139,14 @@ describe('gameday', () => {
             const messages = [
                 {
                     discordMessage: {
-                        edit: () => { return new Promise(resolve => resolve({ id: 'message-id-1' })); }
+                        edit: () => { return new Promise(resolve => resolve({ id: 'message-id-1' })); },
+                        embeds: [structuredClone(mockEmbed)]
                     }
                 },
                 {
                     discordMessage: {
-                        edit: () => { return new Promise(resolve => resolve({ id: 'message-id-1' })); }
+                        edit: () => { return new Promise(resolve => resolve({ id: 'message-id-1' })); },
+                        embeds: [structuredClone(mockEmbed)]
                     }
                 }
             ];
