@@ -206,7 +206,6 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle =
                 } else {
                     LOGGER.debug('Waiting ' + channelSubscription.delay + ' seconds for channel: ' + channelSubscription.channel_id);
                     message.delayed = true;
-                    message.doneEditing = true; // since it has not been sent, don't yet consider it for editing with statcast metrics.
                     sendDelayedMessage(play, gamePk, channelSubscription, returnedChannel, embed, message);
                 }
                 messages.push(message);
@@ -261,7 +260,6 @@ function sendDelayedMessage (play, gamePk, channelSubscription, returnedChannel,
             message.discordMessage = await returnedChannel.send({
                 embeds: [embed]
             });
-            message.doneEditing = false; // now that it has been sent, it may need edited with statcast metrics.
         } catch (e) {
             LOGGER.error(e);
         }
@@ -357,12 +355,11 @@ async function processMatchingPlay (matchingPlay, messages, playId, hitDistance,
                 embed.data.description = embed.data.description.replaceAll('xBA: Pending...', 'xBA: ' + matchingPlay.xba +
                     (matchingPlay.is_barrel === 1 ? ' \uD83D\uDFE2 (Barreled)' : ''));
             }
-            if (messages[i].discordMessage && !messages[i].xbaEdited) { // discordMessage will not be defined for a delayed message that has not sent yet.
+            if (messages[i].discordMessage && messages[i].discordMessage.embeds[0].data.description.includes('xBA: Pending...')) { // discordMessage will not be defined for a delayed message that has not sent yet.
                 messages[i].discordMessage.edit({
                     embeds: [embed]
                 }).then((m) => {
                     LOGGER.trace('xBA Edited: ' + m.id);
-                    messages[i].xbaEdited = true;
                 }).catch((e) => {
                     console.error(e);
                     messages[i].doneEditing = true;
@@ -374,15 +371,13 @@ async function processMatchingPlay (matchingPlay, messages, playId, hitDistance,
                 LOGGER.debug('Editing with Bat Speed: ' + playId);
                 console.timeEnd('Bat Speed: ' + playId);
                 embed.data.description = embed.data.description.replaceAll('Bat Speed: Pending...', 'Bat Speed: ' + matchingPlay.batSpeed + ' mph' +
-                    (matchingPlay.isSword ? ' \u2694\uFE0F (Sword)' : '') +
                     (matchingPlay.batSpeed >= 75.0 ? ' \u26A1' : ''));
             }
-            if (messages[i].discordMessage && !messages[i].batSpeedEdited) {
+            if (messages[i].discordMessage && messages[i].discordMessage.embeds[0].data.description.includes('Bat Speed: Pending...')) {
                 messages[i].discordMessage.edit({
                     embeds: [embed]
                 }).then((m) => {
                     LOGGER.trace('Bat Speed Edited: ' + m.id);
-                    messages[i].batSpeedEdited = true;
                 }).catch((e) => {
                     console.error(e);
                     messages[i].doneEditing = true;
@@ -402,12 +397,11 @@ async function processMatchingPlay (matchingPlay, messages, playId, hitDistance,
                     (await gamedayUtil.getXParks(feed.gamePk(), playId, matchingPlay.contextMetrics.homeRunBallparks));
                 embed.data.description = embed.data.description.replaceAll('HR/Park: Pending...', homeRunBallParksDescription);
             }
-            if (messages[i].discordMessage && !messages[i].homeRunBallparksEdited) {
+            if (messages[i].discordMessage && messages[i].discordMessage.embeds[0].data.description.includes('HR/Park: Pending...')) {
                 messages[i].discordMessage.edit({
                     embeds: [embed]
                 }).then((m) => {
                     LOGGER.trace('HR/Park Edited: ' + m.id);
-                    messages[i].homeRunBallParksEdited = true;
                 }).catch((e) => {
                     console.error(e);
                     messages[i].doneEditing = true;
