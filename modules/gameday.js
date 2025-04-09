@@ -357,7 +357,7 @@ async function processMatchingPlay (matchingPlay, messages, playId, hitDistance,
                 embed.data.description = embed.data.description.replaceAll('xBA: Pending...', 'xBA: ' + matchingPlay.xba +
                     (matchingPlay.is_barrel === 1 ? ' \uD83D\uDFE2 (Barreled)' : ''));
             }
-            if (messages[i].discordMessage && !messages[i].xbaEdited) { // will not be defined for a delayed message that has not sent yet.
+            if (messages[i].discordMessage && !messages[i].xbaEdited) { // discordMessage will not be defined for a delayed message that has not sent yet.
                 messages[i].discordMessage.edit({
                     embeds: [embed]
                 }).then((m) => {
