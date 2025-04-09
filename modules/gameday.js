@@ -291,12 +291,11 @@ async function maybePopulateAdvancedStatcastMetrics (play, messages, gamePk, emb
 function notifySavantDataUnavailable (messages, embed) {
     for (let i = 0; i < messages.length; i ++) {
         embed.data.description = embed.data.description.replaceAll('Pending...', 'Not Available.');
-        if (messages[i].discordMessage) {
+        if (messages[i].discordMessage && !messages[i].discordMessage.doneEditing) {
             messages[i].discordMessage.edit({
                 embeds: [embed]
             }).then((m) => LOGGER.trace('Edited: ' + m.id)).catch((e) => {
                 console.error(e);
-                messages[i].doneEditing = true;
             });
             messages[i].doneEditing = true;
         }
