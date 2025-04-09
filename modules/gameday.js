@@ -133,7 +133,7 @@ async function reportPlays (bot, gamePk) {
             ), gamePk, atBatIndex - 1);
         /* the below block detects and handles if we missed the result of an at-bat due to the data moving too fast.
          Sometimes it progresses to the next at bat quite quickly. */
-        } else if (lastReportedCompleteAtBatIndex !== null
+        } else if (lastAtBat && lastReportedCompleteAtBatIndex !== null
             && (atBatIndex - lastReportedCompleteAtBatIndex > 1)) {
             LOGGER.debug('Missed at-bat index: ' + atBatIndex - 1);
             await reportAnyMissedEvents(lastAtBat, bot, gamePk, atBatIndex - 1);
