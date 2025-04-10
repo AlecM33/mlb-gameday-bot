@@ -1,4 +1,7 @@
 # MLB Gameday Bot ⚾
+
+<img src='https://github.com/user-attachments/assets/6b671496-ac24-4c4b-a0a3-b53e6974f414' width=500/>
+<br><br>
 For demos of the bot's commands, view its github pages site here: https://alecm33.github.io/mlb-gameday-bot/
 
 This bot and its author are not affiliated with the MLB. The bot uses the MLB Stats API, which is subject to the notice posted at http://gdx.mlb.com/components/copyright.txt
@@ -28,19 +31,11 @@ and in turn reports events to any number of subscribed Discord channels. Slash C
 - **/weather** - view the weather for current the game.
 - **/wildcard** - the current wildcard standings.
 
-...and likely more to follow!
-
-Examples:
-
-![image](https://github.com/user-attachments/assets/4339bbee-1615-434d-8a18-b7cad1372f02)
-
-<img src='https://github.com/user-attachments/assets/82730d13-9f1a-471e-be65-f5a3960d844a' width=400/>
-
 # Tech Stack
 
-Written in JavaScript using [Discord.js](https://discord.js.org/). Running on the Heroku platform.
+Written in JavaScript using [Discord.js](https://discord.js.org/).
 
-The bot uses a PostgreSQL database hosted for free on the [Aiven Platform](https://aiven.io/) to keep track of the Discord channels that have subscribed to the real-time gameday feature.
+The bot uses a PostgreSQL database to keep track of the Discord channels that have subscribed to the real-time gameday feature.
 
 I integrate with the MLB stats API for a dizzying amount of data. Its documentation is limited, but there is some. Shout out to Todd Roberts and his project for getting me acquainted with some of the subtleties: https://pypi.org/project/MLB-StatsAPI/. You can also
 view the spec for the MLB's "master game object", nicknamed GUMBO, here: https://bdata-research-blog-prod.s3.amazonaws.com/uploads/2019/03/GUMBOPDF3-29.pdf. I'm also happy to answer what I can about how to use the API.
