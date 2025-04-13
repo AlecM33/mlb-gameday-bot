@@ -26,13 +26,15 @@ for (const file of commandFiles) {
 
 BOT.once('ready', async () => {
     LOGGER.info('Ready!');
-    BOT.application.emojis.fetch().then(emojis => {
+    let emojis;
+    try {
+        emojis = await BOT.application.emojis.fetch();
         LOGGER.info('Fetched application emojis.');
         globalCache.values.emojis = Array.from(emojis.values());
-    }).catch(e => {
+    } catch (e) {
         console.error(e);
         globalCache.values.emojis = [];
-    });
+    }
     globalCache.values.subscribedChannels = await queries.getAllSubscribedChannels();
     LOGGER.info('Subscribed channels: ' + JSON.stringify(globalCache.values.subscribedChannels, null, 2));
     await gameday.statusPoll(BOT);
