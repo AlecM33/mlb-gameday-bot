@@ -138,18 +138,43 @@ function getHomeRunCall (player, partOfField, scorers, hrNumber) {
         player.toUpperCase() +
         ' WITH A SWING AND A DRIVE! TO DEEP ' +
         partOfField.toUpperCase() +
-        '! A-WAAAAY BACK! GONE!!! ' + hrNumber + '\n' +
+        '! A-WAAAAY BACK! GONE!! ' + hrNumber + '\n' +
         (scorers || ''),
         player +
         ' is ready...the pitch...SWUNG ON AND BLASTED. DEEP ' +
         partOfField.toUpperCase() +
-        ' FIELD! THIS BALL: GONE!! ' + hrNumber + '\n' +
+        ' FIELD! THIS BALL: GONE! ' + hrNumber + '\n' +
+        (scorers || ''),
+        player +
+        ' is ready...the pitch...SWUNG ON AND RIPPED. DEEP ' +
+        partOfField.toUpperCase() +
+        ' FIELD! THIS BALL: GONE! ' + hrNumber + '\n' +
+        (scorers || ''),
+        player +
+        ' is ready...the pitch...SWUNG ON AND HAMMERED. DEEP ' +
+        partOfField.toUpperCase() +
+        ' FIELD! THIS BALL: GONE! ' + hrNumber + '\n' +
         (scorers || ''),
         'The next pitch to ' + player +
         '...SWUNG ON! HIT HIGH! HIT DEEP TO ' +
         partOfField.toUpperCase() +
-        '! A-WAAAAY BACK! GONE!!! ' + hrNumber + '\n' +
-        (scorers || '')
+        '! A-WAAAAY BACK AND GONE!! ' + hrNumber + '\n' +
+        (scorers || ''),
+        'The next pitch to ' + player +
+        '...SWUNG ON! HIT HIGH! DEEP TO ' +
+        partOfField.toUpperCase() +
+        '! THERE SHE GOES! ' + hrNumber + '\n' +
+        (scorers || ''),
+        player +
+        ' is ready...the pitch...swung on! Hit a TON! DEEP ' +
+        partOfField.toUpperCase() +
+        ' FIELD! THIS BALL IS...GONE! ' + hrNumber + '\n' +
+        (scorers || ''),
+        player.toUpperCase() +
+        ' WITH A LONG DRIVE! DEEP TO' +
+        partOfField.toUpperCase() +
+        '! A-WAAAAY BACK AND GONE!! ' + hrNumber + '\n' +
+        (scorers || ''),
     ];
 
     return calls[Math.floor(Math.random() * calls.length)];
