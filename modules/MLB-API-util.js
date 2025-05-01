@@ -261,12 +261,15 @@ module.exports = {
         try {
             return (await fetch(endpoints.savantPage(personId, type),
                 {
-                    signal: AbortSignal.timeout(10000)
+                    signal: AbortSignal.timeout(15000)
                 }
             )).text();
         } catch (e) {
             LOGGER.error(e);
-            return {};
+            if (e.name === 'TimeoutError') {
+                return new Error('Timed out trying to retrieve statcast data. Please try your command again.');
+            }
+            return new Error('Could not find statcast data for this player for the chosen season.');
         }
     },
     hitter: async (personId, statType, season) => {

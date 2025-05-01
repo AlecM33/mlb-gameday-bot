@@ -560,6 +560,12 @@ module.exports = {
         const playerResult = await commandUtil.resolvePlayer(interaction, playerName, 'Batter');
         if (!playerResult) return;
         const text = await mlbAPIUtil.savantPage(playerResult.player.id, 'hitting');
+        if (text instanceof Error) {
+            await interaction.followUp({
+                content: text.message
+            });
+            return;
+        }
         const statcastData = commandUtil.getStatcastData(text, interaction.options.getInteger('year'));
         if (statcastData.matchingStatcast && statcastData.matchingMetricYear && statcastData.metricSummaryJSON) {
             const batterInfo = await commandUtil.hydrateHitter(
@@ -593,6 +599,12 @@ module.exports = {
         const playerResult = await commandUtil.resolvePlayer(interaction, playerName, 'Pitcher');
         if (!playerResult) return;
         const text = await mlbAPIUtil.savantPage(playerResult.player.id, 'pitching');
+        if (text instanceof Error) {
+            await interaction.followUp({
+                content: text.message
+            });
+            return;
+        }
         const statcastData = commandUtil.getStatcastData(text, interaction.options.getInteger('year'));
         if (statcastData.matchingStatcast && statcastData.matchingMetricYear && statcastData.metricSummaryJSON) {
             const pitcherInfo = await commandUtil.hydrateProbable(
