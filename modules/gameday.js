@@ -196,7 +196,13 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle =
         );
         const messages = [];
         for (const channelSubscription of globalCache.values.subscribedChannels) {
-            const returnedChannel = await bot.channels.fetch(channelSubscription.channel_id);
+            let returnedChannel;
+            try {
+                returnedChannel = await bot.channels.fetch(channelSubscription.channel_id);
+            } catch(e) { // an error would be caught here if we, for example, did not have permission to see the requested channel.
+                LOGGER.error(e);
+                continue;
+            }
             if (!play.isScoringPlay && channelSubscription.scoring_plays_only) {
                 LOGGER.debug('Skipping - against the channel\'s preference');
             } else {
