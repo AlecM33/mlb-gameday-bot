@@ -171,7 +171,7 @@ function getHomeRunCall (player, partOfField, scorers, hrNumber) {
         ' FIELD! THIS BALL IS...GONE! ' + hrNumber + '\n' +
         (scorers || ''),
         player.toUpperCase() +
-        ' WITH A LONG DRIVE! DEEP TO' +
+        ' WITH A LONG DRIVE! DEEP TO ' +
         partOfField.toUpperCase() +
         '! A-WAAAAY BACK AND GONE!! ' + hrNumber + '\n' +
         (scorers || ''),
