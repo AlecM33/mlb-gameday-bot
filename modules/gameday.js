@@ -199,7 +199,8 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle =
             let returnedChannel;
             try {
                 returnedChannel = await bot.channels.fetch(channelSubscription.channel_id);
-            } catch(e) { // an error would be caught here if we, for example, did not have permission to see the requested channel.
+            // an error would be caught here if we, for example, did not have permission to see the requested channel.
+            } catch (e) {
                 LOGGER.error(e);
                 continue;
             }
