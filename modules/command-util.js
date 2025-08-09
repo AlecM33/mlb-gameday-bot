@@ -633,7 +633,7 @@ module.exports = {
         if (lastThree) {
             reply += `\n**Recent Games${resolveGameType(gameType)}:** \n`;
             reply += `G: ${lastThree.gamesPlayed}, `;
-            if (lastThree.gamesPlayed && lastThree.gamesPlayed > 0) {
+            if (lastThree.gamesStarted && lastThree.gamesStarted > 0) {
                 reply += `IP/GS: ${(parseFloat(lastThree.inningsPitched) / parseFloat(lastThree.gamesPlayed)).toFixed(2)}, `;
             }
             reply += `ERA: ${lastThree.era}, `;
