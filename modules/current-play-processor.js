@@ -16,6 +16,10 @@ module.exports = {
             if (currentPlayJSON.result?.isOut || currentPlayJSON.details?.isOut) {
                 reply += ' **' + currentPlayJSON.count.outs + (currentPlayJSON.count.outs > 1 ? ' outs. **' : ' out. **');
             }
+            if (globals.PITCH_BY_PITCH_WHITELIST.includes((currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType))
+                && !currentPlayJSON.about?.hasReview) {
+                reply += ` [Pitch by pitch](https://www.mlb.com/gameday/${globalCache.values.game.currentGamePk}/play/${currentPlayJSON.atBatIndex})`
+            }
             if (!currentPlayJSON.reviewDetails?.inProgress
                 && (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details?.isScoringPlay)) {
                 reply = addScore(reply, currentPlayJSON, feed, homeTeamEmoji, awayTeamEmoji);
