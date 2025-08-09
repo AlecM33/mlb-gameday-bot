@@ -62,7 +62,7 @@ module.exports = {
         'wild_pitch',
         'other_out'
     ],
-    PITCH_BY_PITCH_WHITELIST:[
+    PITCH_BY_PITCH_WHITELIST: [
         'single',
         'double',
         'triple',
