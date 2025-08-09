@@ -18,7 +18,7 @@ module.exports = {
             }
             if (globals.PITCH_BY_PITCH_WHITELIST.includes((currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType))
                 && !currentPlayJSON.about?.hasReview) {
-                reply += ` [Pitch by pitch](https://www.mlb.com/gameday/${globalCache.values.game.currentGamePk}/play/${currentPlayJSON.atBatIndex})`
+                reply += ` [Pitch by pitch](https://www.mlb.com/gameday/${globalCache.values.game.currentGamePk}/play/${currentPlayJSON.atBatIndex})`;
             }
             if (!currentPlayJSON.reviewDetails?.inProgress
                 && (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details?.isScoringPlay)) {
