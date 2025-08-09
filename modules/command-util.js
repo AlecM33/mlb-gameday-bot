@@ -633,6 +633,9 @@ module.exports = {
         if (lastThree) {
             reply += `\n**Recent Games${resolveGameType(gameType)}:** \n`;
             reply += `G: ${lastThree.gamesPlayed}, `;
+            if (lastThree.gamesPlayed && lastThree.gamesPlayed > 0) {
+                reply += `IP/GS: ${(parseFloat(lastThree.inningsPitched) / parseFloat(lastThree.gamesPlayed)).toFixed(2)}, `;
+            }
             reply += `ERA: ${lastThree.era}, `;
             reply += `Hits: ${lastThree.hits}, `;
             reply += `K: ${lastThree.strikeOuts}, `;
@@ -642,11 +645,13 @@ module.exports = {
         reply += `**All Games${resolveGameType(gameType)}:** \n`;
         if (!pitchingStats) {
             reply += 'G: 0, ';
+            reply += 'IP: 0';
             reply += 'W-L: -, ';
             reply += 'ERA: -.--, ';
             reply += 'WHIP: -.--';
         } else {
             reply += `G: ${pitchingStats.gamesPlayed}, `;
+            reply += `IP: ${pitchingStats.inningsPitched}, `;
             reply += `W-L: ${pitchingStats.wins}-${pitchingStats.losses}, `;
             reply += `ERA: ${pitchingStats.era}, `;
             reply += `WHIP: ${pitchingStats.whip} `;
