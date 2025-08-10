@@ -46,6 +46,14 @@ module.exports = {
         globalCache.values.game.awayTeamEmoji = globalCache.values.emojis.find(e => e.name.includes(feed.awayTeamId()));
     },
 
+    getCurrentPitcherPitchesStrikes: (play) => {
+        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
+        const boxscore = feed.boxscore();
+        const mergedPlayers = { ...boxscore.teams.away.players, ...boxscore.teams.home.players };
+        const currentPitcher = mergedPlayers[`ID${play.currentPitcherId}`]
+        return `\n\n**Pitcher**: ${currentPitcher?.person.fullName}, ${currentPitcher?.stats.pitching.numberOfPitches} P - ${currentPitcher?.stats.pitching.strikes} S\n`;
+    },
+
     getDueUp: () => {
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         const linescore = feed.linescore();
@@ -53,7 +61,7 @@ module.exports = {
         const onDeckIndex = linescore.offense.battingOrder >= 9 ? (linescore.offense.battingOrder + 1) % 9 : linescore.offense.battingOrder + 1;
         const inHoleIndex = linescore.offense.battingOrder >= 8 ? (linescore.offense.battingOrder + 2) % 9 : linescore.offense.battingOrder + 2;
 
-        return '\n\n**Due up**: ' +
+        return '**Due up**: ' +
             upIndex + '. ' + linescore.offense?.batter?.fullName + ', ' +
             onDeckIndex + '. ' + linescore.offense?.onDeck?.fullName + ', ' +
             inHoleIndex + '. ' + linescore.offense?.inHole?.fullName;
