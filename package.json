@@ -15,7 +15,7 @@
     "canvas": "^3.1.0",
     "chroma-js": "^2.6.0",
     "color-contrast-checker": "^2.1.0",
-    "discord.js": "^14.16.0",
+    "discord.js": "^14.21.0",
     "jasmine": "^5.1.0",
     "join-images": "^1.1.5",
     "jsdom": "^26.0.0",
