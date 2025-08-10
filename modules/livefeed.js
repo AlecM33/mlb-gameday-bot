@@ -40,6 +40,9 @@ module.exports = {
             linescore: () => {
                 return liveFeed.liveData.linescore;
             },
+            boxscore: () => {
+                return liveFeed.liveData.boxscore;
+            },
             homeTeamScore: () => {
                 return liveFeed.liveData.plays.currentPlay.result.homeScore;
             },

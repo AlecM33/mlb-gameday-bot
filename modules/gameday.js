@@ -1,3 +1,14 @@
+/**
+ * This component concerns subscribing to MLB.com's websocket feed for a live game and in turn reporting that to subscribed Discord channels.
+ * It does that very consistently well, and it took a lot of work to get to that point. But it is not perfect, and I don't think it ever will be.
+ * Once in a while, you will see a missed event, or a misreported event, or some other weird bug. From what I have observed, that is a consequence of MLB's
+ * data feed, which also occasionally makes mistakes. In fact, I have witnessed them sending rare "correction" events live in the wild. And while
+ * corrections can be handled nicely on a webpage, once my bot has broadcast an event out to Discord channels, I can't really
+ * correct it, at least not easily. I don't want to be in the business of trying to fish for and correct previously sent messages - that
+ * is too much overhead and too much complexity for not enough payoff. So, all this to say, if you come into this component
+ * looking to perfect it, while I'm sure there are improvements to make, just be aware: the API we are consuming is not perfect either.
+ */
+
 const mlbAPIUtil = require('./MLB-API-util');
 const globalCache = require('./global-cache');
 const diffPatch = require('./diff-patch');
@@ -226,7 +237,9 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle =
 
 function constructPlayEmbed (play, feed, includeTitle, homeTeamColor, awayTeamColor, homeTeamEmoji, awayTeamEmoji) {
     const embed = new EmbedBuilder()
-        .setDescription(play.reply + (play.isOut && play.outs === 3 && !gamedayUtil.didGameEnd(play.homeScore, play.awayScore) ? gamedayUtil.getDueUp() : ''))
+        .setDescription(play.reply + (play.isOut && play.outs === 3 && !gamedayUtil.didGameEnd(play.homeScore, play.awayScore)
+            ? `${gamedayUtil.getCurrentPitcherPitchesStrikes(play)}${gamedayUtil.getDueUp()}`
+            : ''))
         .setColor((feed.halfInning() === 'top'
             ? awayTeamColor
             : homeTeamColor
