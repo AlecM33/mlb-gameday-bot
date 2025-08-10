@@ -59,7 +59,8 @@ module.exports = {
             isInPlay: (lastEvent?.details?.isInPlay || currentPlayJSON.details?.isInPlay),
             playId: (lastEvent?.playId || currentPlayJSON.playId),
             metricsAvailable: (lastEvent?.hitData?.launchSpeed !== undefined || currentPlayJSON.hitData?.launchSpeed !== undefined),
-            hitDistance: (lastEvent?.hitData?.totalDistance || currentPlayJSON.hitData?.totalDistance)
+            hitDistance: (lastEvent?.hitData?.totalDistance || currentPlayJSON.hitData?.totalDistance),
+            currentPitcherId: currentPlayJSON.matchup?.pitcher?.id
         };
     }
 };
