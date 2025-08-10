@@ -50,7 +50,7 @@ module.exports = {
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         const boxscore = feed.boxscore();
         const mergedPlayers = { ...boxscore.teams.away.players, ...boxscore.teams.home.players };
-        const currentPitcher = mergedPlayers[`ID${play.currentPitcherId}`]
+        const currentPitcher = mergedPlayers[`ID${play.currentPitcherId}`];
         return `\n\n**Pitcher**: ${currentPitcher?.person.fullName}, ${currentPitcher?.stats.pitching.numberOfPitches} P - ${currentPitcher?.stats.pitching.strikes} S\n`;
     },
 
