@@ -238,7 +238,7 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle =
 function constructPlayEmbed (play, feed, includeTitle, homeTeamColor, awayTeamColor, homeTeamEmoji, awayTeamEmoji) {
     const embed = new EmbedBuilder()
         .setDescription(play.reply + (play.isOut && play.outs === 3 && !gamedayUtil.didGameEnd(play.homeScore, play.awayScore)
-            ? `${gamedayUtil.getCurrentPitcherPitchesStrikes(play)}${gamedayUtil.getDueUp()}`
+            ? `${gamedayUtil.getPitchesStrikesForPitchersInHalfInning(play)}${gamedayUtil.getDueUp()}`
             : ''))
         .setColor((feed.halfInning() === 'top'
             ? awayTeamColor
