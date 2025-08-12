@@ -8,7 +8,7 @@ describe('gameday-util', () => {
     beforeAll(() => {});
 
     describe('#didGameEnd', () => {
-        it('should say the game ended when the top of the 9th ended with the home team leading', async () => {
+        it('should say the game ended when the top of the 9th ended with the home team leading', () => {
             spyOn(liveFeed, 'init').and.returnValue({
                 inning: () => { return 9; },
                 halfInning: () => { return 'top'; }
@@ -16,7 +16,7 @@ describe('gameday-util', () => {
             expect(gamedayUtil.didGameEnd(3, 2)).toBeTrue();
         });
 
-        it('should say the game ended when the bottom of the 9th ended with the away team leading', async () => {
+        it('should say the game ended when the bottom of the 9th ended with the away team leading', () => {
             spyOn(liveFeed, 'init').and.returnValue({
                 inning: () => { return 9; },
                 halfInning: () => { return 'bottom'; }
@@ -24,7 +24,7 @@ describe('gameday-util', () => {
             expect(gamedayUtil.didGameEnd(2, 3)).toBeTrue();
         });
 
-        it('should say the game is still going if the game is tied', async () => {
+        it('should say the game is still going if the game is tied', () => {
             spyOn(liveFeed, 'init').and.returnValue({
                 inning: () => { return 9; },
                 halfInning: () => { return 'bottom'; }
@@ -32,7 +32,7 @@ describe('gameday-util', () => {
             expect(gamedayUtil.didGameEnd(3, 3)).toBeFalse();
         });
 
-        it('should say the game is still going the top of the 9th has ended with the away team leading', async () => {
+        it('should say the game is still going the top of the 9th has ended with the away team leading', () => {
             spyOn(liveFeed, 'init').and.returnValue({
                 inning: () => { return 9; },
                 halfInning: () => { return 'top'; }
@@ -40,12 +40,62 @@ describe('gameday-util', () => {
             expect(gamedayUtil.didGameEnd(3, 10)).toBeFalse();
         });
 
-        it('should say the game ended when the top of an extra inning ended with the home team leading', async () => {
+        it('should say the game ended when the top of an extra inning ended with the home team leading', () => {
             spyOn(liveFeed, 'init').and.returnValue({
                 inning: () => { return 15; },
                 halfInning: () => { return 'top'; }
             });
             expect(gamedayUtil.didGameEnd(3, 2)).toBeTrue();
+        });
+    });
+
+    describe('#getPitchesStrikesForPitchersInHalfInning', () => {
+        const mockFeed = require('./data/example-live-feed-2');
+
+        it('should list multiple pitchers and their pitches-strikes if multiple pitchers covered the half inning', () => {
+            spyOn(liveFeed, 'init').and.returnValue({
+                inning: () => {
+                    return 8;
+                },
+                halfInning: () => {
+                    return 'top';
+                },
+                allPlays: () => {
+                    return mockFeed.liveData.plays.allPlays;
+                },
+                currentPlay: () => {
+                    return mockFeed.liveData.plays.currentPlay;
+                },
+                boxscore: () => {
+                    return mockFeed.liveData.boxscore;
+                }
+            });
+
+            expect(gamedayUtil.getPitchesStrikesForPitchersInHalfInning({ currentPitcherId: 663574 }))
+                .toContain('Tony Santillan (2 P - 1 S), Andrew Abbott (104 P - 74 S)');
+        });
+
+        it('should list only one pitcher and their pitches-strikes if one pitcher covered the half inning', () => {
+            spyOn(liveFeed, 'init').and.returnValue({
+                inning: () => {
+                    return 1;
+                },
+                halfInning: () => {
+                    return 'top';
+                },
+                allPlays: () => {
+                    return mockFeed.liveData.plays.allPlays;
+                },
+                currentPlay: () => {
+                    return mockFeed.liveData.plays.allPlays.find((play) => play.about.atBatIndex === 0);
+                },
+                boxscore: () => {
+                    return mockFeed.liveData.boxscore;
+                }
+            });
+
+            expect(gamedayUtil.getPitchesStrikesForPitchersInHalfInning({ currentPitcherId: 671096 }))
+                .toEqual('\n\n**Pitcher(s)**: Andrew Abbott (104 P - 74 S)\n');
         });
     });
 
