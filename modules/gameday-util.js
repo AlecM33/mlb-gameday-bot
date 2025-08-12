@@ -46,12 +46,19 @@ module.exports = {
         globalCache.values.game.awayTeamEmoji = globalCache.values.emojis.find(e => e.name.includes(feed.awayTeamId()));
     },
 
-    getCurrentPitcherPitchesStrikes: (play) => {
+    getPitchesStrikesForPitchersInHalfInning: (play) => {
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         const boxscore = feed.boxscore();
         const mergedPlayers = { ...boxscore.teams.away.players, ...boxscore.teams.home.players };
-        const currentPitcher = mergedPlayers[`ID${play.currentPitcherId}`];
-        return `\n\n**Pitcher**: ${currentPitcher?.person.fullName}, ${currentPitcher?.stats.pitching.numberOfPitches} P - ${currentPitcher?.stats.pitching.strikes} S\n`;
+        // finds all unique pitcher ids in the matchups from plays in the current half inning and maps them to their boxscore player entries
+        const pitchersFromThisHalfInning = [...new Set([play.currentPitcherId].concat(feed.allPlays()
+            .filter(play => play.about.halfInning === feed.currentPlay().about.halfInning
+                && play.about.inning === feed.currentPlay().about.inning)
+            .sort((a, b) => b.about.atBatIndex - a.about.atBatIndex)
+            .map(play => play.matchup.pitcher.id)
+        ).map(pitcherId => mergedPlayers[`ID${pitcherId}`]))];
+        return `\n\n**Pitcher(s)**: ${pitchersFromThisHalfInning.reduce((acc, value) => acc + 
+            `${value?.person.fullName} (${value?.stats.pitching.numberOfPitches} P - ${value?.stats.pitching.strikes} S)${pitchersFromThisHalfInning.indexOf(value) === pitchersFromThisHalfInning.length - 1 ? '' : ', '}`, '')}\n`;
     },
 
     getDueUp: () => {
