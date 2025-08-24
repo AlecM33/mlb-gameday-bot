@@ -627,20 +627,27 @@ module.exports = {
         });
     },
 
-    buildPitchingStatsMarkdown: (pitchingStats, pitchMix, lastThree, seasonAdvanced, sabermetrics, gameType, includeExtra = false) => {
+    buildPitchingStatsMarkdown: (pitchingStats, pitchMix, lastThree, seasonAdvanced, sabermetrics, gameType, starterMode = true) => {
         let reply = '';
 
         if (lastThree) {
-            reply += `\n**Recent Games${resolveGameType(gameType)}:** \n`;
-            reply += `G: ${lastThree.gamesPlayed}, `;
-            if (lastThree.gamesStarted && lastThree.gamesStarted > 0) {
-                reply += `IP/GS: ${(parseFloat(lastThree.inningsPitched) / parseFloat(lastThree.gamesPlayed)).toFixed(2)}, `;
+            if (starterMode) {
+                if (lastThree.gamesStarted > 0) {
+                    reply += `**Over ${lastThree.gamesStarted} recent start${lastThree.gamesStarted > 1 ? 's' : ''}:** ` +
+                    `${lastThree.era} ERA, ` +
+                    `${(parseFloat(lastThree.inningsPitched) / parseFloat(lastThree.gamesPlayed)).toFixed(2)} innings per start\n`;
+                } else {
+                    reply += 'Has no recent starts.\n';
+                }
+            } else {
+                reply += `\n**Recent Games${resolveGameType(gameType)}:** \n`;
+                reply += `G: ${lastThree.gamesPlayed}, `;
+                reply += `ERA: ${lastThree.era}, `;
+                reply += `Hits: ${lastThree.hits}, `;
+                reply += `K: ${lastThree.strikeOuts}, `;
+                reply += `BB: ${lastThree.baseOnBalls}, `;
+                reply += `HR: ${lastThree.homeRuns}\n`;
             }
-            reply += `ERA: ${lastThree.era}, `;
-            reply += `Hits: ${lastThree.hits}, `;
-            reply += `K: ${lastThree.strikeOuts}, `;
-            reply += `BB: ${lastThree.baseOnBalls}, `;
-            reply += `HR: ${lastThree.homeRuns}\n`;
         }
         reply += `**All Games${resolveGameType(gameType)}:** \n`;
         if (!pitchingStats) {
@@ -655,9 +662,8 @@ module.exports = {
             reply += `W-L: ${pitchingStats.wins}-${pitchingStats.losses}, `;
             reply += `ERA: ${pitchingStats.era}, `;
             reply += `WHIP: ${pitchingStats.whip} `;
-            if (includeExtra && (seasonAdvanced || sabermetrics)) {
+            if (!starterMode && (seasonAdvanced || sabermetrics)) {
                 reply += '\n...\n';
-                reply += `IP: ${pitchingStats.inningsPitched}\n`;
                 reply += `K/BB: ${seasonAdvanced.strikesoutsToWalks}\n`;
                 reply += `BABIP: ${seasonAdvanced.babip}\n`;
                 reply += `SLG: ${seasonAdvanced.slg}\n`;
