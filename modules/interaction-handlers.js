@@ -510,7 +510,7 @@ module.exports = {
                     pitcherInfo.pitchingStats.seasonAdvanced,
                     pitcherInfo.pitchingStats.sabermetrics,
                     (statType || 'R'),
-                    true
+                    false
                 ),
                 (statType || 'R'),
                 false,
