@@ -30,13 +30,13 @@ My instance of the bot for the Cleveland Guardians is private. The bot is only d
 
 This will assume you are somewhat familiar with Node.js and developing Discord bots.
 
-### Using Docker
+### Using Docker (Simplest)
 
 Requires a machine with the [Docker](https://docs.docker.com/) Engine running.
 
-1. Create a file called `.env` in the root directory, and populate it with the appropriate values. The `.env.example` file contains all the required variables with placeholder values. Each one is explained below.
+1. Create a file called `.env` in the root directory, and populate it with the appropriate values. The `.env.example` file contains all the required variables with placeholder values. Each one is explained below. If you're not that familiar with Docker, a note: the PostgreSQL database will be created the first time the database container is run. With all the database variables like `DB_USER` and `DB_PASSWORD`, you are defining what will be created. So, in short, you can supply whatever (obviously a secure password is recommended). This is in contrast to, say, `DISCORD_TOKEN`, which Discord has created and supplied to you.
     - DB_USER: the user for the postgres database
-    - DB_PASSWORD: the password for the postgres database user
+    - DB_PASSWORD: the password for the postgres database user **(sensitive)**
     - NODE_ENV: the node.js environment (production or development) in which to run the bot.
     - DB_NAME: the name for the postgres database
     - DB_PORT: the port for the postgres database
@@ -48,7 +48,7 @@ Requires a machine with the [Docker](https://docs.docker.com/) Engine running.
     - TIME_ZONE: Your chosen time zone. Defaults to EST. Time zone names correspond to the Zone and Link names of the [IANA Time Zone Database](https://www.iana.org/time-zones), such as "UTC", "Asia/Shanghai", "Asia/Kolkata", and "America/New_York". Additionally, time zones can be given as UTC offsets in the format "±hh:mm", "±hhmm", or "±hh", for example as "+01:00", "-2359", or "+23".
 2. Run `docker-compose up`
 
-### Without Docker
+### Without Docker (More involved)
 
 1. Populate the following environment variables:
    - CLIENT_ID - your bot's client ID, AKA application ID.
