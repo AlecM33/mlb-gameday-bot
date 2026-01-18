@@ -133,4 +133,3 @@ function getWeatherString (feed) {
     }
     return '';
 }
-
