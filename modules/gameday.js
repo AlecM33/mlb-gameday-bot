@@ -20,7 +20,7 @@ const liveFeed = require('./livefeed');
 const gamedayUtil = require('./gameday-util');
 
 module.exports = {
-    statusPoll, subscribe, processAndPushPlay, pollForSavantData, processMatchingPlay, sendMessage, sendDelayedMessage, constructPlayEmbed
+    statusPoll, subscribe, processAndPushPlay, pollForSavantData, processMatchingPlay, sendMessage, sendDelayedMessage, constructPlayEmbed, reportPlays, reportAnyMissedEvents
 };
 
 async function statusPoll (bot) {
@@ -136,7 +136,7 @@ async function reportPlays (bot, gamePk) {
         const lastAtBat = feed.allPlays()
             .find((play) => play.about.atBatIndex === atBatIndex - 1);
         if (lastAtBat && lastAtBat.about.hasReview) { // a play that's been challenged. We should report updates on it.
-            await processAndPushPlay(bot, currentPlayProcessor.process(
+            await module.exports.processAndPushPlay(bot, currentPlayProcessor.process(
                 lastAtBat,
                 feed,
                 globalCache.values.game.homeTeamEmoji,
@@ -144,11 +144,10 @@ async function reportPlays (bot, gamePk) {
             ), gamePk, atBatIndex - 1);
         /* the below block detects and handles if we missed the result of an at-bat due to the data moving too fast.
          Sometimes it progresses to the next at bat quite quickly. */
-        } else if (lastAtBat && lastReportedCompleteAtBatIndex !== null
-            && (atBatIndex - lastReportedCompleteAtBatIndex > 1)) {
-            LOGGER.debug('Missed at-bat index: ' + atBatIndex - 1);
-            await reportAnyMissedEvents(lastAtBat, bot, gamePk, atBatIndex - 1);
-            await processAndPushPlay(bot, currentPlayProcessor.process(
+        } else if (lastAtBat && (atBatIndex - lastReportedCompleteAtBatIndex > 1)) {
+            LOGGER.debug(`Missed at-bat index: ${atBatIndex - 1}`);
+            await module.exports.reportAnyMissedEvents(lastAtBat, bot, gamePk, atBatIndex - 1);
+            await module.exports.processAndPushPlay(bot, currentPlayProcessor.process(
                 lastAtBat,
                 feed,
                 globalCache.values.game.homeTeamEmoji,
@@ -156,8 +155,8 @@ async function reportPlays (bot, gamePk) {
             ), gamePk, atBatIndex - 1);
         }
     }
-    await reportAnyMissedEvents(currentPlay, bot, gamePk, atBatIndex);
-    await processAndPushPlay(bot, currentPlayProcessor.process(
+    await module.exports.reportAnyMissedEvents(currentPlay, bot, gamePk, atBatIndex);
+    await module.exports.processAndPushPlay(bot, currentPlayProcessor.process(
         currentPlay,
         feed,
         globalCache.values.game.homeTeamEmoji,
@@ -172,9 +171,9 @@ async function reportAnyMissedEvents (atBat, bot, gamePk, atBatIndex) {
             .find(reportedDescription => reportedDescription.description === event?.details?.description
                 && (reportedDescription.atBatIndex === atBatIndex || reportedDescription.atBatIndex === (atBatIndex - 1))
             )
-    );
+    ) || [];
     for (const missedEvent of missedEventsToReport) {
-        await processAndPushPlay(bot, currentPlayProcessor.process(
+        await module.exports.processAndPushPlay(bot, currentPlayProcessor.process(
             missedEvent,
             feed,
             globalCache.values.game.homeTeamEmoji,
