@@ -1,5 +1,6 @@
 const globalCache = require('./global-cache');
 const globals = require('../config/globals');
+const commandUtil = require('./command-util');
 
 module.exports = {
     process: (currentPlayJSON, feed, homeTeamEmoji, awayTeamEmoji) => {
@@ -7,7 +8,7 @@ module.exports = {
         if (!globalCache.values.game.startReported
             && currentPlayJSON.playEvents?.find(event => event?.details?.description === 'Status Change - In Progress')) {
             globalCache.values.game.startReported = true;
-            reply += 'A game is starting!';
+            reply += 'A game is starting!' + getWeatherString(feed);
         }
         let lastEvent;
         if (currentPlayJSON.about?.isComplete
@@ -115,3 +116,21 @@ function getDescription (currentPlayJSON, feed) {
 function insertEmojiIfPresent (emoji) {
     return (emoji ? `<:${emoji.name}:${emoji.id}>` : '');
 }
+
+function getWeatherString (feed) {
+    try {
+        const weather = feed.weather();
+        const venueName = feed.venueName();
+
+        if (weather && Object.keys(weather).length > 0 && venueName) {
+            return '\n\nWeather at ' + venueName + ':\n' +
+                commandUtil.getWeatherEmoji(weather.condition) + ' ' + weather.condition + '\n' +
+                '\uD83C\uDF21 ' + weather.temp + '°\n' +
+                '\uD83C\uDF43 ' + weather.wind;
+        }
+    } catch (e) {
+        return '';
+    }
+    return '';
+}
+

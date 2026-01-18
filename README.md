@@ -1,8 +1,9 @@
 # MLB Gameday Bot ⚾
 
-<img src='https://github.com/user-attachments/assets/6b671496-ac24-4c4b-a0a3-b53e6974f414' width=500/>
+### For examples of all the commands, view its github pages site here: https://alecm33.github.io/mlb-gameday-bot/
+
+<img src='./images/screenshots/homer.png' width=500/>
 <br>
-For demos of the bot's commands, view its github pages site here: https://alecm33.github.io/mlb-gameday-bot/
 
 This bot and its author are not affiliated with the MLB. The bot uses the MLB Stats API, which is subject to the notice posted at http://gdx.mlb.com/components/copyright.txt
 
