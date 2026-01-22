@@ -619,7 +619,7 @@ module.exports = {
             const replyOptions = {
                 ephemeral: false,
                 files: [savantAttachment],
-                embeds: [commandUtil.getPitcherEmbed(playerResult.player, pitcherInfo, !playerName, null, 'R', true, interaction.options.getInteger('year'))],
+                embeds: [commandUtil.getPitcherEmbed(playerResult.player, pitcherInfo, !playerName, null, 'R', true, interaction.options.getInteger('year') || statcastData.matchingMetricYear)],
                 components: [],
                 content: ''
             };

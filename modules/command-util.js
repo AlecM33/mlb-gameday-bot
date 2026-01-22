@@ -663,7 +663,7 @@ module.exports = {
             reply += `ERA: ${pitchingStats.era}, `;
             reply += `WHIP: ${pitchingStats.whip} `;
             if (!starterMode && (seasonAdvanced || sabermetrics)) {
-                reply += '\n...\n';
+                reply += '\n---\n';
                 reply += `K/BB: ${seasonAdvanced.strikesoutsToWalks}\n`;
                 reply += `BABIP: ${seasonAdvanced.babip}\n`;
                 reply += `SLG: ${seasonAdvanced.slg}\n`;
