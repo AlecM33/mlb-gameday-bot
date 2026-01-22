@@ -340,6 +340,17 @@ module.exports = {
             "abbreviation": "NYM"
         }
     ],
+    GAME_STATUS_CODES: {
+        IN_PROGRESS: "I",
+        WARMUP: "PW"
+    },
+    /*
+     More general codes that capture all statuses in a particular category.
+     See: https://github.com/MajorLeagueBaseball/google-cloud-mlb-hackathon/blob/main/datasets/mlb-statsapi-docs/MLB-StatsAPI%20-%20Lookup%20Values.pdf
+     */
+    CODED_GAME_STATES: {
+        POSTPONED: "D"
+    },
     HELP_MESSAGE: '`/starters` - examine the starting pitching matchup for the upcoming game.\n'
     +    '`/standings` - check the standings for your team\'s division.\n'
     +    '`/lineup` - view the lineup card for the current game.\n'

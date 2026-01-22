@@ -34,9 +34,10 @@ async function statusPoll (bot) {
             currentGames.sort((a, b) => Math.abs(now - new Date(a.gameDate)) - Math.abs(now - new Date(b.gameDate)));
             globalCache.values.currentGames = currentGames;
             const nearestGames = currentGames.filter(game => game.officialDate === currentGames[0].officialDate); // could be more than one game for double-headers.
-            globalCache.values.nearestGames = nearestGames.filter(g => g.status.codedGameState !== 'D');
+            globalCache.values.nearestGames = nearestGames.filter(g => g.status.codedGameState !== globals.CODED_GAME_STATES.POSTPONED);
             globalCache.values.game.isDoubleHeader = nearestGames.length > 1;
-            const inProgressGame = nearestGames.find(nearestGame => nearestGame.status.statusCode === 'I' || nearestGame.status.statusCode === 'PW');
+            const inProgressGame = nearestGames.find(nearestGame => nearestGame.status.statusCode === globals.GAME_STATUS_CODES.IN_PROGRESS
+                || nearestGame.status.statusCode === globals.GAME_STATUS_CODES.WARMUP);
             /*
                 the "game_finished" socket event is received before a game's status changes to "Final", typically. So we shouldn't try to
                 re-subscribe just because the status is still "In Progress". We should check if it's a different game.
