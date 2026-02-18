@@ -80,36 +80,38 @@ module.exports = {
 
     scheduleHandler: async (interaction) => {
         console.info(`SCHEDULE command invoked by guild: ${interaction.guildId}`);
-        const oneWeek = new Date();
+        const startDate = globals.DATE ? new Date(globals.DATE) : new Date();
+        const oneWeek = new Date(startDate);
         oneWeek.setDate(oneWeek.getDate() + 7);
         const nextWeek = await mlbAPIUtil.schedule(
-            new Date().toISOString().split('T')[0],
-            (oneWeek).toISOString().split('T')[0]
+            startDate.toISOString().split('T')[0],
+            oneWeek.toISOString().split('T')[0]
         );
         let reply = '';
         nextWeek.dates.forEach((date) => {
-            const game = date.games[0];
-            const gameDate = new Date(game.gameDate);
-            const teams = game.teams;
-            const home = teams.home.team.id === parseInt(process.env.TEAM_ID);
-            const emoji = globalCache.values.emojis
-                .find(v => v.name.includes(
-                    (home ? teams.away.team.id : teams.home.team.id)
-                ));
-            reply += `${gameDate.toLocaleString('en-US', {
-                timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
-                weekday: 'short' 
-            })} ${date.date.substr(6)}` +
-                (home ? ' vs. ' : ' @ ') + (home ? teams.away.team.abbreviation : teams.home.team.abbreviation) +
-                `${emoji ? ` <:${emoji.name}:${emoji.id}>` : ''}` +
-                ' ' +
-                gameDate.toLocaleString('en-US', {
+            date.games.forEach((game) => {
+                const gameDate = new Date(game.gameDate);
+                const teams = game.teams;
+                const home = teams.home.team.id === parseInt(process.env.TEAM_ID);
+                const emoji = globalCache.values.emojis
+                    .find(v => v.name.includes(
+                        (home ? teams.away.team.id : teams.home.team.id)
+                    ));
+                reply += `${gameDate.toLocaleString('en-US', {
                     timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    timeZoneName: 'short'
-                }) + (game.gameType === 'S' ? ' (Spring Training)' : '') +
-                '\n';
+                    weekday: 'short' 
+                })} ${date.date.substr(6)}` +
+                    (home ? ' vs. ' : ' @ ') + (home ? teams.away.team.abbreviation : teams.home.team.abbreviation) +
+                    `${emoji ? ` <:${emoji.name}:${emoji.id}>` : ''}` +
+                    ' ' +
+                    gameDate.toLocaleString('en-US', {
+                        timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        timeZoneName: 'short'
+                    }) + (game.gameType === 'S' ? ' (Spring Training)' : '') +
+                    '\n';
+            });
         });
         if (reply.length === 0) {
             await interaction.reply({
