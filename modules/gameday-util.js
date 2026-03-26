@@ -88,10 +88,11 @@ module.exports = {
             console.error(e);
             return reply;
         }
+        // We only list the parks in extreme cases, e.g. fewer than 4 parks or more than 26.
         if (numberOfParks <= globals.HOME_RUN_PARKS_MIN || numberOfParks >= globals.HOME_RUN_PARKS_MAX) {
-            reply += ' - ';
             const parks = numberOfParks >= globals.HOME_RUN_PARKS_MAX ? xParks.not : xParks.hr;
-            if (parks) {
+            if (parks && parks.length > 0) {
+                reply += ' - ';
                 for (let i = 0; i < parks.length; i ++) {
                     reply += parks[i].name + ' (' + parks[i].team_abbrev + ')';
                     if (i < parks.length - 1) {
