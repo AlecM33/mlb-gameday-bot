@@ -58,6 +58,9 @@ module.exports = {
             weather: () => {
                 return liveFeed.gameData.weather;
             },
+            absChallenges: () => {
+                return liveFeed.gameData.absChallenges;
+            },
             venueName: () => {
                 return liveFeed.gameData.venue.name;
             }

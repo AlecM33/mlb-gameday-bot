@@ -102,6 +102,13 @@ module.exports = {
     HOME_RUN_PARKS_MIN: 5,
     HOME_RUN_PARKS_MAX: 25,
     MAX_LEVENSHTEIN_DISTANCE: 3,
+    CHALLENGE_TYPES: {
+        PITCH_RESULT: "challenged (pitch result)"
+    },
+    HALF_INNINGS: {
+        TOP: 'top',
+        BOTTOM: 'bottom'
+    },
     EVENTS: [
         "Double",
         "Double Play",

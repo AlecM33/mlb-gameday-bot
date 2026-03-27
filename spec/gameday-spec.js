@@ -635,7 +635,7 @@ describe('gameday', () => {
             globalCache.values.game.lastReportedCompleteAtBatIndex = null;
             globalCache.values.game.homeTeamColor = '#BA0021';
             globalCache.values.game.awayTeamColor = '#FFC52F';
-            globalCache.values.game.currentLiveFeed = require('./data/example-live-feed');
+            globalCache.values.game.currentLiveFeed = require('./data/example-live-feeds/live-feed-2024');
             globalCache.values.subscribedChannels = [
                 { channel_id: 'channel-123', scoring_plays_only: false, delay: 0 }
             ];
@@ -819,7 +819,7 @@ describe('gameday', () => {
                 { name: 'yankees_147', id: '1339072748126863470' },
                 { name: 'orioles_110', id: '1339073056810864721' }
             ];
-            globalCache.values.game.currentLiveFeed = require('./data/example-live-feed');
+            globalCache.values.game.currentLiveFeed = require('./data/example-live-feeds/live-feed-2024');
             gamedayUtil.getTeamEmojis();
         });
         beforeEach(() => {});

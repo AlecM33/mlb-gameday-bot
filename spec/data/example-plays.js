@@ -1,4 +1,417 @@
 module.exports = {
+    resolvedABSChallenge: {
+        result: {
+            type: 'atBat',
+            event: 'Strikeout',
+            eventType: 'strikeout',
+            description: 'Steven Kwan challenged (pitch result), call on the field was confirmed: Steven Kwan called out on strikes.',
+            rbi: 0,
+            awayScore: 1,
+            homeScore: 2,
+            isOut: true
+        },
+        about: {
+            atBatIndex: 17,
+            halfInning: 'top',
+            isTopInning: true,
+            inning: 3,
+            startTime: '2026-03-27T02:51:38.444Z',
+            endTime: '2026-03-27T02:52:52.551Z',
+            isComplete: true,
+            isScoringPlay: false,
+            hasReview: true,
+            hasOut: true,
+            captivatingIndex: 14
+        },
+        count: {
+            balls: 1,
+            strikes: 3,
+            outs: 2
+        },
+        matchup: {
+            batter: {
+                id: 680757,
+                fullName: 'Steven Kwan',
+                link: '/api/v1/people/680757'
+            },
+            batSide: {
+                code: 'L',
+                description: 'Left'
+            },
+            pitcher: {
+                id: 669302,
+                fullName: 'Logan Gilbert',
+                link: '/api/v1/people/669302'
+            },
+            pitchHand: {
+                code: 'R',
+                description: 'Right'
+            },
+            batterHotColdZones: [],
+            pitcherHotColdZones: [],
+            splits: {
+                batter: 'vs_RHP',
+                pitcher: 'vs_LHB',
+                menOnBase: 'Empty'
+            }
+        },
+        pitchIndex: [
+            0,
+            1,
+            2,
+            3
+        ],
+        actionIndex: [],
+        runnerIndex: [
+            0
+        ],
+        runners: [
+            {
+                movement: {
+                    originBase: null,
+                    start: null,
+                    end: null,
+                    outBase: '1B',
+                    isOut: true,
+                    outNumber: 2
+                },
+                details: {
+                    event: 'Strikeout',
+                    eventType: 'strikeout',
+                    movementReason: null,
+                    runner: {
+                        id: 680757,
+                        fullName: 'Steven Kwan',
+                        link: '/api/v1/people/680757'
+                    },
+                    responsiblePitcher: null,
+                    isScoringEvent: false,
+                    rbi: false,
+                    earned: false,
+                    teamUnearned: false,
+                    playIndex: 3
+                },
+                credits: [
+                    {
+                        player: {
+                            id: 663728,
+                            link: '/api/v1/people/663728'
+                        },
+                        position: {
+                            code: '2',
+                            name: 'Catcher',
+                            type: 'Catcher',
+                            abbreviation: 'C'
+                        },
+                        credit: 'f_putout'
+                    }
+                ]
+            }
+        ],
+        playEvents: [
+            {
+                details: {
+                    call: {
+                        code: 'C',
+                        description: 'Called Strike'
+                    },
+                    description: 'Called Strike',
+                    code: 'C',
+                    ballColor: 'rgba(170, 21, 11, 1.0)',
+                    trailColor: 'rgba(188, 0, 33, 1.0)',
+                    isInPlay: false,
+                    isStrike: true,
+                    isBall: false,
+                    type: {
+                        code: 'FF',
+                        description: 'Four-Seam Fastball'
+                    },
+                    isOut: false,
+                    hasReview: false
+                },
+                count: {
+                    balls: 0,
+                    strikes: 1,
+                    outs: 1
+                },
+                pitchData: {
+                    startSpeed: 93.9,
+                    endSpeed: 85.2,
+                    strikeZoneTop: 3.023,
+                    strikeZoneBottom: 1.525,
+                    strikeZoneWidth: 17.0,
+                    strikeZoneDepth: 8.5,
+                    coordinates: {
+                        aY: 32.38355574156139,
+                        aZ: -11.534291222529761,
+                        pfxX: -2.345602455420449,
+                        pfxZ: 11.039147769439595,
+                        pX: -0.21889762171339847,
+                        pZ: 2.016406587389605,
+                        vX0: 2.1014581666613563,
+                        vY0: -136.4514941413297,
+                        vZ0: -8.337642333508661,
+                        x: 125.34,
+                        y: 184.34,
+                        x0: -0.6974479349124679,
+                        y0: 50.00579116497692,
+                        z0: 5.92306268790093,
+                        aX: -4.3867321774157
+                    },
+                    breaks: {
+                        breakAngle: 15.6,
+                        breakLength: 3.6,
+                        breakY: 24.0,
+                        breakVertical: -13.1,
+                        breakVerticalInduced: 18.2,
+                        breakHorizontal: 3.7,
+                        spinRate: 2149,
+                        spinDirection: 204
+                    },
+                    zone: 8,
+                    typeConfidence: 0.89,
+                    plateTime: 0.4027164221784334,
+                    extension: 7.3233886160035535
+                },
+                index: 0,
+                playId: 'ad145b7b-c5bf-3ea8-a9c1-552a916ca21d',
+                pitchNumber: 1,
+                startTime: '2026-03-27T02:51:47.317Z',
+                endTime: '2026-03-27T02:51:50.888Z',
+                isPitch: true,
+                type: 'pitch'
+            },
+            {
+                details: {
+                    call: {
+                        code: 'F',
+                        description: 'Foul'
+                    },
+                    description: 'Foul',
+                    code: 'F',
+                    ballColor: 'rgba(170, 21, 11, 1.0)',
+                    trailColor: 'rgba(0, 85, 254, 1.0)',
+                    isInPlay: false,
+                    isStrike: true,
+                    isBall: false,
+                    type: {
+                        code: 'CH',
+                        description: 'Changeup'
+                    },
+                    isOut: false,
+                    hasReview: false
+                },
+                count: {
+                    balls: 0,
+                    strikes: 2,
+                    outs: 1
+                },
+                pitchData: {
+                    startSpeed: 84.6,
+                    endSpeed: 77.1,
+                    strikeZoneTop: 3.023,
+                    strikeZoneBottom: 1.525,
+                    strikeZoneWidth: 17.0,
+                    strikeZoneDepth: 8.5,
+                    coordinates: {
+                        aY: 26.688912993636286,
+                        aZ: -26.956051797340553,
+                        pfxX: -10.64632849045223,
+                        pfxZ: 3.44009720516857,
+                        pX: -0.4063237225361869,
+                        pZ: 1.6846773386032572,
+                        vX0: 4.004556128920273,
+                        vY0: -123.0105407449579,
+                        vZ0: -4.744208991841989,
+                        x: 132.49,
+                        y: 193.29,
+                        x0: -0.6814144156278701,
+                        y0: 50.00429102982873,
+                        z0: 5.951264853665321,
+                        aX: -16.152568508714477
+                    },
+                    breaks: {
+                        breakAngle: 28.8,
+                        breakLength: 8.4,
+                        breakY: 24.0,
+                        breakVertical: -33.4,
+                        breakVerticalInduced: 5.3,
+                        breakHorizontal: 18.2,
+                        spinRate: 1558,
+                        spinDirection: 236
+                    },
+                    zone: 7,
+                    typeConfidence: 2.0,
+                    plateTime: 0.44699674092753616,
+                    extension: 7.11326481993434
+                },
+                index: 1,
+                playId: '9a77635a-4b7e-389c-bcee-1779a0571325',
+                pitchNumber: 2,
+                startTime: '2026-03-27T02:52:04.914Z',
+                endTime: '2026-03-27T02:52:07.914Z',
+                isPitch: true,
+                type: 'pitch'
+            },
+            {
+                details: {
+                    call: {
+                        code: 'B',
+                        description: 'Ball'
+                    },
+                    description: 'Ball',
+                    code: 'B',
+                    ballColor: 'rgba(39, 161, 39, 1.0)',
+                    trailColor: 'rgba(119, 0, 152, 1.0)',
+                    isInPlay: false,
+                    isStrike: false,
+                    isBall: true,
+                    type: {
+                        code: 'FS',
+                        description: 'Splitter'
+                    },
+                    isOut: false,
+                    hasReview: false
+                },
+                count: {
+                    balls: 1,
+                    strikes: 2,
+                    outs: 1
+                },
+                pitchData: {
+                    startSpeed: 81.8,
+                    endSpeed: 74.6,
+                    strikeZoneTop: 3.023,
+                    strikeZoneBottom: 1.525,
+                    strikeZoneWidth: 17.0,
+                    strikeZoneDepth: 8.5,
+                    coordinates: {
+                        aY: 27.185765765792546,
+                        aZ: -35.28834556998794,
+                        pfxX: -1.954132321913784,
+                        pfxZ: -2.2376274183671834,
+                        pX: 1.4636531641189199,
+                        pZ: -0.6949867372307219,
+                        vX0: 5.776207708213459,
+                        vY0: -118.67518212408949,
+                        vZ0: -7.5443566886019,
+                        x: 61.21,
+                        y: 257.54,
+                        x0: -0.7707217133824321,
+                        y0: 50.000303532255714,
+                        z0: 5.8259047895253975,
+                        aX: -2.7292896816704815
+                    },
+                    breaks: {
+                        breakAngle: 2.4,
+                        breakLength: 10.8,
+                        breakY: 24.0,
+                        breakVertical: -47.8,
+                        breakVerticalInduced: -6.0,
+                        breakHorizontal: 1.8,
+                        spinRate: 533,
+                        spinDirection: 279
+                    },
+                    zone: 14,
+                    typeConfidence: 0.91,
+                    plateTime: 0.465335712656068,
+                    extension: 7.220746783078377
+                },
+                index: 2,
+                playId: '97c123a2-c3c5-3416-95b5-cd29e280ab50',
+                pitchNumber: 3,
+                startTime: '2026-03-27T02:52:22.859Z',
+                endTime: '2026-03-27T02:52:25.859Z',
+                isPitch: true,
+                type: 'pitch'
+            },
+            {
+                details: {
+                    call: {
+                        code: 'C',
+                        description: 'Called Strike'
+                    },
+                    description: 'Called Strike',
+                    code: 'C',
+                    ballColor: 'rgba(170, 21, 11, 1.0)',
+                    trailColor: 'rgba(152, 0, 101, 1.0)',
+                    isInPlay: false,
+                    isStrike: true,
+                    isBall: false,
+                    type: {
+                        code: 'FC',
+                        description: 'Cutter'
+                    },
+                    isOut: true,
+                    hasReview: false
+                },
+                count: {
+                    balls: 1,
+                    strikes: 3,
+                    outs: 1
+                },
+                pitchData: {
+                    startSpeed: 90.9,
+                    endSpeed: 83.2,
+                    strikeZoneTop: 3.023,
+                    strikeZoneBottom: 1.525,
+                    strikeZoneWidth: 17.0,
+                    strikeZoneDepth: 8.5,
+                    coordinates: {
+                        aY: 28.30893296265257,
+                        aZ: -17.65074969359031,
+                        pfxX: 3.3907226235668015,
+                        pfxZ: 8.201230672130176,
+                        pX: -0.5874329582660759,
+                        pZ: 2.533100054581336,
+                        vX0: -0.8839679713730438,
+                        vY0: -132.28044130408173,
+                        vZ0: -5.613387842940966,
+                        x: 139.39,
+                        y: 170.39,
+                        x0: -0.6894430366959537,
+                        y0: 50.00580920334112,
+                        z0: 5.9774529641268686,
+                        aX: 6.008019619197767
+                    },
+                    breaks: {
+                        breakAngle: 16.8,
+                        breakLength: 4.8,
+                        breakY: 24.0,
+                        breakVertical: -19.3,
+                        breakVerticalInduced: 13.8,
+                        breakHorizontal: -6.0,
+                        spinRate: 2291,
+                        spinDirection: 184
+                    },
+                    zone: 4,
+                    typeConfidence: 0.94,
+                    plateTime: 0.4141110591857067,
+                    extension: 7.191125324227106
+                },
+                index: 3,
+                playId: '0fa9f39b-809c-3d4d-8bee-c0644f2da154',
+                pitchNumber: 4,
+                startTime: '2026-03-27T02:52:47.554Z',
+                endTime: '2026-03-27T02:52:52.551Z',
+                isPitch: true,
+                type: 'pitch'
+            }
+        ],
+        reviewDetails: {
+            isOverturned: false,
+            inProgress: false,
+            reviewType: 'MJ',
+            challengeTeamId: 114,
+            player: {
+                id: 680757,
+                fullName: 'Steven Kwan',
+                link: '/api/v1/people/680757'
+            }
+        },
+        playEndTime: '2026-03-27T02:52:52.551Z',
+        atBatIndex: 17
+    },
     resolvedChallenge: {
         result: {
             type: 'atBat',

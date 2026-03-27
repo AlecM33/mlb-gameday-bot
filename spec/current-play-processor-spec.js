@@ -5,7 +5,7 @@ const liveFeed = require('../modules/livefeed');
 
 describe('current-play-processor', () => {
     beforeAll(() => {
-        globalCache.values.game.currentLiveFeed = require('./data/example-live-feed');
+        globalCache.values.game.currentLiveFeed = require('./data/example-live-feeds/live-feed-2024');
     });
     describe('#process', () => {
         it('should correctly process a home run', async () => {
@@ -81,6 +81,28 @@ describe('current-play-processor', () => {
             expect(result.description).toEqual('Brewers challenged (tag play), call on the field was upheld: Blake Perkins reaches on a fielder\'s choice out, shortstop Zach Neto to third baseman Luis Guillorme.   Gary Sánchez out at 3rd.');
             expect(result.event).toEqual('Fielders Choice Out');
             expect(result.eventType).toEqual('fielders_choice_out');
+            expect(result.isScoringPlay).not.toBeDefined();
+            expect(result.isInPlay).not.toBeDefined();
+            expect(result.playId).not.toBeDefined();
+            expect(result.hitDistance).not.toBeDefined();
+        });
+
+        it('should correctly process an ABS challenge for a pitch result', async () => {
+            const result = currentPlayProcessor.process(
+                examplePlays.resolvedABSChallenge,
+                liveFeed.init(require('./data/example-live-feeds/live-feed-2026')),
+                { name: 'mariners_136', id: '1339072610041856090' },
+                { name: 'guardians_114', id: '1339072602408484917' }
+            );
+            expect(result.reply).toMatch(/Steven Kwan challenged \(pitch result\), call on the field was confirmed: Steven Kwan called out on strikes. \*\*2 outs. \*\*\n\nCLE has 1 challenge remaining./);
+            expect(result.reply).not.toMatch(/Exit Velo/);
+            expect(result.reply).not.toMatch(/Launch Angle/);
+            expect(result.reply).not.toMatch(/Distance/);
+            expect(result.reply).not.toMatch(/xBA/);
+            expect(result.reply).not.toMatch(/HR\/Park/);
+            expect(result.description).toEqual('Steven Kwan challenged (pitch result), call on the field was confirmed: Steven Kwan called out on strikes.');
+            expect(result.event).toEqual('Strikeout');
+            expect(result.eventType).toEqual('strikeout');
             expect(result.isScoringPlay).not.toBeDefined();
             expect(result.isInPlay).not.toBeDefined();
             expect(result.playId).not.toBeDefined();
