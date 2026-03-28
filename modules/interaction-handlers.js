@@ -6,7 +6,7 @@ const commandUtil = require('./command-util');
 const queries = require('../database/queries.js');
 const { constructPlayEmbed } = require('./gameday');
 const examplePlays = require('../spec/data/example-plays');
-const exampleLiveFeed = require('../spec/data/example-live-feed');
+const exampleLiveFeed = require('../spec/data/example-live-feeds/live-feed-2024');
 const liveFeed = require('./livefeed');
 const currentPlayProcessor = require('./current-play-processor');
 

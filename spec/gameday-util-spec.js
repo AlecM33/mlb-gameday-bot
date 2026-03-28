@@ -50,7 +50,7 @@ describe('gameday-util', () => {
     });
 
     describe('#getPitchesStrikesForPitchersInHalfInning', () => {
-        const mockFeed = require('./data/example-live-feed-2');
+        const mockFeed = require('./data/example-live-feeds/live-feed-2025');
 
         it('should list multiple pitchers and their pitches-strikes if multiple pitchers covered the half inning', () => {
             spyOn(liveFeed, 'init').and.returnValue({

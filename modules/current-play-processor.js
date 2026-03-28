@@ -1,6 +1,7 @@
 const globalCache = require('./global-cache');
 const globals = require('../config/globals');
 const commandUtil = require('./command-util');
+const { CHALLENGE_TYPES } = require('../config/globals');
 
 module.exports = {
     process: (currentPlayJSON, feed, homeTeamEmoji, awayTeamEmoji) => {
@@ -11,6 +12,7 @@ module.exports = {
             reply += 'A game is starting!' + getWeatherString(feed);
         }
         let lastEvent;
+        const description = currentPlayJSON.result?.description || currentPlayJSON.details?.description;
         if (currentPlayJSON.about?.isComplete
             || globals.EVENT_WHITELIST.includes((currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType))) {
             reply += getDescription(currentPlayJSON, feed);
@@ -21,9 +23,14 @@ module.exports = {
                 && !currentPlayJSON.about?.hasReview) {
                 reply += ` [Pitch by pitch](https://www.mlb.com/gameday/${globalCache.values.game.currentGamePk}/play/${currentPlayJSON.atBatIndex})`;
             }
-            if (!currentPlayJSON.reviewDetails?.inProgress
-                && (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details?.isScoringPlay)) {
-                reply = addScore(reply, currentPlayJSON, feed, homeTeamEmoji, awayTeamEmoji);
+            if (!currentPlayJSON.reviewDetails?.inProgress) {
+                if (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details?.isScoringPlay) {
+                    reply = addScore(reply, currentPlayJSON, feed, homeTeamEmoji, awayTeamEmoji);
+                }
+                // 2026 season ABS changes - state how many challenges we have remaining after an ABS challenge completes.
+                if (description.includes(CHALLENGE_TYPES.PITCH_RESULT) && feed.absChallenges()) {
+                    reply += `\n\n**Challenges remaining**: ${feed.homeAbbreviation()} ${feed.absChallenges().home?.remaining} ${feed.awayAbbreviation()} ${feed.absChallenges().away?.remaining}`;
+                }
             }
             if (!currentPlayJSON.about?.hasReview) {
                 if (currentPlayJSON.playEvents) {
@@ -47,7 +54,7 @@ module.exports = {
             homeScore: (currentPlayJSON.result ? currentPlayJSON.result.homeScore : currentPlayJSON.details?.homeScore),
             awayScore: (currentPlayJSON.result ? currentPlayJSON.result.awayScore : currentPlayJSON.details?.awayScore),
             isComplete: currentPlayJSON.about?.isComplete,
-            description: (currentPlayJSON.result?.description || currentPlayJSON.details?.description),
+            description,
             event: (currentPlayJSON.result?.event || currentPlayJSON.details?.event),
             eventType: (currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType),
             isScoringPlay: (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details?.isScoringPlay),
