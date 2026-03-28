@@ -94,7 +94,7 @@ describe('current-play-processor', () => {
                 { name: 'mariners_136', id: '1339072610041856090' },
                 { name: 'guardians_114', id: '1339072602408484917' }
             );
-            expect(result.reply).toMatch(/Steven Kwan challenged \(pitch result\), call on the field was confirmed: Steven Kwan called out on strikes. \*\*2 outs. \*\*\n\nCLE has 1 challenge remaining./);
+            expect(result.reply).toMatch(/Steven Kwan challenged \(pitch result\), call on the field was confirmed: Steven Kwan called out on strikes. \*\*2 outs. \*\*\n\nChallenges remaining: SEA 2 CLE 1/);
             expect(result.reply).not.toMatch(/Exit Velo/);
             expect(result.reply).not.toMatch(/Launch Angle/);
             expect(result.reply).not.toMatch(/Distance/);

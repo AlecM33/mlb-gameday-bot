@@ -1,7 +1,7 @@
 const globalCache = require('./global-cache');
 const globals = require('../config/globals');
 const commandUtil = require('./command-util');
-const { CHALLENGE_TYPES, HALF_INNINGS } = require('../config/globals');
+const { CHALLENGE_TYPES } = require('../config/globals');
 
 module.exports = {
     process: (currentPlayJSON, feed, homeTeamEmoji, awayTeamEmoji) => {
@@ -29,9 +29,7 @@ module.exports = {
                 }
                 // 2026 season ABS changes - state how many challenges we have remaining after an ABS challenge completes.
                 if (description.includes(CHALLENGE_TYPES.PITCH_RESULT) && feed.absChallenges()) {
-                    reply += `\n\n${currentPlayJSON.about?.halfInning === HALF_INNINGS.TOP || currentPlayJSON.details?.halfInning === HALF_INNINGS.TOP
-                        ? `${feed.awayAbbreviation()} has ${feed.absChallenges().away?.remaining} challenge${feed.absChallenges().away?.remaining === 1 ? '' : 's'} remaining.`
-                        : `${feed.homeAbbreviation()} has ${feed.absChallenges().home?.remaining} challenge${feed.absChallenges().home?.remaining === 1 ? '' : 's'} remaining.`}`;
+                    reply += `\n\nChallenges remaining: ${feed.homeAbbreviation()} ${feed.absChallenges().home?.remaining} ${feed.awayAbbreviation()} ${feed.absChallenges().away?.remaining}`;
                 }
             }
             if (!currentPlayJSON.about?.hasReview) {
