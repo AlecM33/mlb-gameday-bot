@@ -29,7 +29,7 @@ module.exports = {
                 }
                 // 2026 season ABS changes - state how many challenges we have remaining after an ABS challenge completes.
                 if (description.includes(CHALLENGE_TYPES.PITCH_RESULT) && feed.absChallenges()) {
-                    reply += `\n\nChallenges remaining: ${feed.homeAbbreviation()} ${feed.absChallenges().home?.remaining} ${feed.awayAbbreviation()} ${feed.absChallenges().away?.remaining}`;
+                    reply += `\n\n**Challenges remaining**: ${feed.homeAbbreviation()} ${feed.absChallenges().home?.remaining} ${feed.awayAbbreviation()} ${feed.absChallenges().away?.remaining}`;
                 }
             }
             if (!currentPlayJSON.about?.hasReview) {
