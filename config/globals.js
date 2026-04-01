@@ -102,6 +102,7 @@ module.exports = {
     HOME_RUN_PARKS_MIN: 5,
     HOME_RUN_PARKS_MAX: 25,
     MAX_LEVENSHTEIN_DISTANCE: 3,
+    PLAYER_STATS_MIN_YEAR: 2015,
     CHALLENGE_TYPES: {
         PITCH_RESULT: "challenged (pitch result)"
     },
@@ -369,10 +370,8 @@ module.exports = {
     +    '`/unsubscribe_gameday` - un-subscribe a given Discord channel from the above functionality.\n'
     +    '`/gameday_preference` - change which plays the bot will report or the reporting delay.\n'
     +    '`/schedule` - view the upcoming schedule for the next week of games.\n'
-    +    '`/batter` - view stats on a specified batter. If you don\'t provide a name, the bot will check for a live game and use the current batter.\n'
-    +    '`/pitcher` - view stats on a specified pitcher. If you don\'t provide a name, the bot will check for a live game and use the current pitcher.\n'
-    +    '`/batter_savant` - view Baseball Savant percentile rankings for a specified batter. If you don\'t provide a name, the bot will check for a live game and use the current batter.\n'
-    +    '`/pitcher_savant` - view Baseball Savant percentile rankings for a specified pitcher. If you don\'t provide a name, the bot will check for a live game and use the current pitcher.\n'
+    +    '`/player` - view stats on a specified player (pitcher or batter).\n'
+    +    '`/player_savant` - view Baseball Savant percentile rankings for a specified player.\n'
     +    '`/weather` - view the weather for the current game.\n'
     +    '`/attendance` - view the attendance for the current game.\n'
 }

@@ -3,6 +3,7 @@ const values = {
     currentGames: null,
     subscribedChannels: [],
     emojis: null,
+    playersByYear: {},
     game: {
         currentLiveFeed: null,
         currentGamePk: null,

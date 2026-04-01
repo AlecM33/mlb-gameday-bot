@@ -1,23 +1,26 @@
 const interactionHandlers = require('../modules/interaction-handlers.js');
+const commandUtil = require('../modules/command-util.js');
 const { SlashCommandBuilder } = require('@discordjs/builders');
+const globals = require('../config/globals.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('pitcher_savant')
-        .setDescription('View the savant metrics for a specified pitcher, or who is on the mound right now.')
+        .setName('player_savant')
+        .setDescription('View Baseball Savant percentile rankings for a specified player.')
         .addStringOption(option =>
             option.setName('player')
-                .setDescription('An active player\'s name.')
-                .setRequired(false))
+                .setDescription('A player\'s name.')
+                .setRequired(true)
+                .setAutocomplete(true))
         .addIntegerOption(option =>
             option.setName('year')
                 .setDescription('Which season?')
                 .setRequired(false)
-                .setMinValue(new Date().getFullYear() - 10)
+                .setMinValue(globals.PLAYER_STATS_MIN_YEAR)
                 .setMaxValue(new Date().getFullYear())),
     async execute (interaction) {
         try {
-            await interactionHandlers.pitcherSavantHandler(interaction);
+            await interactionHandlers.playerSavantHandler(interaction);
         } catch (e) {
             console.error(e);
             if (interaction.deferred && !interaction.replied) {
@@ -26,5 +29,9 @@ module.exports = {
                 await interaction.reply('There was an error processing this command. If it persists, please reach out to the developer.');
             }
         }
+    },
+    async autocomplete (interaction) {
+        await commandUtil.playerAutocomplete(interaction);
     }
 };
+
