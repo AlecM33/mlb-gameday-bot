@@ -518,7 +518,6 @@ module.exports = {
                 embeds: [commandUtil.getPitcherEmbed(
                     playerResult.player,
                     pitcherInfo,
-                    false,
                     commandUtil.buildPitchingStatsMarkdown(
                         pitcherInfo.pitchingStats.season,
                         pitcherInfo.pitchMix,
@@ -544,7 +543,6 @@ module.exports = {
                 embeds: [commandUtil.getBatterEmbed(
                     playerResult.player,
                     batterInfo,
-                    false,
                     commandUtil.formatSplits(
                         batterInfo.stats.stats.find(stat => stat.type.displayName === 'season'),
                         batterInfo.stats.stats.find(stat => stat.type.displayName === 'statSplits'),
@@ -601,7 +599,7 @@ module.exports = {
                 await interaction.editReply({
                     ephemeral: false,
                     files: [savantAttachment],
-                    embeds: [commandUtil.getPitcherEmbed(playerResult.player, pitcherInfo, false, null, 'R', true, interaction.options.getInteger('year') || statcastData.matchingMetricYear, twoWayLabel)],
+                    embeds: [commandUtil.getPitcherEmbed(playerResult.player, pitcherInfo, null, 'R', true, interaction.options.getInteger('year') || statcastData.matchingMetricYear, twoWayLabel)],
                     components: [],
                     content: ''
                 });
@@ -618,7 +616,7 @@ module.exports = {
                 await interaction.editReply({
                     ephemeral: false,
                     files: [savantAttachment],
-                    embeds: [commandUtil.getBatterEmbed(playerResult.player, batterInfo, false, null, null, true, interaction.options.getInteger('year'), twoWayLabel)],
+                    embeds: [commandUtil.getBatterEmbed(playerResult.player, batterInfo, null, null, true, interaction.options.getInteger('year'), twoWayLabel)],
                     components: [],
                     content: ''
                 });

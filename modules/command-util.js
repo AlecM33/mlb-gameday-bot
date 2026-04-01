@@ -8,7 +8,6 @@ const globals = require('../config/globals');
 const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_LEVEL.INFO);
 const chroma = require('chroma-js');
 const ztable = require('ztable');
-const liveFeed = require('./livefeed');
 const jsdom = require('jsdom');
 
 module.exports = {
@@ -703,160 +702,76 @@ module.exports = {
             liveFeed.gameData.teams.home.abbreviation + ' ' + homeScore + '**');
     },
 
-    getPitcherEmbed: (pitcher, pitcherInfo, isLiveGame, description, statType = 'R', savantMode = false, season = undefined, twoWayLabel = undefined) => {
+    getPitcherEmbed: (pitcher, pitcherInfo, description, statType = 'R', savantMode = false, season = undefined, twoWayLabel = undefined) => {
         const twoWaySuffix = twoWayLabel ? ` (${twoWayLabel})` : '';
-        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
-        if (isLiveGame) {
-            const abbreviations = {
-                home: feed.homeAbbreviation(),
-                away: feed.awayAbbreviation()
-            };
-            const halfInning = feed.halfInning();
-            const abbreviation = halfInning === 'top'
-                ? abbreviations.home
-                : abbreviations.away;
-            const inning = feed.inning();
-            const embed = new EmbedBuilder()
-                .setTitle(halfInning.toUpperCase() + ' ' + inning + ', ' +
-                    abbreviations.away + ' vs. ' + abbreviations.home + ': Current Pitcher')
-                .setDescription('### ' + (pitcherInfo.handedness
-                    ? pitcherInfo.handedness + 'HP **'
-                    : '**') + (pitcher.fullName || 'TBD') +
-                        '** (' + abbreviation + `): ${season || pitcherInfo.pitchingStats.yearOfStats || 'Latest'} ${(() => {
-                    if (savantMode) {
-                        return 'Percentile Rankings' + twoWaySuffix;
-                    }
-                    switch (statType) {
-                        case 'R':
-                            return 'Regular Season' + twoWaySuffix + '\n';
-                        case 'P':
-                            return 'Postseason' + twoWaySuffix + '\n';
-                        case 'S':
-                            return 'Spring Training' + twoWaySuffix + '\n';
-                    }
-                })()}` + (description || ''))
-                .setImage('attachment://savant.png')
-                .setColor((halfInning === 'top'
-                    ? globalCache.values.game.homeTeamColor
-                    : globalCache.values.game.awayTeamColor)
-                );
+        const embed = new EmbedBuilder()
+            .setTitle((pitcherInfo.handedness
+                ? pitcherInfo.handedness + 'HP '
+                : '') + pitcher.fullName + ` (${globals.TEAMS.find(t => t.id === pitcher.currentTeam.id).abbreviation}): ${season || pitcherInfo.pitchingStats.yearOfStats || 'Latest'} ${(() => {
+                if (savantMode) {
+                    return 'Percentile Rankings' + twoWaySuffix;
+                }
+                switch (statType) {
+                    case 'R':
+                        return 'Regular Season' + twoWaySuffix;
+                    case 'P':
+                        return 'Postseason' + twoWaySuffix;
+                    case 'S':
+                        return 'Spring Training' + twoWaySuffix;
+                }
+            })()}`
+            )
+            .setImage('attachment://savant.png')
+            .setColor(globals.TEAMS.find(team => team.id === pitcher.currentTeam.id).primaryColor);
 
-            if (!savantMode) {
-                embed.setThumbnail('attachment://spot.png');
-            }
-
-            return embed;
-        } else {
-            const embed = new EmbedBuilder()
-                .setTitle((pitcherInfo.handedness
-                    ? pitcherInfo.handedness + 'HP '
-                    : '') + pitcher.fullName + ` (${globals.TEAMS.find(t => t.id === pitcher.currentTeam.id).abbreviation}): ${season || pitcherInfo.pitchingStats.yearOfStats || 'Latest'} ${(() => {
-                    if (savantMode) {
-                        return 'Percentile Rankings' + twoWaySuffix;
-                    }
-                    switch (statType) {
-                        case 'R':
-                            return 'Regular Season' + twoWaySuffix;
-                        case 'P':
-                            return 'Postseason' + twoWaySuffix;
-                        case 'S':
-                            return 'Spring Training' + twoWaySuffix;
-                    }
-                })()}`
-                )
-                .setImage('attachment://savant.png')
-                .setColor(globals.TEAMS.find(team => team.id === pitcher.currentTeam.id).primaryColor);
-
-            if (description) {
-                embed.setDescription(description);
-            }
-
-            if (!savantMode) {
-                embed.setThumbnail('attachment://spot.png');
-            }
-
-            return embed;
+        if (description) {
+            embed.setDescription(description);
         }
+
+        if (!savantMode) {
+            embed.setThumbnail('attachment://spot.png');
+        }
+
+        return embed;
     },
 
-    getBatterEmbed: (batter, batterInfo, isLiveGame, description, statType = 'R', savantMode = false, season = undefined, twoWayLabel = undefined) => {
+    getBatterEmbed: (batter, batterInfo, description, statType = 'R', savantMode = false, season = undefined, twoWayLabel = undefined) => {
         const twoWaySuffix = twoWayLabel ? ` (${twoWayLabel})` : '';
-        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
-        let expandedBatter;
-        if (isLiveGame) {
-            expandedBatter = feed.players()['ID' + batter.id];
-            const abbreviations = {
-                home: feed.homeAbbreviation(),
-                away: feed.awayAbbreviation()
-            };
-            const halfInning = feed.halfInning();
-            const abbreviation = halfInning === 'bottom'
-                ? abbreviations.home
-                : abbreviations.away;
-            const inning = feed.inning();
-            const embed = new EmbedBuilder()
-                .setTitle(halfInning.toUpperCase() + ' ' + inning + ', ' +
-                    abbreviations.away + ' vs. ' + abbreviations.home + ': Current Batter' + (savantMode ? `: ${season || 'Latest'} Percentile Rankings${twoWaySuffix}` : ''))
-                .setDescription(`### ${batter.fullName} (${abbreviation})\n ${expandedBatter.primaryPosition.abbreviation} | Bats ${expandedBatter.batSide.description} ${(description || '')}`)
-                .setImage('attachment://savant.png')
-                .setColor((halfInning === 'top'
-                    ? globalCache.values.game.awayTeamColor
-                    : globalCache.values.game.homeTeamColor)
-                );
+        const yearLabel = season || batterInfo.stats?.season || 'Latest';
+        const statLabel = savantMode
+            ? `${yearLabel} Percentile Rankings${twoWaySuffix}`
+            : (() => {
+                switch (statType) {
+                    case 'R': return `${yearLabel} Regular Season${twoWaySuffix}`;
+                    case 'P': return `${yearLabel} Postseason${twoWaySuffix}`;
+                    case 'S': return `${yearLabel} Spring Training${twoWaySuffix}`;
+                    default: return `${yearLabel}${twoWaySuffix}`;
+                }
+            })();
+        const embed = new EmbedBuilder()
+            .setTitle(`${batter.fullName} (${globals.TEAMS.find(team => team.id === batter.currentTeam.id).abbreviation}): ${statLabel}`)
+            .setDescription(`${batter.primaryPosition.abbreviation} | Bats ${batterInfo.stats.batSide.description}`)
+            .setImage('attachment://savant.png')
+            .setColor(globals.TEAMS.find(team => team.id === batter.currentTeam.id).primaryColor);
 
-            if (!savantMode) {
-                embed.setThumbnail('attachment://spot.png');
-            }
-
-            return embed;
-        } else {
-            const yearLabel = season || batterInfo.stats?.season || 'Latest';
-            const statLabel = savantMode
-                ? `${yearLabel} Percentile Rankings${twoWaySuffix}`
-                : (() => {
-                    switch (statType) {
-                        case 'R': return `${yearLabel} Regular Season${twoWaySuffix}`;
-                        case 'P': return `${yearLabel} Postseason${twoWaySuffix}`;
-                        case 'S': return `${yearLabel} Spring Training${twoWaySuffix}`;
-                        default: return `${yearLabel}${twoWaySuffix}`;
-                    }
-                })();
-            const embed = new EmbedBuilder()
-                .setTitle(`${batter.fullName} (${globals.TEAMS.find(team => team.id === batter.currentTeam.id).abbreviation}): ${statLabel}`)
-                .setDescription(`${batter.primaryPosition.abbreviation} | Bats ${batterInfo.stats.batSide.description}`)
-                .setImage('attachment://savant.png')
-                .setColor(globals.TEAMS.find(team => team.id === batter.currentTeam.id).primaryColor);
-
-            if (description) {
-                embed.setDescription(`${batter.primaryPosition.abbreviation} | Bats ${batterInfo.stats.batSide.description}` + description);
-            }
-
-            if (!savantMode) {
-                embed.setThumbnail('attachment://spot.png');
-            }
-
-            return embed;
+        if (description) {
+            embed.setDescription(`${batter.primaryPosition.abbreviation} | Bats ${batterInfo.stats.batSide.description}` + description);
         }
-    },
 
-    getPlayerFromUserInputOrLiveFeed: async (playerName, interaction, type, season) => {
-        const player = module.exports.findPlayer(playerName, season);
-        return { player };
+        if (!savantMode) {
+            embed.setThumbnail('attachment://spot.png');
+        }
+
+        return embed;
     },
 
     resolvePlayer: async (interaction, playerName) => {
-        const playerResult = await module.exports.getPlayerFromUserInputOrLiveFeed(
-            playerName,
-            interaction,
-            null,
-            interaction.options.getInteger('year') || new Date().getFullYear()
-        );
-        if (!playerResult.player) {
+        const player = module.exports.findPlayer(playerName, interaction.options.getInteger('year') || new Date().getFullYear());
+        if (!player) {
             await interaction.followUp('No player found with that name. Please use the autocomplete list to select a player.');
             return;
         }
-
-        return playerResult;
+        return { player };
     },
 
     getHomeAwayChoice: async (interaction, teams, question) => {

@@ -295,7 +295,7 @@ describe('playerHandler', () => {
         expect(commandUtil.resolveTwoWayPlayerSelection).toHaveBeenCalled();
         expect(commandUtil.hydrateProbable).toHaveBeenCalledWith(TWO_WAY.id, 'R', CURRENT_YEAR);
         const embedArgs = commandUtil.getPitcherEmbed.calls.mostRecent().args;
-        expect(embedArgs[7]).toBe('Pitching'); // twoWayLabel
+        expect(embedArgs[6]).toBe('Pitching'); // twoWayLabel
     });
 
     it('should prompt for pitching/hitting choice for a TWP and use batter path when Hitter is chosen', async () => {
@@ -307,7 +307,7 @@ describe('playerHandler', () => {
         await interactionHandlers.playerHandler(interaction);
         expect(commandUtil.hydrateHitter).toHaveBeenCalledWith(TWO_WAY.id, 'R', CURRENT_YEAR);
         const embedArgs = commandUtil.getBatterEmbed.calls.mostRecent().args;
-        expect(embedArgs[7]).toBe('Hitting'); // twoWayLabel
+        expect(embedArgs[6]).toBe('Hitting'); // twoWayLabel
     });
 
     it('should pass the correct stat type when specified', async () => {
@@ -414,7 +414,7 @@ describe('playerSavantHandler', () => {
         await interactionHandlers.playerSavantHandler(interaction);
         expect(mlbAPIUtil.savantPage).toHaveBeenCalledWith(TWO_WAY.id, 'pitching');
         const embedArgs = commandUtil.getPitcherEmbed.calls.mostRecent().args;
-        expect(embedArgs[7]).toBe('Pitching');
+        expect(embedArgs[6]).toBe('Pitching');
     });
 
     it('should pass twoWayLabel "Hitting/Fielding" to getBatterEmbed for a TWP choosing Hitter', async () => {
@@ -426,6 +426,6 @@ describe('playerSavantHandler', () => {
         await interactionHandlers.playerSavantHandler(interaction);
         expect(mlbAPIUtil.savantPage).toHaveBeenCalledWith(TWO_WAY.id, 'hitting');
         const embedArgs = commandUtil.getBatterEmbed.calls.mostRecent().args;
-        expect(embedArgs[7]).toBe('Hitting/Fielding');
+        expect(embedArgs[6]).toBe('Hitting/Fielding');
     });
 });
