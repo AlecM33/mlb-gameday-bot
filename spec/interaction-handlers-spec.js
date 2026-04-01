@@ -252,4 +252,3 @@ describe('interaction-handlers', () => {
         });
     });
 });
-

@@ -155,7 +155,7 @@ describe('command-util', () => {
         it('should continue populating other years if one year fetch fails', async () => {
             let callCount = 0;
             mlbAPIUtil.players = jasmine.createSpy('players').and.callFake(async () => {
-                callCount++;
+                callCount ++;
                 if (callCount === 1) throw new Error('Network error');
                 return { people: [PITCHER] };
             });
