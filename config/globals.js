@@ -103,6 +103,7 @@ module.exports = {
     HOME_RUN_PARKS_MAX: 25,
     MAX_LEVENSHTEIN_DISTANCE: 3,
     PLAYER_STATS_MIN_YEAR: 2015,
+    PLAYER_CACHE_TTL_MS: 12 * 60 * 60 * 1000, // 12 hours
     CHALLENGE_TYPES: {
         PITCH_RESULT: "challenged (pitch result)"
     },

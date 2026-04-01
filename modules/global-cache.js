@@ -4,6 +4,7 @@ const values = {
     subscribedChannels: [],
     emojis: null,
     playersByYear: {},
+    playerCacheTimestamps: {},
     game: {
         currentLiveFeed: null,
         currentGamePk: null,

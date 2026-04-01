@@ -571,8 +571,9 @@ module.exports = {
         }
     },
 
-    findPlayer: (playerName, season) => {
-        const people = globalCache.values.playersByYear[season] || globalCache.values.playersByYear[new Date().getFullYear()] || [];
+    findPlayer: async (playerName, season, ttlMs = globals.PLAYER_CACHE_TTL_MS) => {
+        const year = season || new Date().getFullYear();
+        const people = await module.exports.getPlayersForYear(year, ttlMs);
         const removeDiacritics = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         const normalizedPlayerName = removeDiacritics(playerName.toLowerCase());
         return people.find(p =>
@@ -766,7 +767,7 @@ module.exports = {
     },
 
     resolvePlayer: async (interaction, playerName) => {
-        const player = module.exports.findPlayer(playerName, interaction.options.getInteger('year') || new Date().getFullYear());
+        const player = await module.exports.findPlayer(playerName, interaction.options.getInteger('year') || new Date().getFullYear());
         if (!player) {
             await interaction.followUp('No player found with that name. Please use the autocomplete list to select a player.');
             return;
@@ -815,14 +816,21 @@ module.exports = {
         return `${emoji ? `<:${emoji.name}:${emoji.id}>` : ''} ${team.name}`;
     },
 
-    buildPlayerCache: async () => {
+    buildPlayerCache: async (ttlMs = globals.PLAYER_CACHE_TTL_MS) => {
         const currentYear = new Date().getFullYear();
         const RATE_LIMIT_MS = 200;
         for (let year = currentYear; year >= globals.PLAYER_STATS_MIN_YEAR; year --) {
+            const timestamp = globalCache.values.playerCacheTimestamps[year];
+            const isPastYear = year < currentYear;
+            if (timestamp && (isPastYear || (Date.now() - timestamp) < ttlMs)) {
+                LOGGER.info(`Player cache for ${year} is still fresh, skipping.`);
+                continue;
+            }
             try {
                 const data = await mlbAPIUtil.players(year);
                 if (data.people) {
                     globalCache.values.playersByYear[year] = data.people;
+                    globalCache.values.playerCacheTimestamps[year] = Date.now();
                     LOGGER.info(`Player cache built: ${data.people.length} players for ${year}.`);
                 }
             } catch (e) {
@@ -830,6 +838,27 @@ module.exports = {
             }
             await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_MS));
         }
+    },
+
+    getPlayersForYear: async (year, ttlMs = globals.PLAYER_CACHE_TTL_MS) => {
+        const currentYear = new Date().getFullYear();
+        const timestamp = globalCache.values.playerCacheTimestamps[year];
+        const isPastYear = year < currentYear;
+        const isStale = !timestamp || (!isPastYear && (Date.now() - timestamp) >= ttlMs);
+        if (isStale) {
+            LOGGER.info(`Player cache for ${year} is stale or missing — refreshing.`);
+            try {
+                const data = await mlbAPIUtil.players(year);
+                if (data.people) {
+                    globalCache.values.playersByYear[year] = data.people;
+                    globalCache.values.playerCacheTimestamps[year] = Date.now();
+                    LOGGER.info(`Player cache refreshed: ${data.people.length} players for ${year}.`);
+                }
+            } catch (e) {
+                LOGGER.error(`Failed to refresh player cache for season ${year}:`, e);
+            }
+        }
+        return globalCache.values.playersByYear[year] || [];
     },
 
     playerAutocomplete: async (interaction) => {
@@ -850,7 +879,7 @@ module.exports = {
                 removeDiacritics(p.fullName.toLowerCase()).includes(normalized)
             );
 
-            const primaryPeople = globalCache.values.playersByYear[primaryYear] || [];
+            const primaryPeople = await module.exports.getPlayersForYear(primaryYear);
             const matches = filterPeople(primaryPeople)
                 .slice(0, 25)
                 .map(p => {
