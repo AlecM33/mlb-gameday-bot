@@ -489,143 +489,138 @@ module.exports = {
         }
     },
 
-    pitcherHandler: async (interaction) => {
-        console.info(`PITCHER command invoked by guild: ${interaction.guildId}`);
+    playerHandler: async (interaction) => {
+        console.info(`PLAYER command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
-        const playerName = interaction.options.getString('player')?.trim();
+        const playerName = interaction.options.getString('player').trim();
         const statType = interaction.options.getString('stat_type');
-        const playerResult = await commandUtil.resolvePlayer(interaction, playerName, 'Pitcher');
+        const playerResult = await commandUtil.resolvePlayer(interaction, playerName);
         if (!playerResult) return;
-        const pitcherInfo = await commandUtil.hydrateProbable(playerResult.player.id, (statType || 'R'), (interaction.options.getInteger('year') || new Date().getFullYear()));
-        const attachment = new AttachmentBuilder(Buffer.from(pitcherInfo.spot), { name: 'spot.png' });
-        const replyOptions = {
-            ephemeral: false,
-            files: [attachment],
-            embeds: [commandUtil.getPitcherEmbed(
-                playerResult.player,
-                pitcherInfo,
-                !playerName,
-                commandUtil.buildPitchingStatsMarkdown(
-                    pitcherInfo.pitchingStats.season,
-                    pitcherInfo.pitchMix,
-                    pitcherInfo.pitchingStats.lastXGames,
-                    pitcherInfo.pitchingStats.seasonAdvanced,
-                    pitcherInfo.pitchingStats.sabermetrics,
-                    (statType || 'R'),
-                    false
-                ),
-                (statType || 'R'),
-                false,
-                interaction.options.getInteger('year'))],
-            components: [],
-            content: ''
-        };
-        await (playerResult.shouldEditReply ? interaction.editReply(replyOptions) : interaction.followUp(replyOptions));
-    },
 
-    batterHandler: async (interaction) => {
-        console.info(`BATTER command invoked by guild: ${interaction.guildId}`);
-        await interaction.deferReply();
-        const playerName = interaction.options.getString('player')?.trim();
-        const statType = interaction.options.getString('stat_type');
-        const playerResult = await commandUtil.resolvePlayer(interaction, playerName, 'Batter');
-        if (!playerResult) return;
-        const batterInfo = await commandUtil.hydrateHitter(playerResult.player.id, (statType || 'R'), interaction.options.getInteger('year') || new Date().getFullYear());
-        const attachment = new AttachmentBuilder(Buffer.from(batterInfo.spot), { name: 'spot.png' });
-        const replyOptions = {
-            ephemeral: false,
-            files: [attachment],
-            embeds: [commandUtil.getBatterEmbed(
-                playerResult.player,
-                batterInfo,
-                !playerName,
-                commandUtil.formatSplits(
-                    batterInfo.stats.stats.find(stat => stat.type.displayName === 'season'),
-                    batterInfo.stats.stats.find(stat => stat.type.displayName === 'statSplits'),
-                    batterInfo.stats.stats.find(stat => stat.type.displayName === 'lastXGames'),
-                    (statType || 'R')
-                ),
-                (statType || 'R'),
-                false,
-                interaction.options.getInteger('year')
-            )],
-            components: [],
-            content: ''
-        };
-        await (playerResult.shouldEditReply ? interaction.editReply(replyOptions) : interaction.followUp(replyOptions));
-    },
-
-    batterSavantHandler: async (interaction) => {
-        console.info(`BATTER SAVANT command invoked by guild: ${interaction.guildId}`);
-        await interaction.deferReply();
-        const playerName = interaction.options.getString('player')?.trim();
-        const playerResult = await commandUtil.resolvePlayer(interaction, playerName, 'Batter');
-        if (!playerResult) return;
-        const text = await mlbAPIUtil.savantPage(playerResult.player.id, 'hitting');
-        if (text instanceof Error) {
-            await interaction.followUp({
-                content: text.message
-            });
-            return;
-        }
-        const statcastData = commandUtil.getStatcastData(text, interaction.options.getInteger('year'));
-        if (statcastData.matchingStatcast && statcastData.matchingMetricYear && statcastData.metricSummaryJSON) {
-            const batterInfo = await commandUtil.hydrateHitter(
-                playerResult.player.id,
-                'R',
-                interaction.options.getInteger('year') || new Date().getFullYear()
-            );
-            const savantAttachment = new AttachmentBuilder(commandUtil.buildBatterSavantTable(
-                statcastData.matchingStatcast,
-                statcastData.metricSummaryJSON[statcastData.matchingMetricYear.toString()],
-                batterInfo.spot), { name: 'savant.png' });
-            const replyOptions = {
-                ephemeral: false,
-                files: [savantAttachment],
-                embeds: [commandUtil.getBatterEmbed(playerResult.player, batterInfo, !playerName, null, null, true, interaction.options.getInteger('year'))],
-                components: [],
-                content: ''
-            };
-            await (playerResult.shouldEditReply ? interaction.editReply(replyOptions) : interaction.followUp(replyOptions));
+        let isPitcher;
+        let twoWayLabel;
+        if (playerResult.player.primaryPosition.abbreviation === 'TWP') {
+            const selection = await commandUtil.resolveTwoWayPlayerSelection(interaction);
+            if (!selection) return;
+            isPitcher = selection.customId === 'Pitcher';
+            twoWayLabel = isPitcher ? 'Pitching' : 'Hitting';
+            await selection.update({ content: 'Confirmed. Please wait...', components: [] });
         } else {
-            await interaction.followUp({
-                content: 'There is no statcast data for this player for the chosen season.'
+            isPitcher = playerResult.player.primaryPosition.name === 'Pitcher';
+        }
+
+        if (isPitcher) {
+            const pitcherInfo = await commandUtil.hydrateProbable(playerResult.player.id, (statType || 'R'), (interaction.options.getInteger('year') || new Date().getFullYear()));
+            const attachment = new AttachmentBuilder(Buffer.from(pitcherInfo.spot), { name: 'spot.png' });
+            await interaction.editReply({
+                ephemeral: false,
+                files: [attachment],
+                embeds: [commandUtil.getPitcherEmbed(
+                    playerResult.player,
+                    pitcherInfo,
+                    commandUtil.buildPitchingStatsMarkdown(
+                        pitcherInfo.pitchingStats.season,
+                        pitcherInfo.pitchMix,
+                        pitcherInfo.pitchingStats.lastXGames,
+                        pitcherInfo.pitchingStats.seasonAdvanced,
+                        pitcherInfo.pitchingStats.sabermetrics,
+                        (statType || 'R'),
+                        false
+                    ),
+                    (statType || 'R'),
+                    false,
+                    interaction.options.getInteger('year'),
+                    twoWayLabel)],
+                components: [],
+                content: ''
+            });
+        } else {
+            const batterInfo = await commandUtil.hydrateHitter(playerResult.player.id, (statType || 'R'), interaction.options.getInteger('year') || new Date().getFullYear());
+            const attachment = new AttachmentBuilder(Buffer.from(batterInfo.spot), { name: 'spot.png' });
+            await interaction.editReply({
+                ephemeral: false,
+                files: [attachment],
+                embeds: [commandUtil.getBatterEmbed(
+                    playerResult.player,
+                    batterInfo,
+                    commandUtil.formatSplits(
+                        batterInfo.stats.stats.find(stat => stat.type.displayName === 'season'),
+                        batterInfo.stats.stats.find(stat => stat.type.displayName === 'statSplits'),
+                        batterInfo.stats.stats.find(stat => stat.type.displayName === 'lastXGames')
+                    ),
+                    (statType || 'R'),
+                    false,
+                    interaction.options.getInteger('year'),
+                    twoWayLabel
+                )],
+                components: [],
+                content: ''
             });
         }
     },
 
-    pitcherSavantHandler: async (interaction) => {
-        console.info(`PITCHER SAVANT command invoked by guild: ${interaction.guildId}`);
+    playerSavantHandler: async (interaction) => {
+        console.info(`PLAYER SAVANT command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
-        const playerName = interaction.options.getString('player')?.trim();
-        const playerResult = await commandUtil.resolvePlayer(interaction, playerName, 'Pitcher');
+        const playerName = interaction.options.getString('player').trim();
+        const playerResult = await commandUtil.resolvePlayer(interaction, playerName);
         if (!playerResult) return;
-        const text = await mlbAPIUtil.savantPage(playerResult.player.id, 'pitching');
+
+        let isPitcher;
+        let twoWayLabel;
+        if (playerResult.player.primaryPosition.abbreviation === 'TWP') {
+            const selection = await commandUtil.resolveTwoWayPlayerSelection(interaction);
+            if (!selection) return;
+            isPitcher = selection.customId === 'Pitcher';
+            twoWayLabel = isPitcher ? 'Pitching' : 'Hitting/Fielding';
+            await selection.update({ content: 'Confirmed. Please wait...', components: [] });
+        } else {
+            isPitcher = playerResult.player.primaryPosition.name === 'Pitcher';
+        }
+
+        const savantType = isPitcher ? 'pitching' : 'hitting';
+        const text = await mlbAPIUtil.savantPage(playerResult.player.id, savantType);
         if (text instanceof Error) {
-            await interaction.followUp({
-                content: text.message
-            });
+            await interaction.followUp({ content: text.message });
             return;
         }
         const statcastData = commandUtil.getStatcastData(text, interaction.options.getInteger('year'));
         if (statcastData.matchingStatcast && statcastData.matchingMetricYear && statcastData.metricSummaryJSON) {
-            const pitcherInfo = await commandUtil.hydrateProbable(
-                playerResult.player.id,
-                'R',
-                interaction.options.getInteger('year') || new Date().getFullYear()
-            );
-            const savantAttachment = new AttachmentBuilder(commandUtil.buildPitcherSavantTable(
-                statcastData.matchingStatcast,
-                statcastData.metricSummaryJSON[statcastData.matchingMetricYear.toString()],
-                pitcherInfo.spot), { name: 'savant.png' });
-            const replyOptions = {
-                ephemeral: false,
-                files: [savantAttachment],
-                embeds: [commandUtil.getPitcherEmbed(playerResult.player, pitcherInfo, !playerName, null, 'R', true, interaction.options.getInteger('year') || statcastData.matchingMetricYear)],
-                components: [],
-                content: ''
-            };
-            await (playerResult.shouldEditReply ? interaction.editReply(replyOptions) : interaction.followUp(replyOptions));
+            if (isPitcher) {
+                const pitcherInfo = await commandUtil.hydrateProbable(
+                    playerResult.player.id,
+                    'R',
+                    interaction.options.getInteger('year') || new Date().getFullYear()
+                );
+                const savantAttachment = new AttachmentBuilder(commandUtil.buildPitcherSavantTable(
+                    statcastData.matchingStatcast,
+                    statcastData.metricSummaryJSON[statcastData.matchingMetricYear.toString()],
+                    pitcherInfo.spot), { name: 'savant.png' });
+                await interaction.editReply({
+                    ephemeral: false,
+                    files: [savantAttachment],
+                    embeds: [commandUtil.getPitcherEmbed(playerResult.player, pitcherInfo, null, 'R', true, interaction.options.getInteger('year') || statcastData.matchingMetricYear, twoWayLabel)],
+                    components: [],
+                    content: ''
+                });
+            } else {
+                const batterInfo = await commandUtil.hydrateHitter(
+                    playerResult.player.id,
+                    'R',
+                    interaction.options.getInteger('year') || new Date().getFullYear()
+                );
+                const savantAttachment = new AttachmentBuilder(commandUtil.buildBatterSavantTable(
+                    statcastData.matchingStatcast,
+                    statcastData.metricSummaryJSON[statcastData.matchingMetricYear.toString()],
+                    batterInfo.spot), { name: 'savant.png' });
+                await interaction.editReply({
+                    ephemeral: false,
+                    files: [savantAttachment],
+                    embeds: [commandUtil.getBatterEmbed(playerResult.player, batterInfo, null, null, true, interaction.options.getInteger('year'), twoWayLabel)],
+                    components: [],
+                    content: ''
+                });
+            }
         } else {
             await interaction.followUp({
                 content: 'There is no statcast data for this player for the chosen season.'

@@ -4,6 +4,7 @@ const { Client, Collection, GatewayIntentBits } = require('discord.js');
 const gameday = require('./modules/gameday');
 const globalCache = require('./modules/global-cache');
 const queries = require('./database/queries');
+const commandUtil = require('./modules/command-util');
 const { LOG_LEVEL } = require('./config/globals');
 const LOGGER = require('./modules/logger')(process.env.LOG_LEVEL?.trim() || LOG_LEVEL.INFO);
 
@@ -37,6 +38,7 @@ BOT.once('ready', async () => {
     }
     globalCache.values.subscribedChannels = await queries.getAllSubscribedChannels();
     LOGGER.info('Subscribed channels: ' + JSON.stringify(globalCache.values.subscribedChannels, null, 2));
+    commandUtil.buildPlayerCache().catch(e => LOGGER.error('Failed to build player cache:', e));
     await gameday.statusPoll(BOT);
 });
 
@@ -45,6 +47,17 @@ BOT.login(process.env.TOKEN?.trim()).then(() => {
 });
 
 BOT.on('interactionCreate', async interaction => {
+    if (interaction.isAutocomplete()) {
+        const command = BOT.commands.get(interaction.commandName);
+        if (!command?.autocomplete) return;
+        try {
+            await command.autocomplete(interaction);
+        } catch (error) {
+            LOGGER.error(error);
+        }
+        return;
+    }
+
     if (!interaction.isCommand()) return;
 
     const command = BOT.commands.get(interaction.commandName);

@@ -1,19 +1,22 @@
 const interactionHandlers = require('../modules/interaction-handlers.js');
+const commandUtil = require('../modules/command-util.js');
 const { SlashCommandBuilder } = require('@discordjs/builders');
+const globals = require('../config/globals.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('batter')
-        .setDescription('View slash lines and splits for a specified batter, or just who is batting right now.')
+        .setName('player')
+        .setDescription('View stats on a specified player.')
         .addStringOption(option =>
             option.setName('player')
-                .setDescription('An active player\'s name.')
-                .setRequired(false))
+                .setDescription('A player\'s name.')
+                .setRequired(true)
+                .setAutocomplete(true))
         .addIntegerOption(option =>
             option.setName('year')
                 .setDescription('Which season?')
                 .setRequired(false)
-                .setMinValue(new Date().getFullYear() - 10)
+                .setMinValue(globals.PLAYER_STATS_MIN_YEAR)
                 .setMaxValue(new Date().getFullYear()))
         .addStringOption(option =>
             option.setName('stat_type')
@@ -26,7 +29,7 @@ module.exports = {
                 )),
     async execute (interaction) {
         try {
-            await interactionHandlers.batterHandler(interaction);
+            await interactionHandlers.playerHandler(interaction);
         } catch (e) {
             console.error(e);
             if (interaction.deferred && !interaction.replied) {
@@ -35,5 +38,8 @@ module.exports = {
                 await interaction.reply('There was an error processing this command. If it persists, please reach out to the developer.');
             }
         }
+    },
+    async autocomplete (interaction) {
+        await commandUtil.playerAutocomplete(interaction);
     }
 };

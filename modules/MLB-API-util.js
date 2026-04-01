@@ -158,6 +158,9 @@ module.exports = {
     team: async (teamId) =>
         fetchJson(`https://statsapi.mlb.com/api/v1/teams/${teamId}`),
 
+    fullRoster: async (teamId, season = (new Date().getFullYear())) =>
+        fetchJson(`https://statsapi.mlb.com/api/v1/teams/${teamId}/roster?rosterType=fullRoster&season=${season}&hydrate=person`),
+
     players: async (season = (new Date().getFullYear())) =>
         fetchJson(`https://statsapi.mlb.com/api/v1/sports/1/players?fields=people,fullName,lastName,id,currentTeam,primaryPosition,name,code,abbreviation&season=${season}`),
 

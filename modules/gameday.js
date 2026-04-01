@@ -330,10 +330,12 @@ function notifySavantDataUnavailable (messages, embed) {
 async function pollForSavantData (gamePk, playId, messages, hitDistance, embed) {
     let attempts = 1;
     let currentInterval = globals.SAVANT_POLLING_INTERVAL;
-    console.time('xBA: ' + playId);
-    console.time('Bat Speed: ' + playId);
+    const activeTimers = new Set();
+    const startTimer = (label) => { console.time(label); activeTimers.add(label); };
+    startTimer('xBA: ' + playId);
+    startTimer('Bat Speed: ' + playId);
     if (hitDistance >= globals.HOME_RUN_BALLPARKS_MIN_DISTANCE) {
-        console.time('HR/Park: ' + playId);
+        startTimer('HR/Park: ' + playId);
     }
     const pollingFunction = async () => {
         if (messages.every(m => m.doneEditing)) {
@@ -348,7 +350,7 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance, embed) 
             if (matchingPlay && (matchingPlay.xba
                 || matchingPlay.contextMetrics?.homeRunBallparks !== undefined
                 || matchingPlay.batSpeed !== undefined)) {
-                await module.exports.processMatchingPlay(matchingPlay, messages, playId, hitDistance, embed);
+                await module.exports.processMatchingPlay(matchingPlay, messages, playId, hitDistance, embed, activeTimers);
             }
             attempts ++;
             currentInterval = currentInterval + globals.SAVANT_POLLING_BACKOFF_INCREASE;
@@ -365,13 +367,14 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance, embed) 
     Notably, the list of messages can include messages with a reporting delay that have not yet been sent. We only attempt
     to edit messages that have been sent.
 */
-async function processMatchingPlay (matchingPlay, messages, playId, hitDistance, embed) {
+async function processMatchingPlay (matchingPlay, messages, playId, hitDistance, embed, activeTimers = new Set()) {
+    const endTimer = (label) => { if (activeTimers.has(label)) { console.timeEnd(label); activeTimers.delete(label); } };
     const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
     for (let i = 0; i < messages.length; i ++) {
         if (matchingPlay.xba) {
             if (embed.data.description.includes('xBA: Pending...')) {
                 LOGGER.debug('Editing with xba: ' + playId);
-                console.timeEnd('xBA: ' + playId);
+                endTimer('xBA: ' + playId);
                 embed.data.description = embed.data.description.replaceAll('xBA: Pending...', 'xBA: ' + matchingPlay.xba +
                     (matchingPlay.is_barrel === 1 ? ' \uD83D\uDFE2 (Barreled)' : ''));
             }
@@ -389,7 +392,7 @@ async function processMatchingPlay (matchingPlay, messages, playId, hitDistance,
         if (matchingPlay.batSpeed) {
             if (embed.data.description.includes('Bat Speed: Pending...')) {
                 LOGGER.debug('Editing with Bat Speed: ' + playId);
-                console.timeEnd('Bat Speed: ' + playId);
+                endTimer('Bat Speed: ' + playId);
                 embed.data.description = embed.data.description.replaceAll('Bat Speed: Pending...', 'Bat Speed: ' + matchingPlay.batSpeed + ' mph' +
                     (matchingPlay.batSpeed >= 75.0 ? ' \u26A1' : ''));
             }
@@ -411,7 +414,7 @@ async function processMatchingPlay (matchingPlay, messages, playId, hitDistance,
             && matchingPlay.contextMetrics.homeRunBallparks !== undefined) {
             if (embed.data.description.includes('HR/Park: Pending...')) {
                 LOGGER.debug('Editing with HR/Park: ' + playId);
-                console.timeEnd('HR/Park: ' + playId);
+                endTimer('HR/Park: ' + playId);
                 const homeRunBallParksDescription = 'HR/Park: ' + matchingPlay.contextMetrics.homeRunBallparks + '/30' +
                     (matchingPlay.contextMetrics.homeRunBallparks === 30 ? '\u203C\uFE0F' : '') +
                     (await gamedayUtil.getXParks(feed.gamePk(), playId, matchingPlay.contextMetrics.homeRunBallparks));
