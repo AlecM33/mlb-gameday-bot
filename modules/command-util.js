@@ -818,7 +818,7 @@ module.exports = {
                         case 'R': return `${yearLabel} Regular Season${twoWaySuffix}`;
                         case 'P': return `${yearLabel} Postseason${twoWaySuffix}`;
                         case 'S': return `${yearLabel} Spring Training${twoWaySuffix}`;
-                        default:  return `${yearLabel}${twoWaySuffix}`;
+                        default: return `${yearLabel}${twoWaySuffix}`;
                     }
                 })();
             const embed = new EmbedBuilder()
@@ -903,7 +903,7 @@ module.exports = {
     buildPlayerCache: async () => {
         const currentYear = new Date().getFullYear();
         const RATE_LIMIT_MS = 200;
-        for (let year = currentYear; year >= globals.PLAYER_STATS_MIN_YEAR; year--) {
+        for (let year = currentYear; year >= globals.PLAYER_STATS_MIN_YEAR; year --) {
             try {
                 const data = await mlbAPIUtil.players(year);
                 if (data.people) {

@@ -43,4 +43,3 @@ module.exports = {
         await commandUtil.playerAutocomplete(interaction);
     }
 };
-

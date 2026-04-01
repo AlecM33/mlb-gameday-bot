@@ -66,7 +66,7 @@ describe('buildPlayerCache', () => {
     it('should continue populating other years if one year fetch fails', async () => {
         let callCount = 0;
         mlbAPIUtil.players = jasmine.createSpy('players').and.callFake(async () => {
-            callCount++;
+            callCount ++;
             if (callCount === 1) throw new Error('Network error');
             return { people: [PITCHER] };
         });
@@ -122,7 +122,7 @@ describe('findPlayer', () => {
 });
 
 describe('playerAutocomplete', () => {
-    function makeInteraction(focused, year = null) {
+    function makeInteraction (focused, year = null) {
         return {
             options: {
                 getFocused: () => focused,
@@ -144,8 +144,8 @@ describe('playerAutocomplete', () => {
         const [results] = interaction.respond.calls.mostRecent().args;
         expect(results.length).toBe(1);
         expect(results[0].value).toBe('Shane Bieber');
-        expect(results[0].name).toMatch(/P/);    // position abbreviation
-        expect(results[0].name).toMatch(/CLE/);  // team abbreviation (114 = CLE)
+        expect(results[0].name).toMatch(/P/); // position abbreviation
+        expect(results[0].name).toMatch(/CLE/); // team abbreviation (114 = CLE)
     });
 
     it('should match players case-insensitively', async () => {
@@ -183,11 +183,11 @@ describe('playerAutocomplete', () => {
     });
 
     it('should cap results at 25', async () => {
-        globalCache.values.playersByYear[CURRENT_YEAR] = Array.from({length: 30}, (_, i) => ({
+        globalCache.values.playersByYear[CURRENT_YEAR] = Array.from({ length: 30 }, (_, i) => ({
             id: 2000 + i,
             fullName: `Test Player ${i}`,
-            currentTeam: {id: 114},
-            primaryPosition: {name: 'Pitcher', abbreviation: 'P'}
+            currentTeam: { id: 114 },
+            primaryPosition: { name: 'Pitcher', abbreviation: 'P' }
         }));
         const interaction = makeInteraction('test player');
         await commandUtil.playerAutocomplete(interaction);
@@ -198,7 +198,7 @@ describe('playerAutocomplete', () => {
 });
 
 describe('resolvePlayer', () => {
-    function makeInteraction(year = null) {
+    function makeInteraction (year = null) {
         return {
             options: { getInteger: () => year },
             followUp: jasmine.createSpy('followUp').and.resolveTo()
@@ -223,7 +223,7 @@ describe('resolvePlayer', () => {
 describe('playerHandler', () => {
     let interaction;
 
-    function makeInteraction(playerName, year = null, statType = null) {
+    function makeInteraction (playerName, year = null, statType = null) {
         return {
             guildId: 'test-guild',
             options: {
@@ -333,7 +333,7 @@ describe('playerSavantHandler', () => {
         metricSummaryJSON: { [MATCHING_YEAR]: { xba: 80 } }
     };
 
-    function makeInteraction(playerName, year = null) {
+    function makeInteraction (playerName, year = null) {
         return {
             guildId: 'test-guild',
             options: {
@@ -429,4 +429,3 @@ describe('playerSavantHandler', () => {
         expect(embedArgs[7]).toBe('Hitting/Fielding');
     });
 });
-

@@ -9,7 +9,7 @@ module.exports = {
         .setDescription('View Baseball Savant percentile rankings for a specified player.')
         .addStringOption(option =>
             option.setName('player')
-                .setDescription('A player\'s name.')
+                .setDescription('An active player\'s name.')
                 .setRequired(true)
                 .setAutocomplete(true))
         .addIntegerOption(option =>
@@ -34,4 +34,3 @@ module.exports = {
         await commandUtil.playerAutocomplete(interaction);
     }
 };
-
