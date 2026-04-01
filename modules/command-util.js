@@ -823,7 +823,6 @@ module.exports = {
             const timestamp = globalCache.values.playerCacheTimestamps[year];
             const isPastYear = year < currentYear;
             if (timestamp && (isPastYear || (Date.now() - timestamp) < ttlMs)) {
-                LOGGER.info(`Player cache for ${year} is still fresh, skipping.`);
                 continue;
             }
             try {
@@ -846,7 +845,7 @@ module.exports = {
         const isPastYear = year < currentYear;
         const isStale = !timestamp || (!isPastYear && (Date.now() - timestamp) >= ttlMs);
         if (isStale) {
-            LOGGER.info(`Player cache for ${year} is stale or missing — refreshing.`);
+            LOGGER.info(`Player cache for ${year} is stale or missing. Refreshing...`);
             try {
                 const data = await mlbAPIUtil.players(year);
                 if (data.people) {
