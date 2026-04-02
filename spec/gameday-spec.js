@@ -789,6 +789,48 @@ describe('gameday', () => {
 
             expect(gameday.sendMessage).toHaveBeenCalled();
         });
+
+        it('should not send a rephrased review description that shares the same outcome as an already-reported one', async () => {
+            const firstVersion = 'Yankees challenged (pitch result), call on the field was overturned: Steven Kwan called out on strikes';
+            globalCache.values.game.reportedDescriptions.push({ description: firstVersion, atBatIndex: 5 });
+
+            mockPlay.description = 'Austin Wells challenged (pitch result), call on the field was overturned: Steven Kwan called out on strikes';
+            mockPlay.reply = 'Austin Wells challenged (pitch result), call on the field was overturned: Steven Kwan called out on strikes';
+
+            await gameday.processAndPushPlay(mockBot, mockPlay, 12345, 5);
+
+            expect(gameday.sendMessage).not.toHaveBeenCalled();
+        });
+
+        it('should send a review description with a truly different outcome', async () => {
+            const previousDescription = 'Yankees challenged (pitch result), call on the field was overturned: Steven Kwan called out on strikes';
+            globalCache.values.game.reportedDescriptions.push({ description: previousDescription, atBatIndex: 5 });
+
+            mockPlay.description = 'Yankees challenged (pitch result), call on the field was upheld: Steven Kwan called out on strikes';
+            mockPlay.reply = mockPlay.description;
+
+            await gameday.processAndPushPlay(mockBot, mockPlay, 12345, 5);
+
+            expect(gameday.sendMessage).toHaveBeenCalled();
+        });
+
+        it('should also deduplicate rephrased review descriptions in reportAnyMissedEvents', async () => {
+            const firstVersion = 'Yankees challenged (pitch result), call on the field was overturned: Steven Kwan called out on strikes';
+            globalCache.values.game.reportedDescriptions.push({ description: firstVersion, atBatIndex: 5 });
+
+            const atBat = {
+                playEvents: [{
+                    details: {
+                        eventType: 'strikeout',
+                        description: 'Austin Wells challenged (pitch result), call on the field was overturned: Steven Kwan called out on strikes'
+                    }
+                }]
+            };
+
+            await gameday.reportAnyMissedEvents(atBat, mockBot, 12345, 5);
+
+            expect(gameday.sendMessage).not.toHaveBeenCalled();
+        });
     });
 
     describe('#constructPlayEmbed', () => {

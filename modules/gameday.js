@@ -168,10 +168,7 @@ async function reportPlays (bot, gamePk) {
 async function reportAnyMissedEvents (atBat, bot, gamePk, atBatIndex) {
     const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
     const missedEventsToReport = atBat.playEvents?.filter(event => globals.EVENT_WHITELIST.includes(event?.details?.eventType)
-        && !globalCache.values.game.reportedDescriptions
-            .find(reportedDescription => reportedDescription.description === event?.details?.description
-                && (reportedDescription.atBatIndex === atBatIndex || reportedDescription.atBatIndex === (atBatIndex - 1))
-            )
+        && !alreadyReported(event?.details?.description, atBatIndex)
     ) || [];
     for (const missedEvent of missedEventsToReport) {
         await module.exports.processAndPushPlay(bot, currentPlayProcessor.process(
@@ -183,13 +180,42 @@ async function reportAnyMissedEvents (atBat, bot, gamePk, atBatIndex) {
     }
 }
 
+/*
+    ABS challenges specifically can be reported with the same result but a different challenger. For example:
+    "Dodgers challenged (pitch result), call on the field was overturned: Steven Kwan called out on strikes" and then,
+    shortly after, "Will Smith challenged (pitch result), call on the field was overturned: Steven Kwan called out on strikes".
+    For these we just need to compare what is consistent between them: the outcome.
+*/
+function extractReviewOutcome (description) {
+    const index = description?.indexOf(', call on the field was ');
+    return index === -1 ? null : description.slice(index);
+}
+
+function alreadyReported (description, atBatIndex) {
+    const reviewOutcome = extractReviewOutcome(description);
+    return globalCache.values.game.reportedDescriptions.find(reported => {
+        const withinRange = reported.atBatIndex === atBatIndex || reported.atBatIndex === (atBatIndex - 1);
+        if (!withinRange) {
+            return false;
+        }
+        if (reported.description === description) {
+            return true;
+        }
+        // see function extractReviewOutcome - the same challenge result can be reported two different ways.
+        if (reviewOutcome) {
+            const reportedOutcome = extractReviewOutcome(reported.description);
+            if (reportedOutcome && reportedOutcome === reviewOutcome) {
+                return true;
+            }
+        }
+        return false;
+    });
+}
+
 async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle = true) {
     if (play.reply
         && play.reply.length > 0
-        && !globalCache.values.game.reportedDescriptions
-            .find(reportedDescription => reportedDescription.description === play.description
-                && (reportedDescription.atBatIndex === atBatIndex || reportedDescription.atBatIndex === (atBatIndex - 1))
-            )
+        && !alreadyReported(play.description, atBatIndex)
     ) {
         globalCache.values.game.reportedDescriptions.push({ description: play.description, atBatIndex });
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
