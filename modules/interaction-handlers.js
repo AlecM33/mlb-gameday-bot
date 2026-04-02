@@ -622,8 +622,8 @@ module.exports = {
                 });
             }
         } else {
-            await interaction.followUp({
-                content: 'There is no statcast data for this player for the chosen season.'
+            await interaction.editReply({
+                content: `There is no statcast ${savantType === 'pitching' ? savantType : 'hitting/fielding'} data for this player for the chosen season.`
             });
         }
     },

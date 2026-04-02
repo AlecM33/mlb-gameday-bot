@@ -1,6 +1,7 @@
 const commandUtil = require('../modules/command-util');
 const globalCache = require('../modules/global-cache');
 const mlbAPIUtil = require('../modules/MLB-API-util');
+const globals = require('../config/globals.js');
 
 const PITCHER = {
     id: 1001,
@@ -82,6 +83,7 @@ describe('command-util', () => {
         let originalPlayers;
 
         beforeEach(() => {
+            globals.PLAYER_CACHE_RATE_LIMIT_MS = 0;
             originalPlayers = mlbAPIUtil.players;
             globalCache.values.playersByYear = {};
             globalCache.values.playerCacheTimestamps = {};

@@ -417,7 +417,8 @@ describe('gameday', () => {
             mockBot = {};
             mockLiveGame = { gamePk: 12345 };
             mockGames = [mockLiveGame];
-
+            spyOn(gamedayUtil, 'getConstrastingEmbedColors').and.stub();
+            spyOn(gamedayUtil, 'getTeamEmojis').and.stub();
             mockWebSocket = {
                 addEventListener: jasmine.createSpy('addEventListener'),
                 close: jasmine.createSpy('close')
@@ -461,9 +462,14 @@ describe('gameday', () => {
                 awayAbbreviation: () => 'MIL',
                 homeAbbreviation: () => 'LAA',
                 awayTeamScore: () => 3,
-                homeTeamScore: () => 5
+                homeTeamScore: () => 5,
+                halfInning: () => 'top',
+                inning: () => 1,
+                currentPlay: () => ({ atBatIndex: 0, about: { hasReview: false }, playEvents: [] }),
+                allPlays: () => []
             });
             spyOn(gameday, 'processAndPushPlay').and.stub();
+            spyOn(gameday, 'statusPoll').and.resolveTo();
         });
 
         it('should create a WebSocket connection', () => {
