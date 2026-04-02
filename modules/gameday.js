@@ -85,13 +85,13 @@ function subscribe (bot, liveGame, games) {
                 globalCache.values.game.finished = true;
                 globalCache.values.game.startReported = false;
                 LOGGER.info('NOTIFIED OF GAME CONCLUSION: CLOSING...');
-                await processAndPushPlay(bot, {
+                await module.exports.processAndPushPlay(bot, {
                     reply: `## Final: ${feed.awayAbbreviation()} ${feed.awayTeamScore()} - ${feed.homeTeamScore()} ${feed.homeAbbreviation()}`,
                     isScoringPlay: true,
                     isOut: false
                 }, liveGame, globalCache.values.game.lastReportedCompleteAtBatIndex, false);
                 ws.close();
-                await statusPoll(bot, games);
+                await module.exports.statusPoll(bot, games);
             } else if (!globalCache.values.game.finished) {
                 LOGGER.trace('RECEIVED: ' + eventJSON.updateId);
                 if (eventJSON.changeEvent?.type === 'full_refresh') {

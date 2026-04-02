@@ -769,7 +769,8 @@ module.exports = {
     resolvePlayer: async (interaction, playerName) => {
         const player = await module.exports.findPlayer(playerName, interaction.options.getInteger('year') || new Date().getFullYear());
         if (!player) {
-            await interaction.followUp('No player found with that name. Please use the autocomplete list to select a player.');
+            await interaction.followUp(`No player found with that name for the year specified (${interaction.options.getInteger('year')
+                || new Date().getFullYear()}). Please use the autocomplete list to select a player.`);
             return;
         }
         return { player };
@@ -818,7 +819,6 @@ module.exports = {
 
     buildPlayerCache: async (ttlMs = globals.PLAYER_CACHE_TTL_MS) => {
         const currentYear = new Date().getFullYear();
-        const RATE_LIMIT_MS = 200;
         for (let year = currentYear; year >= globals.PLAYER_STATS_MIN_YEAR; year --) {
             const timestamp = globalCache.values.playerCacheTimestamps[year];
             const isPastYear = year < currentYear;
@@ -835,7 +835,7 @@ module.exports = {
             } catch (e) {
                 LOGGER.error(`Failed to fetch players for season ${year}:`, e);
             }
-            await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_MS));
+            await new Promise(resolve => setTimeout(resolve, globals.PLAYER_CACHE_RATE_LIMIT_MS));
         }
     },
 
