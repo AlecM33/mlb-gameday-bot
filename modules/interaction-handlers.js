@@ -36,7 +36,7 @@ module.exports = {
         commandUtil.joinPlayerSpots([hydratedHomeProbable.spot, hydratedAwayProbable.spot],
             { direction: 'horizontal', offset: 10, margin: 0, color: 'transparent' })
             .then(async (img) => {
-                const attachment = new AttachmentBuilder((await img.png().toBuffer()), { name: 'matchupSpots.png' });
+                const attachment = new AttachmentBuilder((await img), { name: 'matchupSpots.png' });
                 const myEmbed = new EmbedBuilder()
                     .setTitle('Pitching Matchup - ' + commandUtil.constructGameDisplayString(game))
                     .setImage('attachment://matchupSpots.png')

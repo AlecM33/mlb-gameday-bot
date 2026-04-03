@@ -1,5 +1,5 @@
 const { drawSimpleTables, drawSavantTables } = require('./canvas-util');
-const { joinImages } = require('join-images');
+const { createCanvas, Image } = require('canvas');
 const globalCache = require('./global-cache');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const AsciiTable = require('ascii-table');
@@ -11,8 +11,25 @@ const ztable = require('ztable');
 const jsdom = require('jsdom');
 
 module.exports = {
-    joinPlayerSpots: async (spots, options) => {
-        return joinImages(spots, options);
+    joinPlayerSpots: async (spots, options = {}) => {
+        const margin = options.offset ?? options.margin ?? 10;
+        const loadImage = (src) => new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = Buffer.isBuffer(src) ? src : Buffer.from(src);
+        });
+        const images = await Promise.all(spots.map(loadImage));
+        const totalWidth = images.reduce((sum, img) => sum + img.width, 0) + margin * (images.length - 1);
+        const maxHeight = Math.max(...images.map(img => img.height));
+        const canvas = createCanvas(totalWidth, maxHeight);
+        const ctx = canvas.getContext('2d');
+        let x = 0;
+        for (const img of images) {
+            ctx.drawImage(img, x, 0);
+            x += img.width + margin;
+        }
+        return Promise.resolve(canvas.toBuffer('image/png'))
     },
     getLineupCardTable: async (lineup, gameType) => {
         const table = new AsciiTable();
@@ -52,7 +69,7 @@ module.exports = {
                     resolve(mlbAPIUtil.spot(probable, season));
                 } else {
                     resolve(Buffer.from(
-                        `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                        `<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="60" cy="60" r="60" />
                     </svg>`));
                 }
@@ -85,7 +102,7 @@ module.exports = {
                     resolve(mlbAPIUtil.spot(hitter, season));
                 } else {
                     resolve(Buffer.from(
-                        `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                        `<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="60" cy="60" r="60" />
                     </svg>`));
                 }
@@ -957,37 +974,42 @@ function mapStandings (standings, wildcard = false) {
 }
 
 function getPitchCollections (dom) {
+    const document = dom.window.document;
+
+    const columnMap = {};
+    document.querySelectorAll('thead tr th').forEach((th, i) => {
+        columnMap[th.textContent.trim()] = i + 1;
+    });
+
+    const columnData = (header) => `tbody tr td:nth-child(${columnMap[header]})`;
+
     const years = [];
     const pitches = [];
     const percentages = [];
     const MPHs = [];
     const battingAvgsAgainst = [];
-    dom.window.document
-        .querySelectorAll('tbody tr td:nth-child(1)').forEach(el => years.push(el.textContent.trim()));
-    dom.window.document
-        .querySelectorAll('tbody tr td:nth-child(2)').forEach((el, key) => {
-            if (years[key] === years[0]) {
-                pitches.push(el.textContent.trim());
-            }
-        });
-    dom.window.document
-        .querySelectorAll('tbody tr td:nth-child(6)').forEach((el, key) => {
-            if (years[key] === years[0]) {
-                percentages.push(el.textContent.trim());
-            }
-        });
-    dom.window.document
-        .querySelectorAll('tbody tr td:nth-child(7)').forEach((el, key) => {
-            if (years[key] === years[0]) {
-                MPHs.push(el.textContent.trim());
-            }
-        });
-    dom.window.document
-        .querySelectorAll('tbody tr td:nth-child(18)').forEach((el, key) => {
-            if (years[key] === years[0]) {
-                battingAvgsAgainst.push((el.textContent.trim().length > 0 ? el.textContent.trim() : 'N/A'));
-            }
-        });
+
+    document.querySelectorAll(columnData('Year')).forEach(el => years.push(el.textContent.trim()));
+    document.querySelectorAll(columnData('Pitch Type')).forEach((el, key) => {
+        if (years[key] === years[0]) {
+            pitches.push(el.textContent.trim());
+        }
+    });
+    document.querySelectorAll(columnData('%')).forEach((el, key) => {
+        if (years[key] === years[0]) {
+            percentages.push(el.textContent.trim());
+        }
+    });
+    document.querySelectorAll(columnData('MPH')).forEach((el, key) => {
+        if (years[key] === years[0]) {
+            MPHs.push(el.textContent.trim());
+        }
+    });
+    document.querySelectorAll(columnData('BA')).forEach((el, key) => {
+        if (years[key] === years[0]) {
+            battingAvgsAgainst.push((el.textContent.trim().length > 0 ? el.textContent.trim() : 'N/A'));
+        }
+    });
     return [pitches, percentages, MPHs, battingAvgsAgainst];
 }
 
