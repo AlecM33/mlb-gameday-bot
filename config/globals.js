@@ -98,11 +98,21 @@ module.exports = {
     GAMEDAY_PING_INTERVAL: 10000,
     HIGHLIGHTS_PER_MESSAGE: 8,
     SCORING_PLAYS_PER_MESSAGE: 8,
-    DATE: null,
+    DATE: null, // used for testing purposes to have the bot operate using a future date
     TEAM_COLOR_CONTRAST_RATIO: 1.5,
     HOME_RUN_PARKS_MIN: 5,
     HOME_RUN_PARKS_MAX: 25,
     MAX_LEVENSHTEIN_DISTANCE: 3,
+    PLAYER_STATS_MIN_YEAR: 2015,
+    PLAYER_CACHE_TTL_MS: 12 * 60 * 60 * 1000, // 12 hours
+    PLAYER_CACHE_RATE_LIMIT_MS: 200,
+    CHALLENGE_TYPES: {
+        PITCH_RESULT: "challenged (pitch result)"
+    },
+    HALF_INNINGS: {
+        TOP: 'top',
+        BOTTOM: 'bottom'
+    },
     EVENTS: [
         "Double",
         "Double Play",
@@ -341,21 +351,31 @@ module.exports = {
             "abbreviation": "NYM"
         }
     ],
-    HELP_MESSAGE: '`/starters` - examine the starting pitching matchup for the upcoming game.\n'
-    +    '`/standings` - check the standings for your team\'s division.\n'
-    +    '`/lineup` - view the lineup card for the current game.\n'
-    +    '`/line_score` - view the line score for the current game.\n'
+    GAME_STATUS_CODES: {
+        IN_PROGRESS: "I",
+        WARMUP: "PW"
+    },
+    /*
+     More general codes that capture all statuses in a particular category.
+     See: https://github.com/MajorLeagueBaseball/google-cloud-mlb-hackathon/blob/main/datasets/mlb-statsapi-docs/MLB-StatsAPI%20-%20Lookup%20Values.pdf
+     */
+    CODED_GAME_STATES: {
+        POSTPONED: "D"
+    },
+    HELP_MESSAGE: '`/attendance` - view the attendance for the current game.\n'
     +    '`/box_score` - view the box score for the current game, including hitting and pitching stats.\n'
-    +    '`/scoring_plays` - get a curated list of scoring plays, with direct links to the play on the Gameday page.\n'
+    +    '`/gameday_preference` - change which plays the bot will report or the reporting delay.\n'
     +    '`/highlights` - get a link to key moments from the game.\n'
+    +    '`/line_score` - view the line score for the current game.\n'
+    +    '`/lineup` - view the lineup card for the current game.\n'
+    +    '`/player` - view stats on a specified player.\n'
+    +    '`/player_savant` - view Baseball Savant percentile rankings for a specified player.\n'
+    +    '`/schedule` - view the upcoming schedule for the next week of games.\n'
+    +    '`/scoring_plays` - get a curated list of scoring plays, with direct links to the play on the Gameday page.\n'
+    +    '`/standings` - check the standings for your team\'s division.\n'
+    +    '`/starters` - examine the starting pitching matchup for the upcoming game.\n'
     +    '`/subscribe_gameday` - subscribe a given Discord channel to receive real-time updates from the "Gameday" feed.\n'
     +    '`/unsubscribe_gameday` - un-subscribe a given Discord channel from the above functionality.\n'
-    +    '`/gameday_preference` - change which plays the bot will report or the reporting delay.\n'
-    +    '`/schedule` - view the upcoming schedule for the next week of games.\n'
-    +    '`/batter` - view stats on a specified batter. If you don\'t provide a name, the bot will check for a live game and use the current batter.\n'
-    +    '`/pitcher` - view stats on a specified pitcher. If you don\'t provide a name, the bot will check for a live game and use the current pitcher.\n'
-    +    '`/batter_savant` - view Baseball Savant percentile rankings for a specified batter. If you don\'t provide a name, the bot will check for a live game and use the current batter.\n'
-    +    '`/pitcher_savant` - view Baseball Savant percentile rankings for a specified pitcher. If you don\'t provide a name, the bot will check for a live game and use the current pitcher.\n'
     +    '`/weather` - view the weather for the current game.\n'
-    +    '`/attendance` - view the attendance for the current game.\n'
+    +    '`/wildcard` - view the current wildcard standings.\n'
 }

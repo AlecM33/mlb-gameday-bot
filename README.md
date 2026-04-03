@@ -1,8 +1,9 @@
 # MLB Gameday Bot ⚾
 
-<img src='https://github.com/user-attachments/assets/6b671496-ac24-4c4b-a0a3-b53e6974f414' width=500/>
+### For examples of all the commands, view its github pages site here: https://alecm33.github.io/mlb-gameday-bot/
+
+<img src='./images/screenshots/homer.png' width=500/>
 <br>
-For demos of the bot's commands, view its github pages site here: https://alecm33.github.io/mlb-gameday-bot/
 
 This bot and its author are not affiliated with the MLB. The bot uses the MLB Stats API, which is subject to the notice posted at http://gdx.mlb.com/components/copyright.txt
 
@@ -10,35 +11,17 @@ A Discord bot that integrates with the MLB Stats API to track your team of choic
 
 When running, the bot periodically polls for games in a 48-hour window centered on the current date. Whichever game is closest in time is considered
 the "current" game, and will be the game for which a lot of the commands returns data. If there's a doubleheader, the bot may ask you to specify which game. If a game is live, the bot subscribes to its MLB.com Gameday live feed,
-and in turn reports events to any number of subscribed Discord channels. Slash Commands include:
-
-- **/attendance** - view the attendance for the current game.
-- **/batter** - view stats on a specified batter. If you don't provide a name, the bot will check for a live game and use the current batter.
-- **/batter_savant** - view Baseball Savant percentile rankings for a specified batter. If you don't provide a name, the bot will check for a live game and use the current batter.
-- **/box_score** - view the box score for the current game, including hitting and pitching stats.
-- **/gameday_preference** - change the preference for the gameday subscription. This includes which types of plays to report ("all plays" or "scoring plays only") and a reporting delay of 0-180 seconds.
-- **/highlights** - get a direct link to the "game story", which is MLB's timeline of key moments.
-- **/lineup** - view the lineup card for the current game.
-- **/line_score** - view the line score for the current game.
-- **/pitcher** - view stats on a specified pitcher. If you don't provide a name, the bot will check for a live game and use the current pitcher.
-- **/pitcher_savant** - view Baseball Savant percentile rankings for a specified pitcher. If you don't provide a name, the bot will check for a live game and use the current pitcher.
-- **/schedule** - view the upcoming schedule for the next week of games.
-- **/scoring_plays** - get a curated list of scoring plays, with direct links to the play on the Gameday page.
-- **/standings** - check the standings for your team's division.
-- **/starters** - look at the starting pitching matchup for the current game. Includes portraits of both starters, their W/L, ERA, and WHIP, and a list of the pitches they throw.
-- **/subscribe_gameday** - subscribe a given Discord channel to receive real-time updates from the "Gameday" feed. This command is restricted to certain roles. Users can adjust which plays the bot reports and customize a reporting delay. The message includes a description of the play, any change in score, and statcast metrics for balls in play.
-- **/unsubscribe_gameday** - un-subscribe a given Discord channel from the above functionality.
-- **/weather** - view the weather for current the game.
-- **/wildcard** - the current wildcard standings.
+and in turn reports events to any number of subscribed Discord channels.
 
 # Tech Stack
 
 Written in JavaScript using [Discord.js](https://discord.js.org/).
 
-The bot uses a PostgreSQL database to keep track of the Discord channels that have subscribed to the real-time gameday feature.
+The bot uses a PostgreSQL database to keep track of the Discord channels that have subscribed to the real-time gameday feature, and what their preferences are for how the bot reports. The benefits of this are scalability and ease of use - moderators in a given server can subscribe/unsubscribe/change the preferences of channels at any time via slash commands right in Discord. However, if you set up your own instance and only plan to have the bot report in one or two channels in a single server, this is kind of overkill. You could definitely edit the codebase to not use the database at all, and instead just supply your channel IDs (see [this support page on how to find such IDs](https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID)) and the gameday reporting preferences for those channels directly to the code.
 
-I integrate with the MLB stats API for a dizzying amount of data. Its documentation is limited, but there is some. Shout out to Todd Roberts and his project for getting me acquainted with some of the subtleties: https://pypi.org/project/MLB-StatsAPI/. You can also
-view the spec for the MLB's "master game object", nicknamed GUMBO, here: https://bdata-research-blog-prod.s3.amazonaws.com/uploads/2019/03/GUMBOPDF3-29.pdf. I'm also happy to answer what I can about how to use the API.
+I integrate with the MLB stats API for a dizzying amount of data. Documentation _used_ to be very limited, but as of 2024, Google has provided some nice documentation here: https://github.com/MajorLeagueBaseball/google-cloud-mlb-hackathon/tree/main/datasets/mlb-statsapi-docs 
+
+Shout out to Todd Roberts and his project for getting me acquainted with some of the subtleties, back when most documentation for the API was crowdsourced: https://pypi.org/project/MLB-StatsAPI/.
 
 # Using my copy of the bot in your servers
 
@@ -48,13 +31,13 @@ My instance of the bot for the Cleveland Guardians is private. The bot is only d
 
 This will assume you are somewhat familiar with Node.js and developing Discord bots.
 
-### Using Docker
+### Using Docker (Simplest)
 
-Requires a machine with the [Docker Desktop](https://docs.docker.com/get-started/get-docker/) installed and the Docker Engine running.
+Requires a machine with the [Docker](https://docs.docker.com/) Engine running.
 
-1. Create a file called `.env` in the root directory, and populate it with the appropriate values. The `.env.example` file contains all the required variables with placeholder values. Each one is explained below.
+1. Create a file called `.env` in the root directory, and populate it with the appropriate values. The `.env.example` file contains all the required variables with placeholder values. Each one is explained below. If you're not that familiar with Docker, a note: the PostgreSQL database will be created the first time the database container is run. With all the database variables like `DB_USER` and `DB_PASSWORD`, you are defining what will be created. So, in short, you can supply whatever (obviously a secure password is recommended). This is in contrast to, say, `DISCORD_TOKEN`, which Discord has created and supplied to you.
     - DB_USER: the user for the postgres database
-    - DB_PASSWORD: the password for the postgres database user
+    - DB_PASSWORD: the password for the postgres database user **(sensitive)**
     - NODE_ENV: the node.js environment (production or development) in which to run the bot.
     - DB_NAME: the name for the postgres database
     - DB_PORT: the port for the postgres database
@@ -66,7 +49,7 @@ Requires a machine with the [Docker Desktop](https://docs.docker.com/get-started
     - TIME_ZONE: Your chosen time zone. Defaults to EST. Time zone names correspond to the Zone and Link names of the [IANA Time Zone Database](https://www.iana.org/time-zones), such as "UTC", "Asia/Shanghai", "Asia/Kolkata", and "America/New_York". Additionally, time zones can be given as UTC offsets in the format "±hh:mm", "±hhmm", or "±hh", for example as "+01:00", "-2359", or "+23".
 2. Run `docker-compose up`
 
-### Without Docker
+### Without Docker (More involved)
 
 1. Populate the following environment variables:
    - CLIENT_ID - your bot's client ID, AKA application ID.

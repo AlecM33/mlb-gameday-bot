@@ -20,7 +20,7 @@ const liveFeed = require('./livefeed');
 const gamedayUtil = require('./gameday-util');
 
 module.exports = {
-    statusPoll, subscribe, processAndPushPlay, pollForSavantData, processMatchingPlay, sendMessage, sendDelayedMessage, constructPlayEmbed
+    statusPoll, subscribe, processAndPushPlay, pollForSavantData, processMatchingPlay, sendMessage, sendDelayedMessage, constructPlayEmbed, reportPlays, reportAnyMissedEvents
 };
 
 async function statusPoll (bot) {
@@ -34,9 +34,10 @@ async function statusPoll (bot) {
             currentGames.sort((a, b) => Math.abs(now - new Date(a.gameDate)) - Math.abs(now - new Date(b.gameDate)));
             globalCache.values.currentGames = currentGames;
             const nearestGames = currentGames.filter(game => game.officialDate === currentGames[0].officialDate); // could be more than one game for double-headers.
-            globalCache.values.nearestGames = nearestGames.filter(g => g.status.codedGameState !== 'D');
+            globalCache.values.nearestGames = nearestGames.filter(g => g.status.codedGameState !== globals.CODED_GAME_STATES.POSTPONED);
             globalCache.values.game.isDoubleHeader = nearestGames.length > 1;
-            const inProgressGame = nearestGames.find(nearestGame => nearestGame.status.statusCode === 'I' || nearestGame.status.statusCode === 'PW');
+            const inProgressGame = nearestGames.find(nearestGame => nearestGame.status.statusCode === globals.GAME_STATUS_CODES.IN_PROGRESS
+                || nearestGame.status.statusCode === globals.GAME_STATUS_CODES.WARMUP);
             /*
                 the "game_finished" socket event is received before a game's status changes to "Final", typically. So we shouldn't try to
                 re-subscribe just because the status is still "In Progress". We should check if it's a different game.
@@ -84,7 +85,7 @@ function subscribe (bot, liveGame, games) {
                 globalCache.values.game.finished = true;
                 globalCache.values.game.startReported = false;
                 LOGGER.info('NOTIFIED OF GAME CONCLUSION: CLOSING...');
-                await processAndPushPlay(bot, {
+                await module.exports.processAndPushPlay(bot, {
                     reply: `${gamedayUtil.didOurTeamWin(feed.homeTeamScore(), feed.awayTeamScore())
                         ? '## BALLGAME!\n\n '
                         : ''} ## Final: ${feed.awayAbbreviation()} ${feed.awayTeamScore()} - ${feed.homeTeamScore()} ${feed.homeAbbreviation()}`,
@@ -92,7 +93,7 @@ function subscribe (bot, liveGame, games) {
                     isOut: false
                 }, liveGame, globalCache.values.game.lastReportedCompleteAtBatIndex, false);
                 ws.close();
-                await statusPoll(bot, games);
+                await module.exports.statusPoll(bot, games);
             } else if (!globalCache.values.game.finished) {
                 LOGGER.trace('RECEIVED: ' + eventJSON.updateId);
                 if (eventJSON.changeEvent?.type === 'full_refresh') {
@@ -138,7 +139,7 @@ async function reportPlays (bot, gamePk) {
         const lastAtBat = feed.allPlays()
             .find((play) => play.about.atBatIndex === atBatIndex - 1);
         if (lastAtBat && lastAtBat.about.hasReview) { // a play that's been challenged. We should report updates on it.
-            await processAndPushPlay(bot, currentPlayProcessor.process(
+            await module.exports.processAndPushPlay(bot, currentPlayProcessor.process(
                 lastAtBat,
                 feed,
                 globalCache.values.game.homeTeamEmoji,
@@ -146,11 +147,10 @@ async function reportPlays (bot, gamePk) {
             ), gamePk, atBatIndex - 1);
         /* the below block detects and handles if we missed the result of an at-bat due to the data moving too fast.
          Sometimes it progresses to the next at bat quite quickly. */
-        } else if (lastAtBat && lastReportedCompleteAtBatIndex !== null
-            && (atBatIndex - lastReportedCompleteAtBatIndex > 1)) {
-            LOGGER.debug('Missed at-bat index: ' + atBatIndex - 1);
-            await reportAnyMissedEvents(lastAtBat, bot, gamePk, atBatIndex - 1);
-            await processAndPushPlay(bot, currentPlayProcessor.process(
+        } else if (lastAtBat && (atBatIndex - lastReportedCompleteAtBatIndex > 1)) {
+            LOGGER.debug(`Missed at-bat index: ${atBatIndex - 1}`);
+            await module.exports.reportAnyMissedEvents(lastAtBat, bot, gamePk, atBatIndex - 1);
+            await module.exports.processAndPushPlay(bot, currentPlayProcessor.process(
                 lastAtBat,
                 feed,
                 globalCache.values.game.homeTeamEmoji,
@@ -158,8 +158,8 @@ async function reportPlays (bot, gamePk) {
             ), gamePk, atBatIndex - 1);
         }
     }
-    await reportAnyMissedEvents(currentPlay, bot, gamePk, atBatIndex);
-    await processAndPushPlay(bot, currentPlayProcessor.process(
+    await module.exports.reportAnyMissedEvents(currentPlay, bot, gamePk, atBatIndex);
+    await module.exports.processAndPushPlay(bot, currentPlayProcessor.process(
         currentPlay,
         feed,
         globalCache.values.game.homeTeamEmoji,
@@ -170,13 +170,10 @@ async function reportPlays (bot, gamePk) {
 async function reportAnyMissedEvents (atBat, bot, gamePk, atBatIndex) {
     const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
     const missedEventsToReport = atBat.playEvents?.filter(event => globals.EVENT_WHITELIST.includes(event?.details?.eventType)
-        && !globalCache.values.game.reportedDescriptions
-            .find(reportedDescription => reportedDescription.description === event?.details?.description
-                && (reportedDescription.atBatIndex === atBatIndex || reportedDescription.atBatIndex === (atBatIndex - 1))
-            )
-    );
+        && !alreadyReported(event?.details?.description, atBatIndex)
+    ) || [];
     for (const missedEvent of missedEventsToReport) {
-        await processAndPushPlay(bot, currentPlayProcessor.process(
+        await module.exports.processAndPushPlay(bot, currentPlayProcessor.process(
             missedEvent,
             feed,
             globalCache.values.game.homeTeamEmoji,
@@ -185,13 +182,42 @@ async function reportAnyMissedEvents (atBat, bot, gamePk, atBatIndex) {
     }
 }
 
+/*
+    ABS challenges specifically can be reported with the same result but a different challenger. For example:
+    "Dodgers challenged (pitch result), call on the field was overturned: Steven Kwan called out on strikes" and then,
+    shortly after, "Will Smith challenged (pitch result), call on the field was overturned: Steven Kwan called out on strikes".
+    For these we just need to compare what is consistent between them: the outcome.
+*/
+function extractReviewOutcome (description) {
+    const index = description?.indexOf(', call on the field was ');
+    return index === -1 ? null : description.slice(index);
+}
+
+function alreadyReported (description, atBatIndex) {
+    const reviewOutcome = extractReviewOutcome(description);
+    return globalCache.values.game.reportedDescriptions.find(reported => {
+        const withinRange = reported.atBatIndex === atBatIndex || reported.atBatIndex === (atBatIndex - 1);
+        if (!withinRange) {
+            return false;
+        }
+        if (reported.description === description) {
+            return true;
+        }
+        // see function extractReviewOutcome - the same challenge result can be reported two different ways.
+        if (reviewOutcome) {
+            const reportedOutcome = extractReviewOutcome(reported.description);
+            if (reportedOutcome && reportedOutcome === reviewOutcome) {
+                return true;
+            }
+        }
+        return false;
+    });
+}
+
 async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle = true) {
     if (play.reply
         && play.reply.length > 0
-        && !globalCache.values.game.reportedDescriptions
-            .find(reportedDescription => reportedDescription.description === play.description
-                && (reportedDescription.atBatIndex === atBatIndex || reportedDescription.atBatIndex === (atBatIndex - 1))
-            )
+        && !alreadyReported(play.description, atBatIndex)
     ) {
         globalCache.values.game.reportedDescriptions.push({ description: play.description, atBatIndex });
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
@@ -332,10 +358,12 @@ function notifySavantDataUnavailable (messages, embed) {
 async function pollForSavantData (gamePk, playId, messages, hitDistance, embed) {
     let attempts = 1;
     let currentInterval = globals.SAVANT_POLLING_INTERVAL;
-    console.time('xBA: ' + playId);
-    console.time('Bat Speed: ' + playId);
+    const activeTimers = new Set();
+    const startTimer = (label) => { console.time(label); activeTimers.add(label); };
+    startTimer('xBA: ' + playId);
+    startTimer('Bat Speed: ' + playId);
     if (hitDistance >= globals.HOME_RUN_BALLPARKS_MIN_DISTANCE) {
-        console.time('HR/Park: ' + playId);
+        startTimer('HR/Park: ' + playId);
     }
     const pollingFunction = async () => {
         if (messages.every(m => m.doneEditing)) {
@@ -350,7 +378,7 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance, embed) 
             if (matchingPlay && (matchingPlay.xba
                 || matchingPlay.contextMetrics?.homeRunBallparks !== undefined
                 || matchingPlay.batSpeed !== undefined)) {
-                await module.exports.processMatchingPlay(matchingPlay, messages, playId, hitDistance, embed);
+                await module.exports.processMatchingPlay(matchingPlay, messages, playId, hitDistance, embed, activeTimers);
             }
             attempts ++;
             currentInterval = currentInterval + globals.SAVANT_POLLING_BACKOFF_INCREASE;
@@ -367,13 +395,14 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance, embed) 
     Notably, the list of messages can include messages with a reporting delay that have not yet been sent. We only attempt
     to edit messages that have been sent.
 */
-async function processMatchingPlay (matchingPlay, messages, playId, hitDistance, embed) {
+async function processMatchingPlay (matchingPlay, messages, playId, hitDistance, embed, activeTimers = new Set()) {
+    const endTimer = (label) => { if (activeTimers.has(label)) { console.timeEnd(label); activeTimers.delete(label); } };
     const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
     for (let i = 0; i < messages.length; i ++) {
         if (matchingPlay.xba) {
             if (embed.data.description.includes('xBA: Pending...')) {
                 LOGGER.debug('Editing with xba: ' + playId);
-                console.timeEnd('xBA: ' + playId);
+                endTimer('xBA: ' + playId);
                 embed.data.description = embed.data.description.replaceAll('xBA: Pending...', 'xBA: ' + matchingPlay.xba +
                     (matchingPlay.is_barrel === 1 ? ' \uD83D\uDFE2 (Barreled)' : ''));
             }
@@ -391,7 +420,7 @@ async function processMatchingPlay (matchingPlay, messages, playId, hitDistance,
         if (matchingPlay.batSpeed) {
             if (embed.data.description.includes('Bat Speed: Pending...')) {
                 LOGGER.debug('Editing with Bat Speed: ' + playId);
-                console.timeEnd('Bat Speed: ' + playId);
+                endTimer('Bat Speed: ' + playId);
                 embed.data.description = embed.data.description.replaceAll('Bat Speed: Pending...', 'Bat Speed: ' + matchingPlay.batSpeed + ' mph' +
                     (matchingPlay.batSpeed >= 75.0 ? ' \u26A1' : ''));
             }
@@ -413,7 +442,7 @@ async function processMatchingPlay (matchingPlay, messages, playId, hitDistance,
             && matchingPlay.contextMetrics.homeRunBallparks !== undefined) {
             if (embed.data.description.includes('HR/Park: Pending...')) {
                 LOGGER.debug('Editing with HR/Park: ' + playId);
-                console.timeEnd('HR/Park: ' + playId);
+                endTimer('HR/Park: ' + playId);
                 const homeRunBallParksDescription = 'HR/Park: ' + matchingPlay.contextMetrics.homeRunBallparks + '/30' +
                     (matchingPlay.contextMetrics.homeRunBallparks === 30 ? '\u203C\uFE0F' : '') +
                     (await gamedayUtil.getXParks(feed.gamePk(), playId, matchingPlay.contextMetrics.homeRunBallparks));

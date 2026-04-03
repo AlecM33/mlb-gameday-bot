@@ -22,7 +22,7 @@ module.exports = function (logLevel = LOG_LEVEL.INFO) {
                     || logLevel === LOG_LEVEL.ERROR
             ) return;
             const now = new Date();
-            console.error('WARN ', now.toGMTString(), ': ', message);
+            console.warn('WARN ', now.toGMTString(), ': ', message);
         },
 
         debug (message = '') {
@@ -40,7 +40,7 @@ module.exports = function (logLevel = LOG_LEVEL.INFO) {
             ) return;
 
             const now = new Date();
-            console.error('TRACE ', now.toGMTString(), ': ', message);
+            console.log('TRACE ', now.toGMTString(), ': ', message);
         }
     };
 };

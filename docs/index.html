@@ -58,7 +58,6 @@
         border-radius: 5px;
     }
     #header {
-        margin-bottom: 1em;
         display: flex;
         justify-content: center;
         flex-direction: column;
@@ -66,6 +65,9 @@
     }
     #header h1 {
         margin: 0;
+    }
+    pre {
+        white-space: pre-line;
     }
     </style>
 </head>
@@ -81,14 +83,32 @@
             the notice posted at <a href="http://gdx.mlb.com/components/copyright.txt">http://gdx.mlb.com/components/copyright.txt</a>
         </p>
     </div>
-    <h1>Demos</h1>
-    <h2>/subscribe_gameday</h2>
+    <nav id="toc" style="width:100%; max-width:27em; margin:1em 0; background:#0b1628; padding:10px; border-radius:6px;">
+      <h2 style="margin:0 0 8px 0; font-size:1.05rem;">Jump to a command:</h2>
+      <ul style="margin:0; padding-left:1.2em; line-height:1.6;">
+        <li><a href="#subscribe_gameday">/subscribe_gameday</a></li>
+        <li><a href="#lineup">/lineup</a></li>
+        <li><a href="#starters">/starters</a></li>
+        <li><a href="#box_score">/box_score</a></li>
+        <li><a href="#line_score">/line_score</a></li>
+        <li><a href="#player">/player</a></li>
+        <li><a href="#player_savant">/player_savant</a></li>
+        <li><a href="#scoring_plays">/scoring_plays</a></li>
+        <li><a href="#highlights">/highlights</a></li>
+        <li><a href="#standings">/standings</a></li>
+        <li><a href="#wildcard">/wildcard</a></li>
+        <li><a href="#schedule">/schedule</a></li>
+        <li><a href="#weather">/weather</a></li>
+        <li><a href="#attendance">/attendance</a></li>
+      </ul>
+    </nav>
+    <h2 id="subscribe_gameday" class="command-header">/subscribe_gameday</h2>
     <p>This is the centerpiece of the bot's functionality. For whichever team you configure it for, the bot will automatically detect
         whenever a game is live and report those updates to any subscribed Discord channels, respecting each channel's preferences:</p>
     <img class="bot-demo-img" alt="gameday reporting" src="./images/screenshots/gameday_feed.png"/>
     <p>
     The embeds are styled with contrasting colors from each team's color set. For balls in play, the bot will give Statcast metrics.
-    This includes not only exit velo, launch angle, and distance, but also xBA and HR/Park, which are sourced separately from the
+    This includes not only exit velocity, launch angle, and distance, but also xBA, HR/Park, and Bat Speed, which are sourced separately from the
     MLB Savant site. By default, the bot will report the result of each at bat, plus any key events that happen during at-bats,
     such as baserunning events. If this is too much, the bot can be configured to report scoring plays only. Furthermore, if you wish
     to avoid spoilers for people watching or listening on a delay, you can provide a delay from 0-180 seconds when subscribing.
@@ -96,36 +116,51 @@
     For example, in a server for the Guardians, the bot reports on a 45-second delay, providing nice context right in the chat where people are following the game.
     You can of course personalize it to have a bit more flair for your team:
     </p>
-    <img class="bot-demo-img" alt="personalized bot reporting" src="./images/screenshots/personalized_gameday.png"/>
-    <h2 class="command-header">/lineup</h2>
+    <img class="bot-demo-img" alt="personalized bot reporting" src="./images/screenshots/personalized_gameday_2.png"/>
+    <h2 id="lineup" class="command-header">/lineup</h2>
     <img class="bot-demo-img" alt="lineup" src="./images/screenshots/lineup.png"/>
-    <h2 class="command-header">/starters</h2>
-    <img class="bot-demo-img" alt="starters" src="./images/screenshots/starters.png"/>
-    <h2 class="command-header">/box_score</h2>
+    <h2 id="starters" class="command-header">/starters</h2>
+    <img class="bot-demo-img" alt="starters" src="./images/screenshots/starters_2.png"/>
+    <h2 id="box_score" class="command-header">/box_score</h2>
     <img class="bot-demo-img" alt="box score" src="./images/screenshots/box_score.png"/>
-    <h2 class="command-header">/line_score</h2>
+    <h2 id="line_score" class="command-header">/line_score</h2>
     <img class="bot-demo-img" alt="line score" src="./images/screenshots/line_score.png"/>
-    <h2 class="command-header">/pitcher</h2>
-    <img class="bot-demo-img" alt="pitcher" src="./images/screenshots/pitcher.png"/>
-    <h2 class="command-header">/batter</h2>
-    <img class="bot-demo-img" alt="batter" src="./images/screenshots/batter.png"/>
-    <h2 class="command-header">/pitcher_savant</h2>
-    <img class="bot-demo-img" alt="pitcher_savant" src="./images/screenshots/pitcher_savant.png"/>
-    <h2 class="command-header">/batter_savant</h2>
-    <img class="bot-demo-img" alt="batter" src="./images/screenshots/batter_savant.png"/>
-    <h2 class="command-header">/scoring_plays</h2>
+    <h2 id="player" class="command-header">/player</h2>
+    <img class="bot-demo-img" alt="player" src="./images/screenshots/player.png"/>
+    <h2 id="player_savant" class="command-header">/player_savant</h2>
+    <img class="bot-demo-img" alt="player_savant" src="./images/screenshots/player_savant.png"/>
+    <h2 id="scoring_plays" class="command-header">/scoring_plays</h2>
     <img class="bot-demo-img" alt="scoring plays" src="./images/screenshots/scoring_plays.png"/>
-    <h2 class="command-header">/highlights</h2>
+    <h2 id="highlights" class="command-header">/highlights</h2>
     <img class="bot-demo-img" alt="highlights" src="./images/screenshots/highlights.png"/>
-    <h2 class="command-header">/standings</h2>
+    <h2 id="standings" class="command-header">/standings</h2>
     <img class="bot-demo-img" alt="standings" src="./images/screenshots/standings.png"/>
-    <h2 class="command-header">/wildcard</h2>
+    <h2 id="wildcard" class="command-header">/wildcard</h2>
     <img class="bot-demo-img" alt="wildcard" src="./images/screenshots/wildcard.png"/>
-    <h2 class="command-header">/schedule</h2>
-    <img class="bot-demo-img" alt="schedule" src="./images/screenshots/schedule.png"/>
-    <h2 class="command-header">/weather</h2>
+    <h2 id="schedule" class="command-header">/schedule</h2>
+    <img class="bot-demo-img" alt="schedule" src="./images/screenshots/schedule_emojis.png"/>
+    <h2 id="weather" class="command-header">/weather</h2>
     <img class="bot-demo-img" alt="weather" src="./images/screenshots/weather.png"/>
-    <h2 class="command-header">/attendance</h2>
+    <h2 id="attendance" class="command-header">/attendance</h2>
     <img class="bot-demo-img" alt="attendance" src="images/screenshots/attendance.png"/>
+    <h1 id="terms-of-service">Terms of Service</h1>
+    <pre>    TERMS OF SERVICE AGREEMENT
+
+    This Terms of Service Agreement (the "Agreement") is entered into between AlecM33 ("Bot Owner") and the user ("User") of the Discord bot (the "Bot").
+
+    By using the Bot, the User agrees to be bound by the terms of this Agreement. If the User does not agree to the terms of this Agreement, they should immediately discontinue use of the Bot.
+
+    1. Use of the Bot: The Bot Owner grants the User a non-exclusive, non-transferable, limited license to use the Bot for personal or non-commercial purposes.
+    2. Prohibited Use: The User may not use the Bot in any way that violates applicable laws, rules, or regulations or infringes upon the rights of any third party. The User may not use the Bot for any commercial purposes without the express written consent of the Bot Owner.
+    3. Limitation of Liability: The Bot Owner shall not be liable for any damages arising out of the use or inability to use the Bot, including but not limited to, damages for loss of profits, loss of data, or other intangible losses.
+    4. Modifications to the Bot: The Bot Owner may modify the Bot at any time without notice. However, any modifications will be released using semantic versioning, so anyone that wishes to run a copy of the Bot can do so with any past version. The Bot Owner may also discontinue the Bot at any time. If the Bot is to be discontinued, the Bot Owner will make an effort to provide advanced notice. The User agrees that the Bot Owner shall not be liable to the User or any third party for any modification, suspension, or discontinuance of the Bot.
+    5. Termination: This Agreement may be terminated by either party at any time for any reason. Upon termination, the User must immediately cease all use of the Bot.
+    6. Entire Agreement: This Agreement constitutes the entire agreement between the parties and supersedes all prior or contemporaneous agreements or representations, whether written or oral, relating to the Bot.
+
+    By using the Bot, the User acknowledges that they have read this Agreement, understand it, and agree to be bound by its terms and conditions.
+    </pre>
+    <h1 id="privacy-policy">Privacy Policy</h1>
+    <pre>The Bot, as constructed and released <a href="https://github.com/AlecM33/mlb-gameday-bot">here</a>, does not collect any data, except for Discord channel preferences for how the bot reports games. The Bot operates solely as a tool to provide information and updates related to Major League Baseball.
+    </pre>
 </body>
 </html>

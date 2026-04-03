@@ -1,5 +1,7 @@
 const globalCache = require('./global-cache');
 const globals = require('../config/globals');
+const commandUtil = require('./command-util');
+const { CHALLENGE_TYPES } = require('../config/globals');
 
 module.exports = {
     process: (currentPlayJSON, feed, homeTeamEmoji, awayTeamEmoji) => {
@@ -8,14 +10,16 @@ module.exports = {
             && currentPlayJSON.playEvents?.find(event => event?.details?.description === 'Status Change - In Progress')) {
             globalCache.values.game.startReported = true;
             if (parseInt(process.env.TEAM_ID) === globals.GUARDIANS) {
-                reply += (globalCache.values.game.currentLiveFeed.gameData.teams.home.id === globals.GUARDIANS
+                reply += (feed.homeTeamId() === globals.GUARDIANS
                     ? 'And we\'re underway at the corner of Carnegie and Ontario!'
-                    : 'A game is starting! Go Guards!');
+                    : `And we're underway here at ${feed.venueName()}!`);
             } else {
                 reply += 'A game is starting!';
             }
+            reply += getWeatherString(feed);
         }
         let lastEvent;
+        const description = currentPlayJSON.result?.description || currentPlayJSON.details?.description;
         if (currentPlayJSON.about?.isComplete
             || globals.EVENT_WHITELIST.includes((currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType))) {
             reply += getDescription(currentPlayJSON, feed);
@@ -26,9 +30,14 @@ module.exports = {
                 && !currentPlayJSON.about?.hasReview) {
                 reply += ` [Pitch by pitch](https://www.mlb.com/gameday/${globalCache.values.game.currentGamePk}/play/${currentPlayJSON.atBatIndex})`;
             }
-            if (!currentPlayJSON.reviewDetails?.inProgress
-                && (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details?.isScoringPlay)) {
-                reply = addScore(reply, currentPlayJSON, feed, homeTeamEmoji, awayTeamEmoji);
+            if (!currentPlayJSON.reviewDetails?.inProgress) {
+                if (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details?.isScoringPlay) {
+                    reply = addScore(reply, currentPlayJSON, feed, homeTeamEmoji, awayTeamEmoji);
+                }
+                // 2026 season ABS changes - state how many challenges we have remaining after an ABS challenge completes.
+                if (description.includes(CHALLENGE_TYPES.PITCH_RESULT) && feed.absChallenges()) {
+                    reply += `\n\n**Challenges remaining**: ${feed.homeAbbreviation()} ${feed.absChallenges().home?.remaining} ${feed.awayAbbreviation()} ${feed.absChallenges().away?.remaining}`;
+                }
             }
             if (!currentPlayJSON.about?.hasReview) {
                 if (currentPlayJSON.playEvents) {
@@ -52,7 +61,7 @@ module.exports = {
             homeScore: (currentPlayJSON.result ? currentPlayJSON.result.homeScore : currentPlayJSON.details?.homeScore),
             awayScore: (currentPlayJSON.result ? currentPlayJSON.result.awayScore : currentPlayJSON.details?.awayScore),
             isComplete: currentPlayJSON.about?.isComplete,
-            description: (currentPlayJSON.result?.description || currentPlayJSON.details?.description),
+            description,
             event: (currentPlayJSON.result?.event || currentPlayJSON.details?.event),
             eventType: (currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType),
             isScoringPlay: (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details?.isScoringPlay),
@@ -115,76 +124,26 @@ function getFireEmojis (launchSpeed) {
 }
 
 function getDescription (currentPlayJSON, feed) {
-    if (parseInt(process.env.TEAM_ID) === globals.GUARDIANS
-        && !currentPlayJSON.about?.hasReview
-        && currentPlayJSON.result?.event === 'Home Run'
-        && guardiansBatting(currentPlayJSON, feed)
-        && currentPlayJSON.result?.description) {
-        return getGuardiansHomeRunDescription(currentPlayJSON.result.description);
-    }
     return (currentPlayJSON.result?.description || currentPlayJSON.details.description || '');
-}
-
-function guardiansBatting (currentPlayJSON, feed) {
-    return (currentPlayJSON.about.halfInning === 'bottom' && feed.homeTeamId() === globals.GUARDIANS)
-        || (currentPlayJSON.about.halfInning === 'top' && feed.awayTeamId() === globals.GUARDIANS);
-}
-
-function getGuardiansHomeRunDescription (description) {
-    const player = /(?<person>.+)( homers| hits a grand slam)/.exec(description)?.groups.person;
-    const partOfField = /to (?<partOfField>[a-zA-Z ]+) field./.exec(description)?.groups.partOfField;
-    const scorers = /field.[ ]+(?<scorers>.+)/.exec(description)?.groups.scorers;
-    const hrNumber = /.+(?<hrNumber>\([\d]+\))/.exec(description)?.groups.hrNumber;
-    return getHomeRunCall(player, partOfField, scorers, hrNumber);
-}
-
-function getHomeRunCall (player, partOfField, scorers, hrNumber) {
-    const calls = [
-        player.toUpperCase() +
-        ' WITH A SWING AND A DRIVE! TO DEEP ' +
-        partOfField.toUpperCase() +
-        '! A-WAAAAY BACK! GONE!! ' + hrNumber + '\n' +
-        (scorers || ''),
-        player +
-        ' is ready...the pitch...SWUNG ON AND BLASTED. DEEP ' +
-        partOfField.toUpperCase() +
-        ' FIELD! THIS BALL: GONE! ' + hrNumber + '\n' +
-        (scorers || ''),
-        player +
-        ' is ready...the pitch...SWUNG ON AND RIPPED. DEEP ' +
-        partOfField.toUpperCase() +
-        ' FIELD! THIS BALL: GONE! ' + hrNumber + '\n' +
-        (scorers || ''),
-        player +
-        ' is ready...the pitch...SWUNG ON AND HAMMERED. DEEP ' +
-        partOfField.toUpperCase() +
-        ' FIELD! THIS BALL: GONE! ' + hrNumber + '\n' +
-        (scorers || ''),
-        'The next pitch to ' + player +
-        '...SWUNG ON! HIT HIGH! HIT DEEP TO ' +
-        partOfField.toUpperCase() +
-        '! A-WAAAAY BACK AND GONE!! ' + hrNumber + '\n' +
-        (scorers || ''),
-        'The next pitch to ' + player +
-        '...SWUNG ON! HIT HIGH! DEEP TO ' +
-        partOfField.toUpperCase() +
-        '! THERE SHE GOES! ' + hrNumber + '\n' +
-        (scorers || ''),
-        player +
-        ' is ready...the pitch...swung on! Hit a TON! DEEP ' +
-        partOfField.toUpperCase() +
-        ' FIELD! THIS BALL IS...GONE! ' + hrNumber + '\n' +
-        (scorers || ''),
-        player.toUpperCase() +
-        ' WITH A LONG DRIVE! DEEP TO ' +
-        partOfField.toUpperCase() +
-        '! A-WAAAAY BACK AND GONE!! ' + hrNumber + '\n' +
-        (scorers || ''),
-    ];
-
-    return calls[Math.floor(Math.random() * calls.length)];
 }
 
 function insertEmojiIfPresent (emoji) {
     return (emoji ? `<:${emoji.name}:${emoji.id}>` : '');
+}
+
+function getWeatherString (feed) {
+    try {
+        const weather = feed.weather();
+        const venueName = feed.venueName();
+
+        if (weather && Object.keys(weather).length > 0 && venueName) {
+            return '\n\nWeather at ' + venueName + ':\n' +
+                commandUtil.getWeatherEmoji(weather.condition) + ' ' + weather.condition + '\n' +
+                '\uD83C\uDF21 ' + weather.temp + '°\n' +
+                '\uD83C\uDF43 ' + weather.wind;
+        }
+    } catch (e) {
+        return '';
+    }
+    return '';
 }

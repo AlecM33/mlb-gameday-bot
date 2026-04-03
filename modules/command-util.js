@@ -1,5 +1,5 @@
 const { drawSimpleTables, drawSavantTables } = require('./canvas-util');
-const { joinImages } = require('join-images');
+const { createCanvas, Image } = require('canvas');
 const globalCache = require('./global-cache');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const AsciiTable = require('ascii-table');
@@ -8,14 +8,28 @@ const globals = require('../config/globals');
 const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_LEVEL.INFO);
 const chroma = require('chroma-js');
 const ztable = require('ztable');
-const levenshtein = require('./levenshtein');
-const { performance } = require('perf_hooks');
-const liveFeed = require('./livefeed');
 const jsdom = require('jsdom');
 
 module.exports = {
-    joinPlayerSpots: async (spots, options) => {
-        return joinImages(spots, options);
+    joinPlayerSpots: async (spots, options = {}) => {
+        const margin = options.offset ?? options.margin ?? 10;
+        const loadImage = (src) => new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = Buffer.isBuffer(src) ? src : Buffer.from(src);
+        });
+        const images = await Promise.all(spots.map(loadImage));
+        const totalWidth = images.reduce((sum, img) => sum + img.width, 0) + margin * (images.length - 1);
+        const maxHeight = Math.max(...images.map(img => img.height));
+        const canvas = createCanvas(totalWidth, maxHeight);
+        const ctx = canvas.getContext('2d');
+        let x = 0;
+        for (const img of images) {
+            ctx.drawImage(img, x, 0);
+            x += img.width + margin;
+        }
+        return Promise.resolve(canvas.toBuffer('image/png'));
     },
     getLineupCardTable: async (lineup, gameType) => {
         const table = new AsciiTable();
@@ -55,7 +69,7 @@ module.exports = {
                     resolve(mlbAPIUtil.spot(probable, season));
                 } else {
                     resolve(Buffer.from(
-                        `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                        `<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="60" cy="60" r="60" />
                     </svg>`));
                 }
@@ -88,7 +102,7 @@ module.exports = {
                     resolve(mlbAPIUtil.spot(hitter, season));
                 } else {
                     resolve(Buffer.from(
-                        `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                        `<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="60" cy="60" r="60" />
                     </svg>`));
                 }
@@ -110,7 +124,7 @@ module.exports = {
         };
     },
 
-    formatSplits: (season, splitStats, lastXGamesStats, statType) => {
+    formatSplits: (season, splitStats, lastXGamesStats) => {
         const vsLeft = (splitStats.splits.find(split => split?.split?.code === 'vl' && !split.team)
             || splitStats.splits.find(split => split?.split?.code === 'vl'));
         const vsRight = (splitStats.splits.find(split => split?.split?.code === 'vr' && !split.team)
@@ -121,16 +135,7 @@ module.exports = {
         );
         const lastXGames = (lastXGamesStats?.splits.find(split => !split.team) || lastXGamesStats?.splits[0]);
         const seasonStats = (season?.splits.find(split => !split.team) || season?.splits[0]);
-        const formattedSplits = '\n### ' + (seasonStats?.season || 'Latest') + ` ${(() => {
-            switch (statType) {
-                case 'R':
-                    return 'Regular Season';
-                case 'P':
-                    return 'Postseason';
-                case 'S':
-                    return 'Spring Training';
-            }
-        })()}:\n### ` + (seasonStats
+        const formattedSplits = '\n### ' + (seasonStats
             ? `${seasonStats.stat.avg}/${seasonStats.stat.obp}/${seasonStats.stat.slg} (${seasonStats.stat.ops} OPS), ${seasonStats.stat.homeRuns} HR, ${seasonStats.stat.rbi} RBIs\n`
             : 'No at-bats.\n'
         ) + '**Last 7 Games**' + (lastXGames ? ' (' + lastXGames.stat.plateAppearances + ' ABs)\n' : '\n') + (
@@ -583,27 +588,14 @@ module.exports = {
         }
     },
 
-    resolvePlayerSelection: async (players, interaction) => {
-        const buttons = players.map(player =>
-            new ButtonBuilder()
-                .setCustomId(player.id.toString())
-                .setLabel(`${player.fullName} (${globals.TEAMS.find(team => team.id === player.currentTeam.id)?.abbreviation})`)
-                .setStyle(ButtonStyle.Primary)
-        );
-        const response = await interaction.followUp({
-            content: 'I found multiple matches. Which one?',
-            components: [new ActionRowBuilder().addComponents(buttons)]
-        });
-        const collectorFilter = i => i.user.id === interaction.user.id;
-        try {
-            LOGGER.trace('awaiting');
-            return await response.awaitMessageComponent({ filter: collectorFilter, time: 20_000 });
-        } catch (e) {
-            await interaction.editReply({
-                content: 'Player selection not received within 20 seconds - request was canceled.',
-                components: []
-            });
-        }
+    findPlayer: async (playerName, season, ttlMs = globals.PLAYER_CACHE_TTL_MS) => {
+        const year = season || new Date().getFullYear();
+        const people = await module.exports.getPlayersForYear(year, ttlMs);
+        const removeDiacritics = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const normalizedPlayerName = removeDiacritics(playerName.toLowerCase());
+        return people.find(p =>
+            removeDiacritics(p.fullName.toLowerCase()) === normalizedPlayerName
+        ) || null;
     },
 
     giveFinalCommandResponse: async (toHandle, options) => {
@@ -663,7 +655,7 @@ module.exports = {
             reply += `ERA: ${pitchingStats.era}, `;
             reply += `WHIP: ${pitchingStats.whip} `;
             if (!starterMode && (seasonAdvanced || sabermetrics)) {
-                reply += '\n...\n';
+                reply += '\n---\n';
                 reply += `K/BB: ${seasonAdvanced.strikesoutsToWalks}\n`;
                 reply += `BABIP: ${seasonAdvanced.babip}\n`;
                 reply += `SLG: ${seasonAdvanced.slg}\n`;
@@ -728,208 +720,77 @@ module.exports = {
             liveFeed.gameData.teams.home.abbreviation + ' ' + homeScore + '**');
     },
 
-    getClosestPlayers: async (playerName, type, season) => {
-        const startTime = performance.now();
-        const allPlayers = await mlbAPIUtil.players(season);
-        const removeDiacritics = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        const normalizedPlayerName = removeDiacritics(playerName.toLowerCase());
-        let matchingPlayers = [];
-        let smallestDistance = Infinity;
-        allPlayers.people.forEach(p => {
-            const currentName = removeDiacritics(`${p.fullName}`.toLowerCase());
-            const distance = levenshtein.distance(currentName, normalizedPlayerName, globals.MAX_LEVENSHTEIN_DISTANCE);
-            if (distance <= globals.MAX_LEVENSHTEIN_DISTANCE && distance <= smallestDistance
-                && (
-                    (type === 'Pitcher' && p.primaryPosition.name === 'Pitcher')
-                    || (type === 'Batter' && p.primaryPosition.name !== 'Pitcher')
-                )) {
-                if (distance < smallestDistance) {
-                    matchingPlayers = [p];
-                    smallestDistance = distance;
-                } else {
-                    matchingPlayers.push(p);
+    getPitcherEmbed: (pitcher, pitcherInfo, description, statType = 'R', savantMode = false, season = undefined, twoWayLabel = undefined) => {
+        const twoWaySuffix = twoWayLabel ? ` (${twoWayLabel})` : '';
+        const embed = new EmbedBuilder()
+            .setTitle((pitcherInfo.handedness
+                ? pitcherInfo.handedness + 'HP '
+                : '') + pitcher.fullName + ` (${globals.TEAMS.find(t => t.id === pitcher.currentTeam.id).abbreviation}): ${season || pitcherInfo.pitchingStats.yearOfStats || 'Latest'} ${(() => {
+                if (savantMode) {
+                    return 'Percentile Rankings' + twoWaySuffix;
                 }
-            }
-        });
-        const endTime = performance.now();
-        LOGGER.trace(`Savant command - getting closest player took ${endTime - startTime} milliseconds.`);
-        return matchingPlayers;
-    },
-
-    getPitcherEmbed: (pitcher, pitcherInfo, isLiveGame, description, statType = 'R', savantMode = false, season = undefined) => {
-        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
-        if (isLiveGame) {
-            const abbreviations = {
-                home: feed.homeAbbreviation(),
-                away: feed.awayAbbreviation()
-            };
-            const halfInning = feed.halfInning();
-            const abbreviation = halfInning === 'top'
-                ? abbreviations.home
-                : abbreviations.away;
-            const inning = feed.inning();
-            const embed = new EmbedBuilder()
-                .setTitle(halfInning.toUpperCase() + ' ' + inning + ', ' +
-                    abbreviations.away + ' vs. ' + abbreviations.home + ': Current Pitcher')
-                .setDescription('### ' + (pitcherInfo.handedness
-                    ? pitcherInfo.handedness + 'HP **'
-                    : '**') + (pitcher.fullName || 'TBD') +
-                        '** (' + abbreviation + `): ${season || pitcherInfo.pitchingStats.yearOfStats || 'Latest'} ${(() => {
-                    if (savantMode) {
-                        return 'Percentile Rankings';
-                    }
-                    switch (statType) {
-                        case 'R':
-                            return 'Regular Season\n';
-                        case 'P':
-                            return 'Postseason\n';
-                        case 'S':
-                            return 'Spring Training\n';
-                    }
-                })()}` + (description || ''))
-                .setImage('attachment://savant.png')
-                .setColor((halfInning === 'top'
-                    ? globalCache.values.game.homeTeamColor
-                    : globalCache.values.game.awayTeamColor)
-                );
-
-            if (!savantMode) {
-                embed.setThumbnail('attachment://spot.png');
-            }
-
-            return embed;
-        } else {
-            const embed = new EmbedBuilder()
-                .setTitle((pitcherInfo.handedness
-                    ? pitcherInfo.handedness + 'HP '
-                    : '') + pitcher.fullName + ` (${globals.TEAMS.find(t => t.id === pitcher.currentTeam.id).abbreviation}): ${season || pitcherInfo.pitchingStats.yearOfStats || 'Latest'} ${(() => {
-                    if (savantMode) { 
-                        return 'Percentile Rankings';
-                    }
-                    switch (statType) {
-                        case 'R':
-                            return 'Regular Season';
-                        case 'P':
-                            return 'Postseason';
-                        case 'S':
-                            return 'Spring Training';
-                    }
-                })()}`
-                )
-                .setImage('attachment://savant.png')
-                .setColor(globals.TEAMS.find(team => team.id === pitcher.currentTeam.id).primaryColor);
-
-            if (description) {
-                embed.setDescription(description);
-            }
-
-            if (!savantMode) {
-                embed.setThumbnail('attachment://spot.png');
-            }
-
-            return embed;
-        }
-    },
-
-    getBatterEmbed: (batter, batterInfo, isLiveGame, description, statType = 'R', savantMode = false, season = undefined) => {
-        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
-        let expandedBatter;
-        if (isLiveGame) {
-            expandedBatter = feed.players()['ID' + batter.id];
-            const abbreviations = {
-                home: feed.homeAbbreviation(),
-                away: feed.awayAbbreviation()
-            };
-            const halfInning = feed.halfInning();
-            const abbreviation = halfInning === 'bottom'
-                ? abbreviations.home
-                : abbreviations.away;
-            const inning = feed.inning();
-            const embed = new EmbedBuilder()
-                .setTitle(halfInning.toUpperCase() + ' ' + inning + ', ' +
-                    abbreviations.away + ' vs. ' + abbreviations.home + ': Current Batter' + (savantMode ? `: ${season || 'Latest'} Percentile Rankings` : ''))
-                .setDescription(`### ${batter.fullName} (${abbreviation})\n ${expandedBatter.primaryPosition.abbreviation} | Bats ${expandedBatter.batSide.description} ${(description || '')}`)
-                .setImage('attachment://savant.png')
-                .setColor((halfInning === 'top'
-                    ? globalCache.values.game.awayTeamColor
-                    : globalCache.values.game.homeTeamColor)
-                );
-
-            if (!savantMode) {
-                embed.setThumbnail('attachment://spot.png');
-            }
-
-            return embed;
-        } else {
-            const embed = new EmbedBuilder()
-                .setTitle(`${batter.fullName} (${globals.TEAMS.find(team => team.id === batter.currentTeam.id).abbreviation})` + (savantMode ? `: ${season || 'Latest'} Percentile Rankings` : ''))
-                .setDescription(`${batter.primaryPosition.abbreviation} | Bats ${batterInfo.stats.batSide.description}`)
-                .setImage('attachment://savant.png')
-                .setColor(globals.TEAMS.find(team => team.id === batter.currentTeam.id).primaryColor);
-
-            if (description) {
-                embed.setDescription(`${batter.primaryPosition.abbreviation} | Bats ${batterInfo.stats.batSide.description}` + description);
-            }
-
-            if (!savantMode) {
-                embed.setThumbnail('attachment://spot.png');
-            }
-
-            return embed;
-        }
-    },
-
-    getPlayerFromUserInputOrLiveFeed: async (playerName, interaction, type, season) => {
-        let player, currentLiveFeed, shouldEditReply, pendingChoice;
-        if (playerName) {
-            const players = await module.exports.getClosestPlayers(playerName, type, season);
-            if (players.length > 1) {
-                pendingChoice = await module.exports.resolvePlayerSelection(players.slice(0, 5), interaction);
-                const idString = pendingChoice?.customId;
-                if (idString) {
-                    player = players.find(player => player.id === parseInt(idString));
-                    await pendingChoice.deferUpdate(); // This function says it takes reply options, but it doesn't work?? So I've resorted to editing on the next line.
-                    await interaction.editReply({
-                        content: `Getting stats for ${player.fullName} (${globals.TEAMS.find(team => team.id === player.currentTeam.id)?.abbreviation}). Please wait...`,
-                        components: []
-                    });
-                    shouldEditReply = true;
+                switch (statType) {
+                    case 'R':
+                        return 'Regular Season' + twoWaySuffix;
+                    case 'P':
+                        return 'Postseason' + twoWaySuffix;
+                    case 'S':
+                        return 'Spring Training' + twoWaySuffix;
                 }
-            } else {
-                player = players[0];
-            }
-        } else {
-            currentLiveFeed = globalCache.values.game.currentLiveFeed;
-            if (currentLiveFeed && currentLiveFeed.gameData.status.abstractGameState === 'Live') {
-                player = type === 'Pitcher'
-                    ? currentLiveFeed.liveData.plays.currentPlay.matchup.pitcher
-                    : currentLiveFeed.liveData.plays.currentPlay.matchup.batter;
-            }
+            })()}`
+            )
+            .setImage('attachment://savant.png')
+            .setColor(globals.TEAMS.find(team => team.id === pitcher.currentTeam.id).primaryColor);
+
+        if (description) {
+            embed.setDescription(description);
         }
 
-        return {
-            player,
-            pendingChoice,
-            shouldEditReply
-        };
+        if (!savantMode) {
+            embed.setThumbnail('attachment://spot.png');
+        }
+
+        return embed;
     },
 
-    resolvePlayer: async (interaction, playerName, playerType) => {
-        const playerResult = await module.exports.getPlayerFromUserInputOrLiveFeed(
-            playerName,
-            interaction,
-            playerType,
-            interaction.options.getInteger('year') || new Date().getFullYear()
-        );
-        if (!playerResult.player && !playerName) {
-            await interaction.followUp('No game is live right now!');
-            return;
-        } else if (playerName && !playerResult.player) {
-            await interaction.followUp('I didn\'t find a player with a close enough match to your input (use first and last name).');
+    getBatterEmbed: (batter, batterInfo, description, statType = 'R', savantMode = false, season = undefined, twoWayLabel = undefined) => {
+        const twoWaySuffix = twoWayLabel ? ` (${twoWayLabel})` : '';
+        const yearLabel = season || batterInfo.stats?.season || 'Latest';
+        const statLabel = savantMode
+            ? `${yearLabel} Percentile Rankings${twoWaySuffix}`
+            : (() => {
+                switch (statType) {
+                    case 'R': return `${yearLabel} Regular Season${twoWaySuffix}`;
+                    case 'P': return `${yearLabel} Postseason${twoWaySuffix}`;
+                    case 'S': return `${yearLabel} Spring Training${twoWaySuffix}`;
+                    default: return `${yearLabel}${twoWaySuffix}`;
+                }
+            })();
+        const embed = new EmbedBuilder()
+            .setTitle(`${batter.fullName} (${globals.TEAMS.find(team => team.id === batter.currentTeam.id).abbreviation}): ${statLabel}`)
+            .setDescription(`${batter.primaryPosition.abbreviation} | Bats ${batterInfo.stats.batSide.description}`)
+            .setImage('attachment://savant.png')
+            .setColor(globals.TEAMS.find(team => team.id === batter.currentTeam.id).primaryColor);
+
+        if (description) {
+            embed.setDescription(`${batter.primaryPosition.abbreviation} | Bats ${batterInfo.stats.batSide.description}` + description);
+        }
+
+        if (!savantMode) {
+            embed.setThumbnail('attachment://spot.png');
+        }
+
+        return embed;
+    },
+
+    resolvePlayer: async (interaction, playerName) => {
+        const player = await module.exports.findPlayer(playerName, interaction.options.getInteger('year') || new Date().getFullYear());
+        if (!player) {
+            await interaction.followUp(`No player found with that name for the year specified (${interaction.options.getInteger('year')
+                || new Date().getFullYear()}). Please use the autocomplete list to select a player.`);
             return;
         }
-
-        return playerResult;
+        return { player };
     },
 
     getHomeAwayChoice: async (interaction, teams, question) => {
@@ -971,6 +832,112 @@ module.exports = {
             .find(v => v.name.includes(chosenTeamId));
         const team = teams.home.team.id === chosenTeamId ? teams.home.team : teams.away.team;
         return `${emoji ? `<:${emoji.name}:${emoji.id}>` : ''} ${team.name}`;
+    },
+
+    buildPlayerCache: async (ttlMs = globals.PLAYER_CACHE_TTL_MS) => {
+        const currentYear = new Date().getFullYear();
+        for (let year = currentYear; year >= globals.PLAYER_STATS_MIN_YEAR; year --) {
+            const timestamp = globalCache.values.playerCacheTimestamps[year];
+            const isPastYear = year < currentYear;
+            if (timestamp && (isPastYear || (Date.now() - timestamp) < ttlMs)) {
+                continue;
+            }
+            try {
+                const data = await mlbAPIUtil.players(year);
+                if (data.people) {
+                    globalCache.values.playersByYear[year] = data.people;
+                    globalCache.values.playerCacheTimestamps[year] = Date.now();
+                    LOGGER.info(`Player cache built: ${data.people.length} players for ${year}.`);
+                }
+            } catch (e) {
+                LOGGER.error(`Failed to fetch players for season ${year}:`, e);
+            }
+            await new Promise(resolve => setTimeout(resolve, globals.PLAYER_CACHE_RATE_LIMIT_MS));
+        }
+    },
+
+    getPlayersForYear: async (year, ttlMs = globals.PLAYER_CACHE_TTL_MS) => {
+        const currentYear = new Date().getFullYear();
+        const timestamp = globalCache.values.playerCacheTimestamps[year];
+        const isPastYear = year < currentYear;
+        const isStale = !timestamp || (!isPastYear && (Date.now() - timestamp) >= ttlMs);
+        if (isStale) {
+            LOGGER.info(`Player cache for ${year} is stale or missing. Refreshing...`);
+            try {
+                const data = await mlbAPIUtil.players(year);
+                if (data.people) {
+                    globalCache.values.playersByYear[year] = data.people;
+                    globalCache.values.playerCacheTimestamps[year] = Date.now();
+                    LOGGER.info(`Player cache refreshed: ${data.people.length} players for ${year}.`);
+                }
+            } catch (e) {
+                LOGGER.error(`Failed to refresh player cache for season ${year}:`, e);
+            }
+        }
+        return globalCache.values.playersByYear[year] || [];
+    },
+
+    playerAutocomplete: async (interaction) => {
+        try {
+            const focusedValue = interaction.options.getFocused().trim().toLowerCase();
+            if (focusedValue.length === 0) {
+                await interaction.respond([]);
+                return;
+            }
+
+            const currentYear = new Date().getFullYear();
+            const primaryYear = interaction.options.getInteger('year') || currentYear;
+
+            const removeDiacritics = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            const normalized = removeDiacritics(focusedValue);
+
+            const filterPeople = (people) => people.filter(p =>
+                removeDiacritics(p.fullName.toLowerCase()).includes(normalized)
+            );
+
+            const primaryPeople = await module.exports.getPlayersForYear(primaryYear);
+            const matches = filterPeople(primaryPeople)
+                .slice(0, 25)
+                .map(p => {
+                    const team = globals.TEAMS.find(t => t.id === p.currentTeam?.id);
+                    const pos = p.primaryPosition?.abbreviation;
+                    const suffix = (pos || team) ? ` (${[pos, team?.abbreviation].filter(Boolean).join(', ')})` : '';
+                    const label = `${p.fullName}${suffix}`;
+                    return { name: label.slice(0, 100), value: p.fullName };
+                });
+
+            await interaction.respond(matches);
+        } catch (e) {
+            LOGGER.error('Autocomplete error:', e);
+            await interaction.respond([]);
+        }
+    },
+
+    resolveTwoWayPlayerSelection: async (interaction) => {
+        const buttons = [
+            new ButtonBuilder()
+                .setCustomId('Pitcher')
+                .setLabel('Pitching')
+                .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
+                .setCustomId('Hitter')
+                .setLabel('Hitting')
+                .setStyle(ButtonStyle.Primary)
+        ];
+        const response = await interaction.followUp({
+            content: 'This is a two-way player. Would you like to view their pitching or hitting stats?',
+            components: [new ActionRowBuilder().addComponents(buttons)]
+        });
+        const collectorFilter = i => i.user.id === interaction.user.id;
+        try {
+            LOGGER.trace('awaiting');
+            return await response.awaitMessageComponent({ filter: collectorFilter, time: 20_000 });
+        } catch (e) {
+            await interaction.editReply({
+                content: 'A selection was not received within 20 seconds, so I canceled the interaction.',
+                components: []
+            });
+        }
     }
 
 };
@@ -1007,37 +974,42 @@ function mapStandings (standings, wildcard = false) {
 }
 
 function getPitchCollections (dom) {
+    const document = dom.window.document;
+
+    const columnMap = {};
+    document.querySelectorAll('thead tr th').forEach((th, i) => {
+        columnMap[th.textContent.trim()] = i + 1;
+    });
+
+    const columnData = (header) => `tbody tr td:nth-child(${columnMap[header]})`;
+
     const years = [];
     const pitches = [];
     const percentages = [];
     const MPHs = [];
     const battingAvgsAgainst = [];
-    dom.window.document
-        .querySelectorAll('tbody tr td:nth-child(1)').forEach(el => years.push(el.textContent.trim()));
-    dom.window.document
-        .querySelectorAll('tbody tr td:nth-child(2)').forEach((el, key) => {
-            if (years[key] === years[0]) {
-                pitches.push(el.textContent.trim());
-            }
-        });
-    dom.window.document
-        .querySelectorAll('tbody tr td:nth-child(6)').forEach((el, key) => {
-            if (years[key] === years[0]) {
-                percentages.push(el.textContent.trim());
-            }
-        });
-    dom.window.document
-        .querySelectorAll('tbody tr td:nth-child(7)').forEach((el, key) => {
-            if (years[key] === years[0]) {
-                MPHs.push(el.textContent.trim());
-            }
-        });
-    dom.window.document
-        .querySelectorAll('tbody tr td:nth-child(18)').forEach((el, key) => {
-            if (years[key] === years[0]) {
-                battingAvgsAgainst.push((el.textContent.trim().length > 0 ? el.textContent.trim() : 'N/A'));
-            }
-        });
+
+    document.querySelectorAll(columnData('Year')).forEach(el => years.push(el.textContent.trim()));
+    document.querySelectorAll(columnData('Pitch Type')).forEach((el, key) => {
+        if (years[key] === years[0]) {
+            pitches.push(el.textContent.trim());
+        }
+    });
+    document.querySelectorAll(columnData('%')).forEach((el, key) => {
+        if (years[key] === years[0]) {
+            percentages.push(el.textContent.trim());
+        }
+    });
+    document.querySelectorAll(columnData('MPH')).forEach((el, key) => {
+        if (years[key] === years[0]) {
+            MPHs.push(el.textContent.trim());
+        }
+    });
+    document.querySelectorAll(columnData('BA')).forEach((el, key) => {
+        if (years[key] === years[0]) {
+            battingAvgsAgainst.push((el.textContent.trim().length > 0 ? el.textContent.trim() : 'N/A'));
+        }
+    });
     return [pitches, percentages, MPHs, battingAvgsAgainst];
 }
 
