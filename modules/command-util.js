@@ -29,7 +29,7 @@ module.exports = {
             ctx.drawImage(img, x, 0);
             x += img.width + margin;
         }
-        return Promise.resolve(canvas.toBuffer('image/png'))
+        return Promise.resolve(canvas.toBuffer('image/png'));
     },
     getLineupCardTable: async (lineup, gameType) => {
         const table = new AsciiTable();
