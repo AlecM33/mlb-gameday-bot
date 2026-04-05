@@ -104,12 +104,14 @@ module.exports = {
                     (home ? ' vs. ' : ' @ ') + (home ? teams.away.team.abbreviation : teams.home.team.abbreviation) +
                     `${emoji ? ` <:${emoji.name}:${emoji.id}>` : ''}` +
                     ' ' +
-                    (game.status.startTimeTBD ? 'Start Time TBD' : gameDate.toLocaleString('en-US', {
-                        timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        timeZoneName: 'short'
-                    })) + (game.gameType === 'S' ? ' (Spring Training)' : '') +
+                    (game.status.startTimeTBD
+                        ? 'Start Time TBD'
+                        : gameDate.toLocaleString('en-US', {
+                            timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            timeZoneName: 'short'
+                        })) + (game.gameType === 'S' ? ' (Spring Training)' : '') +
                     '\n';
             });
         });
@@ -130,12 +132,12 @@ module.exports = {
         await interaction.deferReply();
         console.info(`STANDINGS command invoked by guild: ${interaction.guildId}`);
         const DIVISION_MAP = {
-            '200': { name: 'AL West', leagueId: 103 },
-            '201': { name: 'AL East', leagueId: 103 },
-            '202': { name: 'AL Central', leagueId: 103 },
-            '203': { name: 'NL West', leagueId: 104 },
-            '204': { name: 'NL East', leagueId: 104 },
-            '205': { name: 'NL Central', leagueId: 104 }
+            200: { name: 'AL West', leagueId: 103 },
+            201: { name: 'AL East', leagueId: 103 },
+            202: { name: 'AL Central', leagueId: 103 },
+            203: { name: 'NL West', leagueId: 104 },
+            204: { name: 'NL East', leagueId: 104 },
+            205: { name: 'NL Central', leagueId: 104 }
         };
         const chosenDivisionId = interaction.options.getString('division');
         let divisionId, leagueId, divisionName;

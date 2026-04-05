@@ -610,14 +610,16 @@ module.exports = {
         return (game.teams?.home?.team?.abbreviation || game.teams?.home?.abbreviation || game.gameData?.teams?.home?.abbreviation) +
             ' vs. ' +
             (game.teams?.away?.team?.abbreviation || game.teams?.away?.abbreviation || game.gameData?.teams?.away?.abbreviation) +
-            ', ' + (startTimeTBD ? 'Start Time TBD' : new Date((game.gameDate || game.datetime?.dateTime || game.gameData?.datetime?.dateTime)).toLocaleString('default', {
-            month: 'short',
-            day: 'numeric',
-            timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
-            hour: 'numeric',
-            minute: '2-digit',
-            timeZoneName: 'short'
-        }));
+            ', ' + (startTimeTBD
+            ? 'Start Time TBD'
+            : new Date((game.gameDate || game.datetime?.dateTime || game.gameData?.datetime?.dateTime)).toLocaleString('default', {
+                month: 'short',
+                day: 'numeric',
+                timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
+                hour: 'numeric',
+                minute: '2-digit',
+                timeZoneName: 'short'
+            }));
     },
 
     buildPitchingStatsMarkdown: (pitchingStats, pitchMix, lastThree, seasonAdvanced, sabermetrics, gameType, starterMode = true) => {
@@ -1018,12 +1020,14 @@ async function resolveDoubleHeaderSelection (interaction) {
     const buttons = globalCache.values.nearestGames.map(game =>
         new ButtonBuilder()
             .setCustomId(game.gamePk.toString())
-            .setLabel((game.status.startTimeTBD ? 'Start Time TBD' : new Date(game.gameDate).toLocaleString('en-US', {
-                timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
-                hour: 'numeric',
-                minute: '2-digit',
-                timeZoneName: 'short'
-            })))
+            .setLabel((game.status.startTimeTBD
+                ? 'Start Time TBD'
+                : new Date(game.gameDate).toLocaleString('en-US', {
+                    timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    timeZoneName: 'short'
+                })))
             .setStyle(ButtonStyle.Primary)
     );
     const response = await interaction.reply({
