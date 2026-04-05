@@ -190,7 +190,7 @@ async function reportAnyMissedEvents (atBat, bot, gamePk, atBatIndex) {
 */
 function extractReviewOutcome (description) {
     const index = description?.indexOf(', call on the field was ');
-    return index === -1 ? null : description.slice(index);
+    return index === -1 ? null : description?.slice(index);
 }
 
 function alreadyReported (description, atBatIndex) {
