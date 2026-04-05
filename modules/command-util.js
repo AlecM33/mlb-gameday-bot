@@ -610,7 +610,7 @@ module.exports = {
         return (game.teams?.home?.team?.abbreviation || game.teams?.home?.abbreviation || game.gameData?.teams?.home?.abbreviation) +
             ' vs. ' +
             (game.teams?.away?.team?.abbreviation || game.teams?.away?.abbreviation || game.gameData?.teams?.away?.abbreviation) +
-            ', ' + (startTimeTBD ? 'TBD' : new Date((game.gameDate || game.datetime?.dateTime || game.gameData?.datetime?.dateTime)).toLocaleString('default', {
+            ', ' + (startTimeTBD ? 'Start Time TBD' : new Date((game.gameDate || game.datetime?.dateTime || game.gameData?.datetime?.dateTime)).toLocaleString('default', {
             month: 'short',
             day: 'numeric',
             timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
@@ -1018,7 +1018,7 @@ async function resolveDoubleHeaderSelection (interaction) {
     const buttons = globalCache.values.nearestGames.map(game =>
         new ButtonBuilder()
             .setCustomId(game.gamePk.toString())
-            .setLabel((game.status.startTimeTBD ? 'TBD' : new Date(game.gameDate).toLocaleString('en-US', {
+            .setLabel((game.status.startTimeTBD ? 'Start Time TBD' : new Date(game.gameDate).toLocaleString('en-US', {
                 timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
                 hour: 'numeric',
                 minute: '2-digit',

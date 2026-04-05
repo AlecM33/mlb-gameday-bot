@@ -104,7 +104,7 @@ module.exports = {
                     (home ? ' vs. ' : ' @ ') + (home ? teams.away.team.abbreviation : teams.home.team.abbreviation) +
                     `${emoji ? ` <:${emoji.name}:${emoji.id}>` : ''}` +
                     ' ' +
-                    (game.status.startTimeTBD ? 'TBD' : gameDate.toLocaleString('en-US', {
+                    (game.status.startTimeTBD ? 'Start Time TBD' : gameDate.toLocaleString('en-US', {
                         timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
                         hour: 'numeric',
                         minute: '2-digit',
