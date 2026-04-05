@@ -104,12 +104,14 @@ module.exports = {
                     (home ? ' vs. ' : ' @ ') + (home ? teams.away.team.abbreviation : teams.home.team.abbreviation) +
                     `${emoji ? ` <:${emoji.name}:${emoji.id}>` : ''}` +
                     ' ' +
-                    gameDate.toLocaleString('en-US', {
-                        timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        timeZoneName: 'short'
-                    }) + (game.gameType === 'S' ? ' (Spring Training)' : '') +
+                    (game.status.startTimeTBD
+                        ? 'Start Time TBD'
+                        : gameDate.toLocaleString('en-US', {
+                            timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            timeZoneName: 'short'
+                        })) + (game.gameType === 'S' ? ' (Spring Training)' : '') +
                     '\n';
             });
         });
@@ -129,14 +131,31 @@ module.exports = {
     standingsHandler: async (interaction) => {
         await interaction.deferReply();
         console.info(`STANDINGS command invoked by guild: ${interaction.guildId}`);
-        const team = await mlbAPIUtil.team(process.env.TEAM_ID);
-        const divisionId = team.teams[0].division.id;
-        const leagueId = team.teams[0].league.id;
+        const DIVISION_MAP = {
+            200: { name: 'AL West', leagueId: 103 },
+            201: { name: 'AL East', leagueId: 103 },
+            202: { name: 'AL Central', leagueId: 103 },
+            203: { name: 'NL West', leagueId: 104 },
+            204: { name: 'NL East', leagueId: 104 },
+            205: { name: 'NL Central', leagueId: 104 }
+        };
+        const chosenDivisionId = interaction.options.getString('division');
+        let divisionId, leagueId, divisionName;
+        if (chosenDivisionId) {
+            divisionId = parseInt(chosenDivisionId);
+            leagueId = DIVISION_MAP[chosenDivisionId].leagueId;
+            divisionName = DIVISION_MAP[chosenDivisionId].name;
+        } else {
+            const team = await mlbAPIUtil.team(process.env.TEAM_ID);
+            divisionId = team.teams[0].division.id;
+            leagueId = team.teams[0].league.id;
+            divisionName = team.teams[0].division.name;
+        }
         const divisionStandings = (await mlbAPIUtil.standings(leagueId))
             .records.find((record) => record.division.id === divisionId);
         await interaction.followUp({
             ephemeral: false,
-            files: [new AttachmentBuilder(commandUtil.buildStandingsTable(divisionStandings, team.teams[0].division.name), { name: 'standings.png' })]
+            files: [new AttachmentBuilder(commandUtil.buildStandingsTable(divisionStandings, divisionName), { name: 'standings.png' })]
         });
     },
 
