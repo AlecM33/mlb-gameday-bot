@@ -823,7 +823,7 @@ module.exports = {
             LOGGER.trace('awaiting');
             return await response.awaitMessageComponent({ filter: collectorFilter, time: 20_000 });
         } catch (e) {
-            await interaction.editReply({
+            return await interaction.editReply({
                 content: 'A selection was not received within 20 seconds, so I canceled the interaction.',
                 components: []
             });
