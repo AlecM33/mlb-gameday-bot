@@ -806,7 +806,6 @@ module.exports = {
                     bestMatch = p;
                 }
             }
-            // Only accept the fuzzy match if it's reasonably close (within ~40% of the input length)
             const threshold = Math.max(globals.MIN_LEVENSHTEIN_DISTANCE, Math.floor(normalizedInput.length * globals.MAX_LEVENSHTEIN_LENGTH_RATIO));
             if (bestMatch && bestDistance <= threshold) {
                 player = bestMatch;
