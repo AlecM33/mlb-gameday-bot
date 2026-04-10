@@ -759,5 +759,83 @@ module.exports = {
                     : 'Not available yet - check back an hour or two before game time.'
             });
         }
+    },
+
+    bullpenHandler: async (interaction) => {
+        console.info(`BULLPEN command invoked by guild: ${interaction.guildId}`);
+        if (!globalCache.values.game.isDoubleHeader) {
+            await interaction.deferReply();
+        }
+        const toHandle = await commandUtil.screenInteraction(interaction);
+        if (toHandle) {
+            const game = globalCache.values.game.isDoubleHeader
+                ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId))
+                : globalCache.values.nearestGames[0];
+
+            const content = await mlbAPIUtil.content(game.gamePk);
+            const allItems = content?.highlights?.highlights?.items || [];
+            const bullpenItems = allItems.filter(item =>
+                item.headline && item.headline.toLowerCase().includes('bullpen availability')
+            );
+
+            if (bullpenItems.length === 0) {
+                await commandUtil.giveFinalCommandResponse(toHandle, {
+                    ephemeral: false,
+                    components: [],
+                    content: commandUtil.constructGameDisplayString(game) + ' - A bullpen availability overview is not available for this game.'
+                });
+                return;
+            }
+
+            const bullpenByTeam = {};
+            for (const item of bullpenItems) {
+                const teamKeyword = (item.keywordsAll || []).find(k => k.type === 'team_id');
+                if (teamKeyword) {
+                    bullpenByTeam[parseInt(teamKeyword.value)] = item;
+                }
+            }
+
+            const teamChoiceToHandle = await commandUtil.getHomeAwayChoice(
+                toHandle,
+                game.teams,
+                'Which team\'s bullpen availability would you like to see?'
+            );
+            if (!teamChoiceToHandle) {
+                return;
+            }
+
+            const chosenTeamId = parseInt(teamChoiceToHandle.customId);
+            const bullpenItem = bullpenByTeam[chosenTeamId];
+            if (!bullpenItem || !bullpenItem.image || !bullpenItem.image.cuts || bullpenItem.image.cuts.length === 0) {
+                await commandUtil.giveFinalCommandResponse(teamChoiceToHandle, {
+                    ephemeral: false,
+                    components: [],
+                    content: commandUtil.constructGameDisplayString(game) + ' - No bullpen availability image found for that team.'
+                });
+                return;
+            }
+
+            const bestCut = bullpenItem.image.cuts
+                .filter(cut => cut.aspectRatio === '16:9')
+                .sort((a, b) => b.width - a.width)[0]
+                || bullpenItem.image.cuts[0];
+
+            const homeTeam = game.teams.home.team || game.teams.home;
+            const awayTeam = game.teams.away.team || game.teams.away;
+            const teamMap = {
+                [homeTeam.id]: homeTeam,
+                [awayTeam.id]: awayTeam
+            };
+
+            const imageUrl = bestCut.src;
+            const team = teamMap[chosenTeamId];
+            const teamName = team ? team.name : 'Team';
+
+            await commandUtil.giveFinalCommandResponse(teamChoiceToHandle, {
+                ephemeral: false,
+                components: [],
+                content: `**Bullpen Availability: ${teamName}** - ${commandUtil.constructGameDisplayString(game)}\n${imageUrl}`
+            });
+        }
     }
 };
