@@ -9,6 +9,7 @@ const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_
 const chroma = require('chroma-js');
 const ztable = require('ztable');
 const jsdom = require('jsdom');
+const levenshtein = require('./levenshtein');
 
 module.exports = {
     joinPlayerSpots: async (spots, options = {}) => {
@@ -787,10 +788,33 @@ module.exports = {
     },
 
     resolvePlayer: async (interaction, playerName) => {
-        const player = await module.exports.findPlayer(playerName, interaction.options.getInteger('year') || new Date().getFullYear());
+        const year = interaction.options.getInteger('year') || new Date().getFullYear();
+        const removeDiacritics = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const normalizedInput = removeDiacritics(playerName.toLowerCase());
+
+        let player = await module.exports.findPlayer(playerName, year);
+
         if (!player) {
-            await interaction.followUp(`No player found with that name for the year specified (${interaction.options.getInteger('year')
-                || new Date().getFullYear()}). Please use the autocomplete list to select a player.`);
+            const people = await module.exports.getPlayersForYear(year);
+            let bestDistance = Infinity;
+            let bestMatch = null;
+            for (const p of people) {
+                const normalizedName = removeDiacritics(p.fullName.toLowerCase());
+                const distance = levenshtein.distance(normalizedInput, normalizedName, bestDistance);
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    bestMatch = p;
+                }
+            }
+            const threshold = Math.max(globals.MIN_LEVENSHTEIN_DISTANCE, Math.floor(normalizedInput.length * globals.MAX_LEVENSHTEIN_LENGTH_RATIO));
+            if (bestMatch && bestDistance <= threshold) {
+                player = bestMatch;
+                LOGGER.info(`resolvePlayer: fuzzy matched "${playerName}" -> "${player.fullName}" (distance: ${bestDistance})`);
+            }
+        }
+
+        if (!player) {
+            await interaction.followUp(`No player found with that name for the year specified (${year}). Please use the autocomplete list to select a player.`);
             return;
         }
         return { player };
@@ -823,7 +847,7 @@ module.exports = {
             LOGGER.trace('awaiting');
             return await response.awaitMessageComponent({ filter: collectorFilter, time: 20_000 });
         } catch (e) {
-            await interaction.editReply({
+            return await interaction.editReply({
                 content: 'A selection was not received within 20 seconds, so I canceled the interaction.',
                 components: []
             });
