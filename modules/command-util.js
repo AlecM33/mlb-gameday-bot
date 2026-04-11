@@ -678,8 +678,8 @@ module.exports = {
             reply += (() => {
                 let arsenal = '';
                 for (let i = 0; i < pitchMix[0].length; i ++) {
-                    arsenal += pitchMix[0][i] + ' (' + pitchMix[1][i] + '%)' +
-                        ': ' + pitchMix[2][i] + ' mph, ' + pitchMix[3][i] + ' BAA' + '\n';
+                    arsenal += (pitchMix[0][i] || 'N/A') + ' (' + (pitchMix[1][i] || 'N/A') + '%)' +
+                        ': ' + (pitchMix[2][i] || 'N/A') + ' mph, ' + (pitchMix[3][i] || 'N/A') + ' BAA' + '\n';
                 }
                 return arsenal;
             })();
@@ -1008,7 +1008,11 @@ function getPitchCollections (dom) {
         columnMap[th.textContent.trim()] = i + 1;
     });
 
-    const columnData = (header) => `tbody tr td:nth-child(${columnMap[header]})`;
+    const queryColumn = (header) => {
+        return columnMap[header]
+            ? Array.from(document.querySelectorAll(`tbody tr td:nth-child(${columnMap[header]})`))
+            : [];
+    };
 
     const years = [];
     const pitches = [];
@@ -1016,23 +1020,23 @@ function getPitchCollections (dom) {
     const MPHs = [];
     const battingAvgsAgainst = [];
 
-    document.querySelectorAll(columnData('Year')).forEach(el => years.push(el.textContent.trim()));
-    document.querySelectorAll(columnData('Pitch Type')).forEach((el, key) => {
+    queryColumn('Year').forEach(el => years.push(el.textContent.trim()));
+    queryColumn('Pitch Type').forEach((el, key) => {
         if (years[key] === years[0]) {
             pitches.push(el.textContent.trim());
         }
     });
-    document.querySelectorAll(columnData('%')).forEach((el, key) => {
+    queryColumn('%').forEach((el, key) => {
         if (years[key] === years[0]) {
             percentages.push(el.textContent.trim());
         }
     });
-    document.querySelectorAll(columnData('MPH')).forEach((el, key) => {
+    queryColumn('MPH').forEach((el, key) => {
         if (years[key] === years[0]) {
             MPHs.push(el.textContent.trim());
         }
     });
-    document.querySelectorAll(columnData('BA')).forEach((el, key) => {
+    queryColumn('BA').forEach((el, key) => {
         if (years[key] === years[0]) {
             battingAvgsAgainst.push((el.textContent.trim().length > 0 ? el.textContent.trim() : 'N/A'));
         }
