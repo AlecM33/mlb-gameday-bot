@@ -92,6 +92,9 @@ module.exports = {
     SAVANT_POLLING_INTERVAL: 15000,
     SAVANT_POLLING_ATTEMPTS: 10,
     SAVANT_POLLING_BACKOFF_INCREASE: 10000,
+    SAVANT_PAGE_ENDPOINT: (personId, type) => {
+        return `https://baseballsavant.mlb.com/savant-player/${personId}?stats=statcast-r-${type}-mlb`;
+    },
     HOME_RUN_BALLPARKS_MIN_DISTANCE: 300,
     SLOW_POLL_INTERVAL: 300000,
     GAMEDAY_PING_INTERVAL: 10000,

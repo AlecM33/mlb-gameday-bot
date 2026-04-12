@@ -642,7 +642,7 @@ module.exports = {
             }
         } else {
             await interaction.editReply({
-                content: `There is no statcast ${savantType === 'pitching' ? savantType : 'hitting/fielding'} data for this player for the chosen season.`
+                content: `I could not retrieve statcast ${savantType === 'pitching' ? savantType : 'hitting/fielding'} data for this player for the chosen season. This could mean that they did not play that year, or it could indicate a temporary issue with Baseball Savant. In the meantime, here is a link to the player's page: ${globals.SAVANT_PAGE_ENDPOINT(playerResult.player.id, savantType)}`
             });
         }
     },
