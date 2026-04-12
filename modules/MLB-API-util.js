@@ -143,7 +143,7 @@ module.exports = {
 
     savantPage: async (personId, type) => {
         try {
-            const endpoint = `https://baseballsavant.mlb.com/savant-player/${personId}?stats=statcast-r-${type}-mlb`;
+            const endpoint = globals.SAVANT_PAGE_ENDPOINT(personId, type);
             LOGGER.debug(endpoint);
             return await (await fetch(endpoint, { signal: AbortSignal.timeout(15000) })).text();
         } catch (e) {

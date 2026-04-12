@@ -1115,6 +1115,9 @@ function addAdditionalDataToStats (statCollection, metricSummaries) {
 }
 
 function calculateRoundedPercentileFromNormalDistribution (metric, value, mean, standardDeviation, shouldInvert) {
+    if (mean == null || standardDeviation == null || isNaN(value) || isNaN(mean) || isNaN(standardDeviation)) {
+        return 0;
+    }
     if (standardDeviation === 0) { // This scenario indicates all the values are equal to the mean. This was observed for "Baserunning Run Value" early in the year. This prevents us from dividing by 0 in this case.
         return 50;
     }
