@@ -216,7 +216,7 @@ describe('interaction-handlers', () => {
             commandUtil.getStatcastData.and.returnValue({ matchingStatcast: null, matchingMetricYear: null, metricSummaryJSON: null });
             interaction = makeInteraction('Shane Bieber');
             await interactionHandlers.playerSavantHandler(interaction);
-            expect(interaction.editReply).toHaveBeenCalledWith({ content: jasmine.stringContaining('no statcast') });
+            expect(interaction.editReply).toHaveBeenCalledWith({ content: jasmine.stringContaining('could not retrieve') });
             expect(interaction.followUp).not.toHaveBeenCalled();
         });
 
