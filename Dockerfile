@@ -1,6 +1,6 @@
-# Use the official lightweight Node.js 20 image.
+# Use the official lightweight Node.js 24 image.
 # https://hub.docker.com/_/node
-FROM node:20-slim
+FROM node:24-slim
 
 RUN apt-get update && \
     apt-get install -y fontconfig
