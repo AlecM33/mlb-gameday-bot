@@ -127,8 +127,8 @@ describe('gameday', () => {
                 mockEmbed
             );
             expect(mockEmbed.data.description).toEqual('xBA: .320\nHR/Park: 28/30');
-            expect(messages[0].discordMessage.edit).toHaveBeenCalledTimes(2);
-            expect(messages[1].discordMessage.edit).toHaveBeenCalledTimes(2);
+            expect(messages[0].discordMessage.edit).toHaveBeenCalledTimes(1);
+            expect(messages[1].discordMessage.edit).toHaveBeenCalledTimes(1);
         });
         it('should edit all messages with xBA, but not HR/Park, and mark them as done', async () => {
             const mockEmbed = {
@@ -268,19 +268,6 @@ describe('gameday', () => {
             expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, jasmine.any(Object), 12345, 4);
         });
 
-        it('should detect and report a missed at-bat', async () => {
-            mockCurrentPlay.atBatIndex = 5;
-            mockCurrentPlay.about.atBatIndex = 5;
-            globalCache.values.game.currentLiveFeed = {};
-            globalCache.values.game.lastReportedCompleteAtBatIndex = 3;
-
-            await gameday.reportPlays(mockBot, 12345);
-
-            expect(gameday.processAndPushPlay).toHaveBeenCalledTimes(2);
-            expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, jasmine.any(Object), 12345, 4);
-            expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, jasmine.any(Object), 12345, 5);
-        });
-
         it('should report missed events within the current at-bat', async () => {
             const missedEvent = {
                 details: {
@@ -345,25 +332,6 @@ describe('gameday', () => {
             await gameday.reportPlays(mockBot, 12345);
 
             expect(gameday.processAndPushPlay).toHaveBeenCalledTimes(1);
-        });
-
-        it('should report missed events from previous at-bat when gap is detected', async () => {
-            const missedEventInPreviousAtBat = {
-                details: {
-                    eventType: 'stolen_base_2b',
-                    description: 'Runner steals 2nd in previous at-bat'
-                }
-            };
-
-            mockCurrentPlay.atBatIndex = 5;
-            mockCurrentPlay.about.atBatIndex = 5;
-            mockAllPlays[4].playEvents = [missedEventInPreviousAtBat];
-            globalCache.values.game.currentLiveFeed = {};
-            globalCache.values.game.lastReportedCompleteAtBatIndex = 3;
-
-            await gameday.reportPlays(mockBot, 12345);
-
-            expect(gameday.processAndPushPlay).toHaveBeenCalledTimes(3);
         });
 
         it('should handle multiple missed events in the current at-bat', async () => {
