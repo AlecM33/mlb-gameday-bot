@@ -127,8 +127,8 @@ describe('gameday', () => {
                 mockEmbed
             );
             expect(mockEmbed.data.description).toEqual('xBA: .320\nHR/Park: 28/30');
-            expect(messages[0].discordMessage.edit).toHaveBeenCalledTimes(2);
-            expect(messages[1].discordMessage.edit).toHaveBeenCalledTimes(2);
+            expect(messages[0].discordMessage.edit).toHaveBeenCalledTimes(1);
+            expect(messages[1].discordMessage.edit).toHaveBeenCalledTimes(1);
         });
         it('should edit all messages with xBA, but not HR/Park, and mark them as done', async () => {
             const mockEmbed = {

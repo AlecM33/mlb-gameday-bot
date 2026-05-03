@@ -20,7 +20,7 @@ const liveFeed = require('./livefeed');
 const gamedayUtil = require('./gameday-util');
 
 module.exports = {
-    statusPoll, subscribe, processAndPushPlay, pollForSavantData, processMatchingPlay, sendMessage, sendDelayedMessage, constructPlayEmbed, reportPlays, reportAnyMissedEvents
+    statusPoll, subscribe, processAndPushPlay, pollForSavantData, pollForXParksAndEdit, processMatchingPlay, sendMessage, sendDelayedMessage, constructPlayEmbed, reportPlays, reportAnyMissedEvents
 };
 
 async function statusPoll (bot) {
@@ -137,17 +137,6 @@ async function reportPlays (bot, gamePk) {
         const lastAtBat = feed.allPlays()
             .find((play) => play.about.atBatIndex === atBatIndex - 1);
         if (lastAtBat && lastAtBat.about.hasReview) { // a play that's been challenged. We should report updates on it.
-            await module.exports.processAndPushPlay(bot, currentPlayProcessor.process(
-                lastAtBat,
-                feed,
-                globalCache.values.game.homeTeamEmoji,
-                globalCache.values.game.awayTeamEmoji
-            ), gamePk, atBatIndex - 1);
-        /* the below block detects and handles if we missed the result of an at-bat due to the data moving too fast.
-         Sometimes it progresses to the next at bat quite quickly. */
-        } else if (lastAtBat && (atBatIndex - lastReportedCompleteAtBatIndex > 1)) {
-            LOGGER.debug(`Missed at-bat index: ${atBatIndex - 1}`);
-            await module.exports.reportAnyMissedEvents(lastAtBat, bot, gamePk, atBatIndex - 1);
             await module.exports.processAndPushPlay(bot, currentPlayProcessor.process(
                 lastAtBat,
                 feed,
@@ -333,15 +322,22 @@ async function maybePopulateAdvancedStatcastMetrics (play, messages, gamePk, emb
 }
 
 function notifySavantDataUnavailable (messages, embed) {
-    for (let i = 0; i < messages.length; i ++) {
-        embed.data.description = embed.data.description.replaceAll('Pending...', 'Not Available.');
-        if (messages[i].discordMessage && !messages[i].doneEditing) {
-            messages[i].discordMessage.edit({
-                embeds: [embed]
-            }).then((m) => LOGGER.trace('Edited: ' + m.id)).catch((e) => {
-                console.error(e);
-            });
-            messages[i].doneEditing = true;
+    embed.data.description = embed.data.description.replaceAll('Pending...', 'Not Available.');
+    editMessages(messages, embed);
+    for (const message of messages) {
+        message.doneEditing = true;
+    }
+}
+
+function editMessages (messages, embed, logLabel = 'Edited') {
+    for (const message of messages) {
+        if (message.discordMessage && !message.doneEditing) {
+            message.discordMessage.edit({ embeds: [embed] })
+                .then((m) => LOGGER.trace(logLabel + ': ' + m.id))
+                .catch((e) => {
+                    console.error(e);
+                    message.doneEditing = true;
+                });
         }
     }
 }
@@ -389,6 +385,36 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance, embed) 
     await pollingFunction();
 }
 
+/*
+    When XParks data wasn't ready at the time of first edit, poll the endpoint until it becomes available,
+    then edit messages with the park details appended to the existing HR/Park description.
+*/
+async function pollForXParksAndEdit (gamePk, playId, numberOfParks, baseHRParkDescription, messages, embed) {
+    let attempts = 1;
+    let currentInterval = globals.SAVANT_POLLING_INTERVAL;
+    const pollingFunction = async () => {
+        if (attempts >= globals.SAVANT_POLLING_ATTEMPTS) {
+            LOGGER.debug('XParks: max polling attempts reached for: ' + playId);
+            return;
+        }
+        LOGGER.trace('XParks: polling for ' + playId + '...');
+        const xParksText = await gamedayUtil.getXParks(gamePk, playId, numberOfParks);
+        if (xParksText !== null) {
+            // Data is now available (even if xParksText is ''), replace the pending placeholder.
+            const fullDescription = baseHRParkDescription + xParksText;
+            if (!embed.data.description.includes(fullDescription)) {
+                embed.data.description = embed.data.description.replace(baseHRParkDescription + ' (Park details pending...)', fullDescription);
+                editMessages(messages, embed, 'XParks Edited');
+            }
+            return;
+        }
+        attempts++;
+        currentInterval = currentInterval + globals.SAVANT_POLLING_BACKOFF_INCREASE;
+        setTimeout(async () => { await pollingFunction(); }, currentInterval);
+    };
+    await pollingFunction();
+}
+
 /* Takes a "play" from the baseball savant game feed and attempts to update any already-sent Discord messages with the metrics.
     Notably, the list of messages can include messages with a reporting delay that have not yet been sent. We only attempt
     to edit messages that have been sent.
@@ -396,69 +422,63 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance, embed) 
 async function processMatchingPlay (matchingPlay, messages, playId, hitDistance, embed, activeTimers = new Set()) {
     const endTimer = (label) => { if (activeTimers.has(label)) { console.timeEnd(label); activeTimers.delete(label); } };
     const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
-    for (let i = 0; i < messages.length; i ++) {
-        if (matchingPlay.xba) {
-            if (embed.data.description.includes('xBA: Pending...')) {
-                LOGGER.debug('Editing with xba: ' + playId);
-                endTimer('xBA: ' + playId);
-                embed.data.description = embed.data.description.replaceAll('xBA: Pending...', 'xBA: ' + matchingPlay.xba +
-                    (matchingPlay.is_barrel === 1 ? ' \uD83D\uDFE2 (Barreled)' : ''));
-            }
-            if (messages[i].discordMessage && messages[i].discordMessage.embeds[0].data.description.includes('xBA: Pending...')) { // discordMessage will not be defined for a delayed message that has not sent yet.
-                messages[i].discordMessage.edit({
-                    embeds: [embed]
-                }).then((m) => {
-                    LOGGER.trace('xBA Edited: ' + m.id);
-                }).catch((e) => {
-                    console.error(e);
-                    messages[i].doneEditing = true;
-                });
-            }
+    const xParksExpected = hitDistance && hitDistance >= globals.HOME_RUN_BALLPARKS_MIN_DISTANCE;
+
+    if (matchingPlay.xba && embed.data.description.includes('xBA: Pending...')) {
+        LOGGER.debug('Editing with xba: ' + playId);
+        endTimer('xBA: ' + playId);
+        embed.data.description = embed.data.description.replaceAll('xBA: Pending...', 'xBA: ' + matchingPlay.xba +
+            (matchingPlay.is_barrel === 1 ? ' \uD83D\uDFE2 (Barreled)' : ''));
+    }
+
+    if (matchingPlay.batSpeed && embed.data.description.includes('Bat Speed: Pending...')) {
+        LOGGER.debug('Editing with Bat Speed: ' + playId);
+        endTimer('Bat Speed: ' + playId);
+        embed.data.description = embed.data.description.replaceAll('Bat Speed: Pending...', 'Bat Speed: ' + matchingPlay.batSpeed + ' mph' +
+            (matchingPlay.batSpeed >= 75.0 ? ' \u26A1' : ''));
+    }
+
+    let pendingXParksArgs = null;
+    if (xParksExpected && matchingPlay.contextMetrics.homeRunBallparks !== undefined
+        && embed.data.description.includes('HR/Park: Pending...')) {
+        LOGGER.debug('Editing with HR/Park: ' + playId);
+        endTimer('HR/Park: ' + playId);
+        const numberOfParks = matchingPlay.contextMetrics.homeRunBallparks;
+        const baseHRParkDescription = 'HR/Park: ' + numberOfParks + '/30' +
+            (numberOfParks === 30 ? '\u203C\uFE0F' : '');
+        const xParksText = await gamedayUtil.getXParks(feed.gamePk(), playId, numberOfParks);
+        embed.data.description = embed.data.description.replaceAll('HR/Park: Pending...', baseHRParkDescription + (xParksText ?? ' (Park details pending...)'));
+        if (xParksText === null) {
+            LOGGER.debug('XParks data not ready yet for: ' + playId + '. Polling...');
+            pendingXParksArgs = [feed.gamePk(), playId, numberOfParks, baseHRParkDescription];
         }
-        if (matchingPlay.batSpeed) {
-            if (embed.data.description.includes('Bat Speed: Pending...')) {
-                LOGGER.debug('Editing with Bat Speed: ' + playId);
-                endTimer('Bat Speed: ' + playId);
-                embed.data.description = embed.data.description.replaceAll('Bat Speed: Pending...', 'Bat Speed: ' + matchingPlay.batSpeed + ' mph' +
-                    (matchingPlay.batSpeed >= 75.0 ? ' \u26A1' : ''));
-            }
-            if (messages[i].discordMessage && messages[i].discordMessage.embeds[0].data.description.includes('Bat Speed: Pending...')) {
-                messages[i].discordMessage.edit({
-                    embeds: [embed]
-                }).then((m) => {
-                    LOGGER.trace('Bat Speed Edited: ' + m.id);
-                }).catch((e) => {
+    }
+
+    /* We consider the metrics "done" if xBA and Bat Speed are both populated and, if applicable,
+        the HR/Park count has been populated. Details about the specific parks are handled by a different polling loop. */
+    const allMetricsDone = matchingPlay.xba && matchingPlay.batSpeed !== undefined
+        && (!xParksExpected || matchingPlay.contextMetrics?.homeRunBallparks !== undefined);
+
+    for (const message of messages) {
+        if (!message.discordMessage) continue; // delayed message not yet sent
+        const sentDescription = message.discordMessage.embeds[0].data.description;
+        const needsEdit = sentDescription.includes('xBA: Pending...')
+            || sentDescription.includes('Bat Speed: Pending...')
+            || sentDescription.includes('HR/Park: Pending...');
+        if (needsEdit) {
+            message.discordMessage.edit({ embeds: [embed] })
+                .then((m) => LOGGER.trace('Edited: ' + m.id))
+                .catch((e) => {
                     console.error(e);
-                    messages[i].doneEditing = true;
+                    message.doneEditing = true;
                 });
-                if (hitDistance && hitDistance < globals.HOME_RUN_BALLPARKS_MIN_DISTANCE && matchingPlay.xba) {
-                    messages[i].doneEditing = true;
-                }
-            }
         }
-        if (hitDistance && hitDistance >= globals.HOME_RUN_BALLPARKS_MIN_DISTANCE
-            && matchingPlay.contextMetrics.homeRunBallparks !== undefined) {
-            if (embed.data.description.includes('HR/Park: Pending...')) {
-                LOGGER.debug('Editing with HR/Park: ' + playId);
-                endTimer('HR/Park: ' + playId);
-                const homeRunBallParksDescription = 'HR/Park: ' + matchingPlay.contextMetrics.homeRunBallparks + '/30' +
-                    (matchingPlay.contextMetrics.homeRunBallparks === 30 ? '\u203C\uFE0F' : '') +
-                    (await gamedayUtil.getXParks(feed.gamePk(), playId, matchingPlay.contextMetrics.homeRunBallparks));
-                embed.data.description = embed.data.description.replaceAll('HR/Park: Pending...', homeRunBallParksDescription);
-            }
-            if (messages[i].discordMessage && messages[i].discordMessage.embeds[0].data.description.includes('HR/Park: Pending...')) {
-                messages[i].discordMessage.edit({
-                    embeds: [embed]
-                }).then((m) => {
-                    LOGGER.trace('HR/Park Edited: ' + m.id);
-                }).catch((e) => {
-                    console.error(e);
-                    messages[i].doneEditing = true;
-                });
-                if (matchingPlay.xba && matchingPlay.batSpeed !== undefined) {
-                    messages[i].doneEditing = true;
-                }
-            }
+        if (allMetricsDone) {
+            message.doneEditing = true;
         }
+    }
+
+    if (pendingXParksArgs) {
+        await pollForXParksAndEdit(...pendingXParksArgs, messages, embed);
     }
 }

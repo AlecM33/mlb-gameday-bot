@@ -3,6 +3,7 @@ const globalCache = require('./global-cache');
 const globals = require('../config/globals');
 const ColorContrastChecker = require('color-contrast-checker');
 const mlbAPIUtil = require('./MLB-API-util');
+const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_LEVEL.INFO);
 
 module.exports = {
     deriveHalfInning: (halfInningFull) => {
@@ -76,7 +77,7 @@ module.exports = {
 
     getXParks: async (gamePk, playId, numberOfParks) => {
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
-        const isHome = feed.homeTeamId() === process.env.TEAM_ID;
+        const isHome = feed.homeTeamId() === parseInt(process.env.TEAM_ID);
         let reply = '';
         if (numberOfParks === 0 || numberOfParks === 30) {
             return reply;
@@ -84,9 +85,14 @@ module.exports = {
         let xParks;
         try {
             xParks = await mlbAPIUtil.xParks(gamePk, playId);
+            LOGGER.debug(JSON.stringify(xParks, null, 2));
         } catch (e) {
             console.error(e);
             return reply;
+        }
+        // If both arrays are empty, the data is not yet available - signal caller to retry.
+        if ((!xParks.hr || xParks.hr.length === 0) && (!xParks.not || xParks.not.length === 0)) {
+            return null;
         }
         // We only list the parks in extreme cases, e.g. fewer than 4 parks or more than 26.
         if (numberOfParks <= globals.HOME_RUN_PARKS_MIN || numberOfParks >= globals.HOME_RUN_PARKS_MAX) {
