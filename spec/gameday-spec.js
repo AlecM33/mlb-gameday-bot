@@ -268,6 +268,19 @@ describe('gameday', () => {
             expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, jasmine.any(Object), 12345, 4);
         });
 
+        it('should detect and report a missed at-bat', async () => {
+            mockCurrentPlay.atBatIndex = 5;
+            mockCurrentPlay.about.atBatIndex = 5;
+            globalCache.values.game.currentLiveFeed = {};
+            globalCache.values.game.lastReportedCompleteAtBatIndex = 3;
+
+            await gameday.reportPlays(mockBot, 12345);
+
+            expect(gameday.processAndPushPlay).toHaveBeenCalledTimes(2);
+            expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, jasmine.any(Object), 12345, 4);
+            expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, jasmine.any(Object), 12345, 5);
+        });
+
         it('should report missed events within the current at-bat', async () => {
             const missedEvent = {
                 details: {
@@ -291,6 +304,25 @@ describe('gameday', () => {
                 globalCache.values.game.homeTeamEmoji,
                 globalCache.values.game.awayTeamEmoji
             );
+        });
+
+        it('should report missed events from previous at-bat when gap is detected', async () => {
+            const missedEventInPreviousAtBat = {
+                details: {
+                    eventType: 'stolen_base_2b',
+                    description: 'Runner steals 2nd in previous at-bat'
+                }
+            };
+
+            mockCurrentPlay.atBatIndex = 5;
+            mockCurrentPlay.about.atBatIndex = 5;
+            mockAllPlays[4].playEvents = [missedEventInPreviousAtBat];
+            globalCache.values.game.currentLiveFeed = {};
+            globalCache.values.game.lastReportedCompleteAtBatIndex = 3;
+
+            await gameday.reportPlays(mockBot, 12345);
+
+            expect(gameday.processAndPushPlay).toHaveBeenCalledTimes(3);
         });
 
         it('should not report events that are not in the EVENT_WHITELIST', async () => {
