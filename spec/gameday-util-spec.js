@@ -101,7 +101,7 @@ describe('gameday-util', () => {
 
     describe('#getXParks', () => {
         beforeAll(() => {
-            process.env.TEAM_ID = 114;
+            process.env.TEAM_ID = '114';
             globals.HOME_RUN_PARKS_MIN = 2;
             globals.HOME_RUN_PARKS_MAX = 28;
         });
