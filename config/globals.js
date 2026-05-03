@@ -359,6 +359,7 @@ module.exports = {
         IN_PROGRESS: "I",
         WARMUP: "PW"
     },
+    MISSED_AT_BAT_INDICATOR: 2,
     /*
      More general codes that capture all statuses in a particular category.
      See: https://github.com/MajorLeagueBaseball/google-cloud-mlb-hackathon/blob/main/datasets/mlb-statsapi-docs/MLB-StatsAPI%20-%20Lookup%20Values.pdf
