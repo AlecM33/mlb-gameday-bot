@@ -132,7 +132,6 @@ async function reportPlays (bot, gamePk) {
     const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
     const currentPlay = feed.currentPlay();
     const atBatIndex = currentPlay.atBatIndex;
-    const lastReportedCompleteAtBatIndex = globalCache.values.game.lastReportedCompleteAtBatIndex;
     if (atBatIndex > 0) {
         const lastAtBat = feed.allPlays()
             .find((play) => play.about.atBatIndex === atBatIndex - 1);
@@ -408,7 +407,7 @@ async function pollForXParksAndEdit (gamePk, playId, numberOfParks, baseHRParkDe
             }
             return;
         }
-        attempts++;
+        attempts ++;
         currentInterval = currentInterval + globals.SAVANT_POLLING_BACKOFF_INCREASE;
         setTimeout(async () => { await pollingFunction(); }, currentInterval);
     };
