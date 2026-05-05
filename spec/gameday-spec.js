@@ -58,12 +58,13 @@ describe('gameday', () => {
                 resolve => resolve(mockResponses.savantGameFeed)
             ));
             const messages = [{ doneEditing: false }, { doneEditing: false }];
+            const embed = { data: { description: 'xBA: Pending...' } };
             spyOn(gameday, 'processMatchingPlay').and.callFake((
-                matchingPlay, msgs
+                matchingPlay, msgs, playId, hitDistance, emb
             ) => {
-                msgs.forEach(m => m.doneEditing = true);
+                emb.data.description = 'xBA: .450';
             });
-            gameday.savantQueue.set('abc', { gamePk: 1, messages, hitDistance: 350, embed: null, activeTimers: new Set(), attempts: 0 });
+            gameday.savantQueue.set('abc', { gamePk: 1, messages, hitDistance: 350, embed, activeTimers: new Set(), attempts: 0 });
             jasmine.clock().install();
             await gameday.runSavantPollingLoop();
             expect(mlbAPIUtil.savantGameFeed).toHaveBeenCalledTimes(1);
@@ -78,7 +79,8 @@ describe('gameday', () => {
             ));
             spyOn(gameday, 'processMatchingPlay').and.stub();
             const messages = [{ doneEditing: false }];
-            gameday.savantQueue.set('xyz', { gamePk: 1, messages, hitDistance: 350, embed: null, activeTimers: new Set(), attempts: 0 });
+            const embed = { data: { description: 'xBA: Pending...' } };
+            gameday.savantQueue.set('xyz', { gamePk: 1, messages, hitDistance: 350, embed, activeTimers: new Set(), attempts: 0 });
             jasmine.clock().install();
             await gameday.runSavantPollingLoop();
             jasmine.clock().tick(globals.SAVANT_POLLING_INTERVAL);
