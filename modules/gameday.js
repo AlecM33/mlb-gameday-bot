@@ -19,8 +19,25 @@ const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_
 const liveFeed = require('./livefeed');
 const gamedayUtil = require('./gameday-util');
 
+// Shared queue for savant polling: playId -> { gamePk, messages, hitDistance, embed, activeTimers, attempts }
+const savantQueue = new Map();
+let savantLoopRunning = false;
+
 module.exports = {
-    statusPoll, subscribe, processAndPushPlay, pollForSavantData, pollForXParksAndEdit, processMatchingPlay, sendMessage, sendDelayedMessage, constructPlayEmbed, reportPlays, reportAnyMissedEvents
+    statusPoll,
+    subscribe,
+    processAndPushPlay,
+    pollForSavantData,
+    runSavantPollingLoop,
+    pollForXParksAndEdit,
+    processMatchingPlay,
+    sendMessage,
+    sendDelayedMessage,
+    constructPlayEmbed,
+    reportPlays,
+    reportAnyMissedEvents,
+    savantQueue,
+    get savantLoopRunning () { return savantLoopRunning; }
 };
 
 async function statusPoll (bot) {
@@ -263,7 +280,7 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle =
 
 function constructPlayEmbed (play, feed, includeTitle, homeTeamColor, awayTeamColor, homeTeamEmoji, awayTeamEmoji) {
     const embed = new EmbedBuilder()
-        .setDescription(play.reply + (play.isOut && play.outs === 3 && !gamedayUtil.didGameEnd(play.homeScore, play.awayScore)
+        .setDescription(play.reply + (play.isOut && play.outs === 3 && !(play.hasReview && play.reviewInProgress) && !gamedayUtil.didGameEnd(play.homeScore, play.awayScore)
             ? `${gamedayUtil.getPitchesStrikesForPitchersInHalfInning(play)}${gamedayUtil.getDueUp()}`
             : ''))
         .setColor((feed.halfInning() === 'top'
@@ -353,16 +370,19 @@ function editMessages (messages, embed, logLabel = 'Edited') {
     }
 }
 
-/* We will continue polling for a given play until either:
-    a) all sent messages have been edited with all our selected, applicable metrics. At that point, we may still have
-       delayed messages that have not been sent yet. That is fine - when they are sent, they will just post the current
-       state of the embed, which will include all the metrics we edited already-sent messages with.
-    b) the polling limit is reached, at which point any missing data will be marked as unavailable. Bat speed in particular
-       can take a long time to be populated, and in some cases seems to never populate.
-*/
+function editMessagesWithXParks (messages, embed, logLabel) {
+    for (const message of messages) {
+        if (message.discordMessage) {
+            message.discordMessage.edit({ embeds: [embed] })
+                .then((m) => LOGGER.trace(logLabel + ': ' + m.id))
+                .catch((e) => console.error(e));
+        }
+    }
+}
+
+/* Enqueues a play for savant data polling. A single shared polling loop handles all queued plays. If the loop is already
+    running, the play is simply added to the queue. If not, the loop is started first. */
 async function pollForSavantData (gamePk, playId, messages, hitDistance, embed) {
-    let attempts = 1;
-    let currentInterval = globals.SAVANT_POLLING_INTERVAL;
     const activeTimers = new Set();
     const startTimer = (label) => { console.time(label); activeTimers.add(label); };
     startTimer('xBA: ' + playId);
@@ -370,27 +390,60 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance, embed) 
     if (hitDistance >= globals.HOME_RUN_BALLPARKS_MIN_DISTANCE) {
         startTimer('HR/Park: ' + playId);
     }
+    const entry = { gamePk, messages, hitDistance, embed, activeTimers, attempts: 0 };
+    if (savantLoopRunning) {
+        LOGGER.debug('Savant: loop already running, enqueueing play: ' + playId);
+        savantQueue.set(playId, entry);
+    } else {
+        savantLoopRunning = true;
+        savantQueue.set(playId, entry);
+        await runSavantPollingLoop();
+    }
+}
+
+/* Single shared polling loop for all queued savant plays. Fetches the savant game feed once per iteration
+   and processes all queued plays against it. Stops when the queue is empty. */
+async function runSavantPollingLoop () {
     const pollingFunction = async () => {
-        if (messages.every(m => m.doneEditing)) {
-            LOGGER.debug(`Savant: all sent messages done for: ${playId}.`);
+        if (savantQueue.size === 0) {
+            LOGGER.debug('Savant: queue empty, stopping loop.');
+            savantLoopRunning = false;
             return;
         }
-        if (attempts < globals.SAVANT_POLLING_ATTEMPTS) {
-            LOGGER.trace('Savant: polling for ' + playId + '...');
+        const gamePk = savantQueue.values().next().value.gamePk;
+        LOGGER.trace('Savant: polling game feed for gamePk ' + gamePk + ' (' + savantQueue.size + ' play(s) queued)...');
+        try {
             const gameFeed = await mlbAPIUtil.savantGameFeed(gamePk);
-            const matchingPlay = gameFeed?.team_away?.find(play => play?.play_id === playId)
-                || gameFeed?.team_home?.find(play => play?.play_id === playId);
-            if (matchingPlay && (matchingPlay.xba
-                || matchingPlay.contextMetrics?.homeRunBallparks !== undefined
-                || matchingPlay.batSpeed !== undefined)) {
-                await module.exports.processMatchingPlay(matchingPlay, messages, playId, hitDistance, embed, activeTimers);
+            for (const [playId, entry] of savantQueue) {
+                const { messages, hitDistance, embed, activeTimers } = entry;
+                if (!entry.embed.data.description.includes('Pending...')) {
+                    LOGGER.debug('Savant: embed has no pending metrics for: ' + playId + '. Removing from queue.');
+                    savantQueue.delete(playId);
+                    continue;
+                }
+                entry.attempts ++;
+                if (entry.attempts >= globals.SAVANT_POLLING_ATTEMPTS) {
+                    LOGGER.debug('Savant: max attempts reached for: ' + playId + '. Removing from queue.');
+                    notifySavantDataUnavailable(messages, embed);
+                    savantQueue.delete(playId);
+                    continue;
+                }
+                const matchingPlay = gameFeed?.team_away?.find(play => play?.play_id === playId)
+                    || gameFeed?.team_home?.find(play => play?.play_id === playId);
+                if (matchingPlay && (matchingPlay.xba
+                    || matchingPlay.contextMetrics?.homeRunBallparks !== undefined
+                    || matchingPlay.batSpeed !== undefined)) {
+                    await module.exports.processMatchingPlay(matchingPlay, messages, playId, hitDistance, embed, activeTimers);
+                }
             }
-            attempts ++;
-            currentInterval = currentInterval + globals.SAVANT_POLLING_BACKOFF_INCREASE;
-            setTimeout(async () => { await pollingFunction(); }, currentInterval);
+        } catch (e) {
+            LOGGER.error('Savant polling loop error: ' + e);
+        }
+        if (savantQueue.size === 0) {
+            LOGGER.debug('Savant: queue empty after processing, stopping loop.');
+            savantLoopRunning = false;
         } else {
-            LOGGER.debug('max savant polling attempts reached for: ' + playId);
-            notifySavantDataUnavailable(messages, embed);
+            setTimeout(async () => { await pollingFunction(); }, globals.SAVANT_POLLING_INTERVAL);
         }
     };
     await pollingFunction();
@@ -402,25 +455,30 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance, embed) 
 */
 async function pollForXParksAndEdit (gamePk, playId, numberOfParks, baseHRParkDescription, messages, embed) {
     let attempts = 1;
-    let currentInterval = globals.SAVANT_POLLING_INTERVAL;
+    let currentInterval = globals.SAVANT_XPARKS_POLLING_INTERVAL;
     const pollingFunction = async () => {
-        if (attempts >= globals.SAVANT_POLLING_ATTEMPTS) {
+        if (attempts >= globals.SAVANT_XPARKS_POLLING_ATTEMPTS) {
             LOGGER.debug('XParks: max polling attempts reached for: ' + playId);
+            const pendingPlaceholder = baseHRParkDescription + globals.XPARKS_PENDING_PLACEHOLDER_SUFFIX;
+            if (embed.data.description.includes(pendingPlaceholder)) {
+                embed.data.description = embed.data.description.replace(pendingPlaceholder, baseHRParkDescription);
+                editMessagesWithXParks(messages, embed, 'XParks Timeout Edit');
+            }
             return;
         }
         LOGGER.trace('XParks: polling for ' + playId + '...');
         const xParksText = await gamedayUtil.getXParks(gamePk, playId, numberOfParks);
         if (xParksText !== null) {
             // Data is now available (even if xParksText is ''), replace the pending placeholder.
-            const fullDescription = baseHRParkDescription + xParksText;
-            if (!embed.data.description.includes(fullDescription)) {
-                embed.data.description = embed.data.description.replace(baseHRParkDescription + ' (Park details pending...)', fullDescription);
-                editMessages(messages, embed, 'XParks Edited');
+            const pendingPlaceholder = baseHRParkDescription + globals.XPARKS_PENDING_PLACEHOLDER_SUFFIX;
+            if (embed.data.description.includes(pendingPlaceholder)) {
+                embed.data.description = embed.data.description.replace(pendingPlaceholder, baseHRParkDescription + xParksText);
+                editMessagesWithXParks(messages, embed, 'XParks Edited');
             }
             return;
         }
         attempts ++;
-        currentInterval = currentInterval + globals.SAVANT_POLLING_BACKOFF_INCREASE;
+        currentInterval = currentInterval + globals.SAVANT_XPARKS_POLLING_BACKOFF_INCREASE;
         setTimeout(async () => { await pollingFunction(); }, currentInterval);
     };
     await pollingFunction();
@@ -458,7 +516,7 @@ async function processMatchingPlay (matchingPlay, messages, playId, hitDistance,
         const baseHRParkDescription = 'HR/Park: ' + numberOfParks + '/30' +
             (numberOfParks === 30 ? '\u203C\uFE0F' : '');
         const xParksText = await gamedayUtil.getXParks(feed.gamePk(), playId, numberOfParks);
-        embed.data.description = embed.data.description.replaceAll('HR/Park: Pending...', baseHRParkDescription + (xParksText ?? ' (Park details pending...)'));
+        embed.data.description = embed.data.description.replaceAll('HR/Park: Pending...', baseHRParkDescription + (xParksText ?? globals.XPARKS_PENDING_PLACEHOLDER_SUFFIX));
         if (xParksText === null) {
             LOGGER.debug('XParks data not ready yet for: ' + playId + '. Polling...');
             pendingXParksArgs = [feed.gamePk(), playId, numberOfParks, baseHRParkDescription];
@@ -476,7 +534,8 @@ async function processMatchingPlay (matchingPlay, messages, playId, hitDistance,
         const needsEdit = sentDescription.includes('xBA: Pending...')
             || sentDescription.includes('Bat Speed: Pending...')
             || sentDescription.includes('HR/Park: Pending...');
-        if (needsEdit) {
+        const descriptionChanged = message.discordMessage.embeds[0].data.description !== embed.data.description;
+        if (needsEdit && descriptionChanged) {
             message.discordMessage.edit({ embeds: [embed] })
                 .then((m) => LOGGER.trace('Edited: ' + m.id))
                 .catch((e) => {
