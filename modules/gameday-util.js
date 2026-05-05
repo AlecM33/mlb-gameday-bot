@@ -85,7 +85,7 @@ module.exports = {
         let xParks;
         try {
             xParks = await mlbAPIUtil.xParks(gamePk, playId);
-            LOGGER.debug(JSON.stringify(xParks, null, 2));
+            LOGGER.trace(JSON.stringify(xParks, null, 2));
         } catch (e) {
             console.error(e);
             return reply;
@@ -108,10 +108,13 @@ module.exports = {
             }
             return reply;
         } else if (!isHome) {
-            if (xParks.hr.find(park => park.id === feed.awayTeamVenue().id)) {
-                reply += ', including ' + feed.awayTeamVenue().name;
-            } else if (xParks.not.find(park => park.id === feed.awayTeamVenue().id)) {
-                reply += ', but not ' + feed.awayTeamVenue().name;
+            const awayVenueId = feed.awayTeamVenue().id;
+            const hrPark = xParks.hr.find(park => park.id === awayVenueId);
+            const notPark = xParks.not.find(park => park.id === awayVenueId);
+            if (hrPark) {
+                reply += ', including ' + hrPark.name;
+            } else if (notPark) {
+                reply += ', but not ' + notPark.name;
             }
             return reply;
         }
