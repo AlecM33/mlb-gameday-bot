@@ -24,8 +24,20 @@ const savantQueue = new Map();
 let savantLoopRunning = false;
 
 module.exports = {
-    statusPoll, subscribe, processAndPushPlay, pollForSavantData, runSavantPollingLoop, pollForXParksAndEdit, processMatchingPlay, sendMessage, sendDelayedMessage, constructPlayEmbed, reportPlays, reportAnyMissedEvents,
-    savantQueue, get savantLoopRunning () { return savantLoopRunning; }
+    statusPoll,
+    subscribe,
+    processAndPushPlay,
+    pollForSavantData,
+    runSavantPollingLoop,
+    pollForXParksAndEdit,
+    processMatchingPlay,
+    sendMessage,
+    sendDelayedMessage,
+    constructPlayEmbed,
+    reportPlays,
+    reportAnyMissedEvents,
+    savantQueue,
+    get savantLoopRunning () { return savantLoopRunning; }
 };
 
 async function statusPoll (bot) {
@@ -399,7 +411,7 @@ async function runSavantPollingLoop () {
                     savantQueue.delete(playId);
                     continue;
                 }
-                entry.attempts++;
+                entry.attempts ++;
                 if (entry.attempts >= globals.SAVANT_POLLING_ATTEMPTS) {
                     LOGGER.debug('Savant: max attempts reached for: ' + playId + '. Removing from queue.');
                     notifySavantDataUnavailable(messages, embed);
