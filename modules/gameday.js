@@ -280,7 +280,7 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle =
 
 function constructPlayEmbed (play, feed, includeTitle, homeTeamColor, awayTeamColor, homeTeamEmoji, awayTeamEmoji) {
     const embed = new EmbedBuilder()
-        .setDescription(play.reply + (play.isOut && play.outs === 3 && !gamedayUtil.didGameEnd(play.homeScore, play.awayScore)
+        .setDescription(play.reply + (play.isOut && play.outs === 3 && !(play.hasReview && play.reviewInProgress) && !gamedayUtil.didGameEnd(play.homeScore, play.awayScore)
             ? `${gamedayUtil.getPitchesStrikesForPitchersInHalfInning(play)}${gamedayUtil.getDueUp()}`
             : ''))
         .setColor((feed.halfInning() === 'top'
@@ -370,6 +370,16 @@ function editMessages (messages, embed, logLabel = 'Edited') {
     }
 }
 
+function editMessagesWithXParks (messages, embed, logLabel) {
+    for (const message of messages) {
+        if (message.discordMessage) {
+            message.discordMessage.edit({ embeds: [embed] })
+                .then((m) => LOGGER.trace(logLabel + ': ' + m.id))
+                .catch((e) => console.error(e));
+        }
+    }
+}
+
 /* Enqueues a play for savant data polling. A single shared polling loop handles all queued plays. If the loop is already
     running, the play is simply added to the queue. If not, the loop is started first. */
 async function pollForSavantData (gamePk, playId, messages, hitDistance, embed) {
@@ -452,7 +462,7 @@ async function pollForXParksAndEdit (gamePk, playId, numberOfParks, baseHRParkDe
             const pendingPlaceholder = baseHRParkDescription + globals.XPARKS_PENDING_PLACEHOLDER_SUFFIX;
             if (embed.data.description.includes(pendingPlaceholder)) {
                 embed.data.description = embed.data.description.replace(pendingPlaceholder, baseHRParkDescription);
-                editMessages(messages, embed, 'XParks Timeout Edit');
+                editMessagesWithXParks(messages, embed, 'XParks Timeout Edit');
             }
             return;
         }
@@ -463,7 +473,7 @@ async function pollForXParksAndEdit (gamePk, playId, numberOfParks, baseHRParkDe
             const pendingPlaceholder = baseHRParkDescription + globals.XPARKS_PENDING_PLACEHOLDER_SUFFIX;
             if (embed.data.description.includes(pendingPlaceholder)) {
                 embed.data.description = embed.data.description.replace(pendingPlaceholder, baseHRParkDescription + xParksText);
-                editMessages(messages, embed, 'XParks Edited');
+                editMessagesWithXParks(messages, embed, 'XParks Edited');
             }
             return;
         }
