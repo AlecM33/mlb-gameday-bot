@@ -89,9 +89,13 @@ module.exports = {
         'walk',
         'hit_by_pitch'
     ],
-    SAVANT_POLLING_INTERVAL: 15000,
-    SAVANT_POLLING_ATTEMPTS: 10,
-    SAVANT_POLLING_BACKOFF_INCREASE: 10000,
+    SAC_BUNT_EVENT_TYPES: ['sac_bunt', 'sac_bunt_double_play'],
+    SAVANT_POLLING_INTERVAL: 20000,
+    SAVANT_POLLING_ATTEMPTS: 20,
+    SAVANT_XPARKS_POLLING_ATTEMPTS: 10,
+    SAVANT_XPARKS_POLLING_INTERVAL: 15000,
+    SAVANT_XPARKS_POLLING_BACKOFF_INCREASE: 10000,
+    XPARKS_PENDING_PLACEHOLDER_SUFFIX: ' [Park details pending...]',
     SAVANT_PAGE_ENDPOINT: (personId, type) => {
         return `https://baseballsavant.mlb.com/savant-player/${personId}?stats=statcast-r-${type}-mlb`;
     },

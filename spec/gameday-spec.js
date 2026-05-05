@@ -48,39 +48,50 @@ describe('gameday', () => {
         });
     });
 
-    describe('#pollForSavantData', () => {
-        it('should stop processing if a matching play is found and every message has been edited', async () => {
+    describe('#runSavantPollingLoop', () => {
+        beforeEach(() => {
+            gameday.savantQueue.clear();
+        });
+
+        it('should call processMatchingPlay and stop the loop when a matching play is found and all messages are done', async () => {
             spyOn(mlbAPIUtil, 'savantGameFeed').and.returnValue(new Promise(
                 resolve => resolve(mockResponses.savantGameFeed)
             ));
+            const messages = [{ doneEditing: false }, { doneEditing: false }];
             spyOn(gameday, 'processMatchingPlay').and.callFake((
-                matchingPlay, messages, playId, hitDistance, embed
+                matchingPlay, msgs
             ) => {
-                messages.forEach(m => m.doneEditing = true);
+                msgs.forEach(m => m.doneEditing = true);
             });
+            gameday.savantQueue.set('abc', { gamePk: 1, messages, hitDistance: 350, embed: null, activeTimers: new Set(), attempts: 0 });
             jasmine.clock().install();
-            await gameday.pollForSavantData(1, 'abc', [{}, {}], 350, null);
-            jasmine.clock().tick(globals.SAVANT_POLLING_INTERVAL);
+            await gameday.runSavantPollingLoop();
             expect(mlbAPIUtil.savantGameFeed).toHaveBeenCalledTimes(1);
             expect(gameday.processMatchingPlay).toHaveBeenCalled();
+            expect(gameday.savantLoopRunning).toBe(false);
             jasmine.clock().uninstall();
         });
 
-        it('should poll again if a matching play is not found', async () => {
+        it('should poll again if a matching play is not yet in the feed', async () => {
             spyOn(mlbAPIUtil, 'savantGameFeed').and.returnValue(new Promise(
                 resolve => resolve(mockResponses.savantGameFeed)
             ));
-            spyOn(gameday, 'processMatchingPlay').and.callFake((
-                matchingPlay, messages, playId, hitDistance, embed
-            ) => {
-                messages.forEach(m => m.doneEditing = true);
-            });
+            spyOn(gameday, 'processMatchingPlay').and.stub();
+            const messages = [{ doneEditing: false }];
+            gameday.savantQueue.set('xyz', { gamePk: 1, messages, hitDistance: 350, embed: null, activeTimers: new Set(), attempts: 0 });
             jasmine.clock().install();
-            await gameday.pollForSavantData(1, 'xyz', [{}, {}], 350);
-            jasmine.clock().tick(globals.SAVANT_POLLING_INTERVAL + globals.SAVANT_POLLING_BACKOFF_INCREASE);
+            await gameday.runSavantPollingLoop();
+            jasmine.clock().tick(globals.SAVANT_POLLING_INTERVAL);
             expect(mlbAPIUtil.savantGameFeed).toHaveBeenCalledTimes(2);
             expect(gameday.processMatchingPlay).not.toHaveBeenCalled();
             jasmine.clock().uninstall();
+        });
+
+        it('should stop immediately if the queue is empty', async () => {
+            spyOn(mlbAPIUtil, 'savantGameFeed').and.stub();
+            await gameday.runSavantPollingLoop();
+            expect(mlbAPIUtil.savantGameFeed).not.toHaveBeenCalled();
+            expect(gameday.savantLoopRunning).toBe(false);
         });
     });
 

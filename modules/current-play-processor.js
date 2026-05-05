@@ -36,10 +36,10 @@ module.exports = {
                 if (currentPlayJSON.playEvents) {
                     lastEvent = currentPlayJSON.playEvents[currentPlayJSON.playEvents.length - 1];
                     if (lastEvent?.details?.isInPlay) {
-                        reply = addMetrics(lastEvent, reply);
+                        reply = addMetrics(lastEvent, reply, currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType);
                     }
                 } else if (currentPlayJSON.details?.isInPlay) {
-                    reply = addMetrics(currentPlayJSON, reply);
+                    reply = addMetrics(currentPlayJSON, reply, currentPlayJSON.details?.eventType);
                 }
             }
         }
@@ -86,7 +86,8 @@ function addScore (reply, currentPlayJSON, feed, homeTeamEmoji, awayTeamEmoji) {
     return reply;
 }
 
-function addMetrics (lastEvent, reply) {
+function addMetrics (lastEvent, reply, eventType) {
+    const isSacBunt = globals.SAC_BUNT_EVENT_TYPES.includes(eventType);
     if (lastEvent.hitData.launchSpeed) { // this data can be randomly unavailable
         reply += '\n\n';
         reply += 'Exit Velo: ' + lastEvent.hitData.launchSpeed + ' mph' +
@@ -94,7 +95,9 @@ function addMetrics (lastEvent, reply) {
         reply += 'Launch Angle: ' + lastEvent.hitData.launchAngle + '° \n';
         reply += 'Distance: ' + lastEvent.hitData.totalDistance + ' ft.\n';
         reply += 'xBA: Pending...\n';
-        reply += 'Bat Speed: Pending...';
+        if (!isSacBunt) { // Obviously, sacrifice bunts aren't really a swing. No sense in trying to get the bat speed.
+            reply += 'Bat Speed: Pending...';
+        }
         reply += lastEvent.hitData.totalDistance && lastEvent.hitData.totalDistance >= globals.HOME_RUN_BALLPARKS_MIN_DISTANCE ? '\nHR/Park: Pending...' : '';
     } else {
         reply += '\n\n**Statcast Metrics:**\n';
