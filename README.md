@@ -13,6 +13,19 @@ When running, the bot periodically polls for games in a 48-hour window centered 
 the "current" game, and will be the game for which a lot of the commands returns data. If there's a doubleheader, the bot may ask you to specify which game. If a game is live, the bot subscribes to its MLB.com Gameday live feed,
 and in turn reports events to any number of subscribed Discord channels.
 
+# Table of Contents
+
+- [Tech Stack](#tech-stack)
+- [Using my copy of the bot in your servers](#using-my-copy-of-the-bot-in-your-servers)
+- [Running your own copy of the bot](#running-your-own-copy-of-the-bot)
+  - [Using Docker (Simplest)](#using-docker-simplest)
+  - [Without Docker (More involved)](#without-docker-more-involved)
+  - [Optional - add emojis!](#optional---add-emojis)
+- [File Structure](#file-structure)
+- [Contributing](#contributing)
+
+---
+
 # Tech Stack
 
 Written in JavaScript using [Discord.js](https://discord.js.org/).
@@ -36,30 +49,45 @@ This will assume you are somewhat familiar with Node.js and developing Discord b
 Requires a machine with the [Docker](https://docs.docker.com/) Engine running.
 
 1. Create a file called `.env` in the root directory, and populate it with the appropriate values. The `.env.example` file contains all the required variables with placeholder values. Each one is explained below. If you're not that familiar with Docker, a note: the PostgreSQL database will be created the first time the database container is run. With all the database variables like `DB_USER` and `DB_PASSWORD`, you are defining what will be created. So, in short, you can supply whatever (obviously a secure password is recommended). This is in contrast to, say, `DISCORD_TOKEN`, which Discord has created and supplied to you.
-    - DB_USER: the user for the postgres database
-    - DB_PASSWORD: the password for the postgres database user **(sensitive)**
-    - NODE_ENV: the node.js environment (production or development) in which to run the bot.
-    - DB_NAME: the name for the postgres database
-    - DB_PORT: the port for the postgres database
-    - DISCORD_TOKEN: your discord bot's auth token **(sensitive)**
-    - TEAM_ID: the id of the team you want the bot to follow. These match those of the "teams" resource in the MLB stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1 . They are also stored statically in `config/globals.js`. Applicable commands will be configured for that team.
-    - LOG_LEVEL: your chosen log level (info, error, warn, debug, or trace)
-    - DISCORD_CLIENT_ID: the client ID of your Discord application
-    - REQUIRE_SSL: whether the postgres database connection should require SSL.
-    - TIME_ZONE: Your chosen time zone. Defaults to EST. Time zone names correspond to the Zone and Link names of the [IANA Time Zone Database](https://www.iana.org/time-zones), such as "UTC", "Asia/Shanghai", "Asia/Kolkata", and "America/New_York". Additionally, time zones can be given as UTC offsets in the format "±hh:mm", "±hhmm", or "±hh", for example as "+01:00", "-2359", or "+23".
+    - `DB_USER` - the user for the postgres database
+    - `DB_PASSWORD` - the password for the postgres database user **(sensitive)**
+    - `NODE_ENV` - the node.js environment (`production` or `development`) in which to run the bot
+    - `DB_NAME` - the name for the postgres database
+    - `DB_PORT` - the port for the postgres database
+    - `DISCORD_TOKEN` - your discord bot's auth token **(sensitive)**
+    - `TEAM_ID` - the id of the team you want the bot to follow. These match those of the "teams" resource in the MLB stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1 . They are also stored statically in `config/globals.js`. Applicable commands will be configured for that team.
+    - `LOG_LEVEL` - your chosen log level (`info`, `error`, `warn`, `debug`, or `trace`)
+    - `DISCORD_CLIENT_ID` - the client ID of your Discord application
+    - `REQUIRE_SSL` - whether the postgres database connection should require SSL
+    - `TIME_ZONE` - your chosen time zone. Defaults to EST. Time zone names correspond to the Zone and Link names of the [IANA Time Zone Database](https://www.iana.org/time-zones), such as `"UTC"`, `"Asia/Shanghai"`, `"Asia/Kolkata"`, and `"America/New_York"`. Additionally, time zones can be given as UTC offsets in the format `"±hh:mm"`, `"±hhmm"`, or `"±hh"`, for example `"+01:00"`, `"-2359"`, or `"+23"`.
+
+
 2. Run `docker-compose up`
 
 ### Without Docker (More involved)
 
-1. Populate the following environment variables:
-   - CLIENT_ID - your bot's client ID, AKA application ID.
-   - DATABASE_STRING - a connection string for a PostgreSQL database instance. **(sensitive)**. That database should have the schema contained here in the file `database/schema.sql`. If requiring SSL, you'll need to place your cert in database/certs.
-   - LOG_LEVEL - your chosen log level. 
-   - TEAM_ID - the team you want to follow. These match those of the "teams" resource in the MLB stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1 . They are also stored statically in `config/globals.js`. Every command will be configured for that team.
-   - TOKEN - your bot's authentication token. **(sensitive)**
-   - TIME_ZONE - Your chosen time zone. Defaults to EST. Time zone names correspond to the Zone and Link names of the [IANA Time Zone Database](https://www.iana.org/time-zones), such as "UTC", "Asia/Shanghai", "Asia/Kolkata", and "America/New_York". Additionally, time zones can be given as UTC offsets in the format "±hh:mm", "±hhmm", or "±hh", for example as "+01:00", "-2359", or "+23".
+Requires [Node.js](https://nodejs.org/) and a running [PostgreSQL](https://www.postgresql.org/) instance.
 
-2. run `npm start`
+1. Run `npm install` to install dependencies.
+
+2. Apply the database schema to your PostgreSQL instance:
+   ```
+   psql -U <your_user> -d <your_db> -f database/schema.sql
+   ```
+   If SSL is required, place your certificate in `database/certs/`.
+
+3. Populate the following environment variables:
+   - `CLIENT_ID` - your bot's client ID, AKA application ID
+   - `TOKEN` - your bot's authentication token **(sensitive)**
+   - `DATABASE_STRING` - a PostgreSQL connection string **(sensitive)**, e.g. `postgresql://user:password@host:5432/dbname`
+   - `TEAM_ID` - the team you want to follow. These match those of the "teams" resource in the MLB stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1 . They are also stored statically in `config/globals.js`.
+   - `LOG_LEVEL` - your chosen log level (`info`, `error`, `warn`, `debug`, or `trace`)
+   - `TIME_ZONE` - your chosen time zone. Defaults to EST. Follows the same format as the Docker section above.
+
+4. Register slash commands with Discord, then start the bot:
+   ```
+   node deploy-commands.js && node main.js
+   ```
 
 ### Optional - add emojis!
 
@@ -99,6 +127,42 @@ TRACE  Mon, 17 Mar 2025 21:13:15 GMT :  Current game PKs: [
     "status": "S"
   }
 ]
+```
+### File Structure
+
+```
+mlb-gameday-bot/
+├── main.js                    # Entry point - logs in the bot, loads commands, registers interaction handlers
+├── deploy-commands.js         # Script to register the current state of the slash commands with Discord
+├── config/
+│   └── globals.js             # Shared constants
+├── commands/                  # One file per slash command
+│   ├── attendance.js
+│   ├── box_score.js
+│   ├── highlights.js
+│   ├── schedule.js
+│   ├── standings.js
+│   ├── subscribe_gameday.js   # Adds a channel to the gameday reporting subscription list
+│   ├── unsubscribe_gameday.js
+│   └── ...
+├── modules/
+│   ├── gameday.js             # The heart of live game reporting, listening for and broadcasting updates.
+│   ├── gameday-util.js        # Helper functions used by gameday.js
+│   ├── current-play-processor.js  # Translates MLB API play data into content for Discord messages
+│   ├── livefeed.js            # Thin wrapper / accessor over the MLB live feed JSON structure
+│   ├── diff-patch.js          # Applies JSON Patch updates to the cached live feed based on events received from the websocket
+│   ├── MLB-API-util.js        # Functions for all calls to the MLB Stats API and Baseball Savant
+│   ├── global-cache.js        # In-memory cache for live feed data, among other things
+│   ├── canvas-util.js         # Helper functions for generating images attached to certain commands
+│   ├── command-util.js        # General helpers used across commands
+│   ├── interaction-handlers.js # contains a handler function for each command
+│   ├── levenshtein.js         # Fuzzy player name matching
+│   └── logger.js
+├── database/
+│   ├── db.js                  # PostgreSQL connection pool
+│   ├── queries.js             # All database queries
+│   └── schema.sql
+└── spec/                      # Jasmine unit tests
 ```
 
 # Contributing
