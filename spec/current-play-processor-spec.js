@@ -16,8 +16,7 @@ describe('current-play-processor', () => {
                 { name: 'brewers_158', id: '1339072560049950760' }
             );
             expect(result.reply).toMatch(/Brice Turang homers \(4\) on a fly ball to right center field\./);
-            expect(result.reply).toMatch(/# <:brewers_158:1339072560049950760> _MIL 3_/);
-            expect(result.reply).toMatch(/LAA 5 <:angels_108:1339072522619977770>/);
+            expect(result.reply).toMatch(/# <:brewers_158:1339072560049950760> MIL 3, _LAA 5_ <:angels_108:1339072522619977770>/);
             expect(result.reply).toMatch(/Exit Velo: 105\.5 mph \uD83D\uDD25\uD83D\uDD25/);
             expect(result.reply).toMatch(/Launch Angle: 24°/);
             expect(result.reply).toMatch(/Distance: 419 ft./);
@@ -26,6 +25,8 @@ describe('current-play-processor', () => {
             expect(result.description).toEqual('Brice Turang homers (4) on a fly ball to right center field.');
             expect(result.event).toEqual('Home Run');
             expect(result.eventType).toEqual('home_run');
+            expect(result.inning).toEqual(5);
+            expect(result.halfInning).toEqual('bottom');
             expect(result.isScoringPlay).toBeTrue();
             expect(result.isInPlay).toBeTrue();
             expect(result.playId).toEqual('a1b1e111-475f-4175-a425-9869084e25bf');
@@ -49,6 +50,8 @@ describe('current-play-processor', () => {
             expect(result.description).toEqual('Sal Frelick steals (9) 2nd base.');
             expect(result.event).toEqual('Stolen Base 2B');
             expect(result.eventType).toEqual('stolen_base_2b');
+            expect(result.inning).toEqual(9);
+            expect(result.halfInning).toEqual('top');
             expect(result.isScoringPlay).toBeFalse();
             expect(result.isInPlay).not.toBeDefined();
             expect(result.playId).not.toBeDefined();
