@@ -6,6 +6,8 @@ const { CHALLENGE_TYPES } = require('../config/globals');
 module.exports = {
     process: (currentPlayJSON, feed, homeTeamEmoji, awayTeamEmoji) => {
         let reply = '';
+        const halfInning = currentPlayJSON.about?.halfInning || feed.halfInning();
+        const inning = currentPlayJSON.about?.inning || feed.inning();
         if (!globalCache.values.game.startReported
             && currentPlayJSON.playEvents?.find(event => event?.details?.description === 'Status Change - In Progress')) {
             globalCache.values.game.startReported = true;
@@ -25,7 +27,7 @@ module.exports = {
             }
             if (!currentPlayJSON.reviewDetails?.inProgress) {
                 if (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details?.isScoringPlay) {
-                    reply = addScore(reply, currentPlayJSON, feed, homeTeamEmoji, awayTeamEmoji);
+                    reply = addScore(reply, currentPlayJSON, halfInning, feed, homeTeamEmoji, awayTeamEmoji);
                 }
                 // 2026 season ABS changes - state how many challenges we have remaining after an ABS challenge completes.
                 if (description.includes(CHALLENGE_TYPES.PITCH_RESULT) && feed.absChallenges()) {
@@ -57,6 +59,8 @@ module.exports = {
             description,
             event: (currentPlayJSON.result?.event || currentPlayJSON.details?.event),
             eventType: (currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType),
+            inning,
+            halfInning,
             isScoringPlay: (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details?.isScoringPlay),
             isInPlay: (lastEvent?.details?.isInPlay || currentPlayJSON.details?.isInPlay),
             playId: (lastEvent?.playId || currentPlayJSON.playId),
@@ -69,7 +73,7 @@ module.exports = {
     }
 };
 
-function addScore (reply, currentPlayJSON, feed, homeTeamEmoji, awayTeamEmoji) {
+function addScore (reply, currentPlayJSON, halfInning, feed, homeTeamEmoji, awayTeamEmoji) {
     reply += '\n';
     let homeScore, awayScore;
     if (currentPlayJSON.result) {
@@ -79,7 +83,7 @@ function addScore (reply, currentPlayJSON, feed, homeTeamEmoji, awayTeamEmoji) {
         homeScore = currentPlayJSON.details.homeScore;
         awayScore = currentPlayJSON.details.awayScore;
     }
-    reply += (feed.halfInning() === 'top'
+    reply += (halfInning === 'top'
         ? '# ' + insertEmojiIfPresent(awayTeamEmoji) + ' _' + feed.awayAbbreviation() + ' ' + awayScore + '_, ' +
         feed.homeAbbreviation() + ' ' + homeScore + ` ${insertEmojiIfPresent(homeTeamEmoji)}`
         : '# ' + `${insertEmojiIfPresent(awayTeamEmoji)} ` + feed.awayAbbreviation() + ' ' + awayScore + ', _' +
