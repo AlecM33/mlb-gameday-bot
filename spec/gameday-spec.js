@@ -902,7 +902,7 @@ describe('gameday', () => {
                 { name: 'brewers_158', id: '1339072560049950760' }
             );
 
-            expect(embed.data.title).toEqual('TOP 9, MIL vs. LAA - Scoring Play ❗');
+            expect(embed.data.title).toEqual('BOT 5, MIL vs. LAA - Scoring Play ❗');
         });
 
         it('should include the score and emojis in the title for non-scoring plays', async () => {
@@ -923,6 +923,34 @@ describe('gameday', () => {
             );
 
             expect(embed.data.title).toEqual('TOP 9, <:brewers_158:1339072560049950760> MIL 3 - 5 LAA <:angels_108:1339072522619977770>');
+        });
+
+        it('should use the reported play inning context when the live feed has already moved ahead', async () => {
+            const feed = {
+                halfInning: () => 'top',
+                inning: () => 8,
+                awayAbbreviation: () => 'CLE',
+                homeAbbreviation: () => 'DET'
+            };
+            const embed = gameday.constructPlayEmbed(
+                {
+                    reply: 'Third out recorded.',
+                    isScoringPlay: false,
+                    awayScore: 2,
+                    homeScore: 0,
+                    halfInning: 'bottom',
+                    inning: 7
+                },
+                feed,
+                true,
+                '#BA0021',
+                '#FFC52F',
+                { name: 'tigers_116', id: '1339072718028673126' },
+                { name: 'guardians_114', id: '1339072602408484917' }
+            );
+
+            expect(embed.data.title).toEqual('BOT 7, <:guardians_114:1339072602408484917> CLE 2 - 0 DET <:tigers_116:1339072718028673126>');
+            expect(embed.data.color).toEqual(12189729);
         });
     });
 });

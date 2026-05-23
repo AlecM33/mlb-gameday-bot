@@ -281,16 +281,18 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle =
 }
 
 function constructPlayEmbed (play, feed, includeTitle, homeTeamColor, awayTeamColor, homeTeamEmoji, awayTeamEmoji) {
+    const halfInning = play.halfInning || feed.halfInning();
+    const inning = play.inning || feed.inning();
     const embed = new EmbedBuilder()
         .setDescription(play.reply + (play.isOut && play.outs === 3 && !(play.hasReview && play.reviewInProgress) && !gamedayUtil.didGameEnd(play.homeScore, play.awayScore)
             ? `${gamedayUtil.getPitchesStrikesForPitchersInHalfInning(play)}${gamedayUtil.getDueUp()}`
             : ''))
-        .setColor((feed.halfInning() === 'top'
+        .setColor((halfInning === 'top'
             ? awayTeamColor
             : homeTeamColor
         ));
     if (includeTitle) {
-        embed.setTitle(`${gamedayUtil.deriveHalfInning(feed.halfInning())} ${feed.inning()}, ` +
+        embed.setTitle(`${gamedayUtil.deriveHalfInning(halfInning)} ${inning}, ` +
             (play.isScoringPlay || !awayTeamEmoji
                 ? `${feed.awayAbbreviation()}`
                 : `<:${awayTeamEmoji.name}:${awayTeamEmoji.id}> ${feed.awayAbbreviation()}`) +
