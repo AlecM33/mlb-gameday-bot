@@ -141,7 +141,7 @@ function subscribe (bot, liveGame, games) {
             LOGGER.error(e);
         }
     });
-    ws.addEventListener('error', (e) => console.error(e));
+    ws.addEventListener('error', (e) => LOGGER.error('Gameday socket error: ' + e.message));
     ws.addEventListener('close', (e) => LOGGER.info('Gameday socket closed: ' + JSON.stringify(e)));
 }
 

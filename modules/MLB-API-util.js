@@ -64,7 +64,7 @@ module.exports = {
         const { WebSocket } = require('ws');
         const wsUrl = `wss://ws.statsapi.mlb.com/api/v1/game/push/subscribe/gameday/${gamePk}`;
         LOGGER.debug(wsUrl);
-        const socket = new ReconnectingWebSocket(wsUrl, [], { WebSocket, maxRetries: 3 });
+        const socket = new ReconnectingWebSocket(wsUrl, [], { WebSocket });
         let heartbeatInterval;
         /*
             This is the same ping that Gameday web clients send to the socket server. If you observe the network traffic
