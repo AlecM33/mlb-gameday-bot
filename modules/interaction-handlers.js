@@ -80,6 +80,7 @@ module.exports = {
 
     scheduleHandler: async (interaction) => {
         console.info(`SCHEDULE command invoked by guild: ${interaction.guildId}`);
+        await interaction.deferReply();
         const startDate = globals.DATE ? new Date(globals.DATE) : new Date();
         const oneWeek = new Date(startDate);
         oneWeek.setDate(oneWeek.getDate() + 7);
@@ -116,12 +117,12 @@ module.exports = {
             });
         });
         if (reply.length === 0) {
-            await interaction.reply({
+            await interaction.followUp({
                 ephemeral: false,
                 content: 'There are no games in the next week.'
             });
         } else {
-            await interaction.reply({
+            await interaction.followUp({
                 ephemeral: false,
                 content: reply
             });
@@ -192,6 +193,7 @@ module.exports = {
             });
             return;
         }
+        await interaction.deferReply();
         const scoringPlaysOnly = interaction.options.getBoolean('scoring_plays_only');
         const reportingDelay = interaction.options.getInteger('reporting_delay');
         if (interaction.channel) {
@@ -202,12 +204,12 @@ module.exports = {
                 reportingDelay || 0
             ).catch(async (e) => {
                 if (e.message.includes('duplicate key')) {
-                    await interaction.reply({
+                    await interaction.followUp({
                         content: 'This channel is already subscribed to the gameday feed.',
                         ephemeral: false
                     });
                 } else {
-                    await interaction.reply({
+                    await interaction.followUp({
                         content: 'Error subscribing to the gameday feed: ' + e.message,
                         ephemeral: true
                     });
@@ -219,7 +221,7 @@ module.exports = {
         }
 
         if (!interaction.replied) {
-            await interaction.reply({
+            await interaction.followUp({
                 ephemeral: false,
                 content: 'Subscribed this channel to the gameday feed.\n' +
                     'Events: ' + (scoringPlaysOnly ? '**Scoring Plays Only**' : '**All Plays**') + '\n' +
@@ -286,6 +288,7 @@ module.exports = {
             });
             return;
         }
+        await interaction.deferReply();
         const scoringPlaysOnly = interaction.options.getBoolean('scoring_plays_only');
         const reportingDelay = interaction.options.getInteger('reporting_delay');
         if (interaction.channel) {
@@ -297,14 +300,14 @@ module.exports = {
             )
                 .then(async (rows) => {
                     if (rows.length === 0) {
-                        await interaction.reply({
+                        await interaction.followUp({
                             content: 'This channel isn\'t currently subscribed. Use `/subscribe_gameday` to subscribe and provide a preference.',
                             ephemeral: false
                         });
                     }
                 })
                 .catch(async (e) => {
-                    await interaction.reply({
+                    await interaction.followUp({
                         content: 'Error subscribing to the gameday feed: ' + e.message,
                         ephemeral: true
                     });
@@ -315,7 +318,7 @@ module.exports = {
         }
 
         if (!interaction.replied) {
-            await interaction.reply({
+            await interaction.followUp({
                 ephemeral: false,
                 content: 'Updated this channel\'s Gameday play reporting preferences:\n' +
                     'Events: ' + (scoringPlaysOnly ? '**Scoring Plays Only**' : '**All Plays**') + '\n' +
@@ -333,12 +336,13 @@ module.exports = {
             });
             return;
         }
+        await interaction.deferReply();
         await queries.removeFromSubscribedChannels(interaction.guild.id, interaction.channel.id).catch(async (e) => {
-            await interaction.reply({ content: 'Error un-subscribing: ' + e.message, ephemeral: true });
+            await interaction.followUp({ content: 'Error un-subscribing: ' + e.message, ephemeral: true });
         });
 
         if (!interaction.replied) {
-            await interaction.reply({
+            await interaction.followUp({
                 ephemeral: false,
                 content: 'This channel is un-subscribed to the Gameday feed. It will no longer receive real-time updates.'
             });
