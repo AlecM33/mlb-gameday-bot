@@ -68,10 +68,15 @@ BOT.on('interactionCreate', async interaction => {
         await command.execute(interaction, BOT.guilds);
     } catch (error) {
         LOGGER.error(error);
-        if (interaction.deferred) {
-            await interaction.followUp({ content: 'error', ephemeral: true });
-        } else if (!interaction.replied) {
-            await interaction.reply({ content: 'error', ephemeral: true });
+        try {
+            if (interaction.deferred && !interaction.replied) {
+                await interaction.followUp({ content: 'There was an error processing this command.', ephemeral: true });
+            } else if (!interaction.replied) {
+                await interaction.reply({ content: 'There was an error processing this command.', ephemeral: true });
+            }
+        } catch (replyError) {
+            LOGGER.error('Cannot send response to interaction:');
+            LOGGER.error(error);
         }
     }
 });

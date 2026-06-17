@@ -1,5 +1,4 @@
 const globals = require('../config/globals');
-const ReconnectingWebSocket = require('reconnecting-websocket');
 const { LOG_LEVEL } = require('../config/globals');
 const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || LOG_LEVEL.INFO);
 
@@ -61,27 +60,15 @@ module.exports = {
         fetchJson(`https://bdfed.stitch.mlbinfra.com/bdfed/playMetrics/${gamePk}?keyMoments=true&scoringPlays=true&homeRuns=true&strikeouts=true&hardHits=true&highLeverage=false&leadChange=true&winProb=true`),
 
     websocketSubscribe: (gamePk) => {
-        const { WebSocket } = require('ws');
+        const createReconnectingWebSocket = require('./reconnecting-websocket');
         const wsUrl = `wss://ws.statsapi.mlb.com/api/v1/game/push/subscribe/gameday/${gamePk}`;
         LOGGER.debug(wsUrl);
-        const socket = new ReconnectingWebSocket(wsUrl, [], { WebSocket, maxRetries: 3 });
-        let heartbeatInterval;
-        /*
-            This is the same ping that Gameday web clients send to the socket server. If you observe the network traffic
-            in the browser, you can see the socket transmits "Gameday5" every 10 seconds or so.
-         */
-        const heartbeat = () => {
-            LOGGER.trace('ping: Gameday5');
-            socket.send('Gameday5');
-        };
-        socket.addEventListener('open', () => {
-            LOGGER.info('Gameday socket opened.');
-            heartbeatInterval = setInterval(heartbeat, globals.GAMEDAY_PING_INTERVAL);
+        return createReconnectingWebSocket(wsUrl, {
+            heartbeatMessage: 'Gameday5',
+            heartbeatInterval: globals.GAMEDAY_PING_INTERVAL,
+            connectionTimeout: 10000,
+            reconnectDelay: 3000
         });
-        socket.addEventListener('close', () => {
-            clearInterval(heartbeatInterval);
-        });
-        return socket;
     },
 
     websocketQueryUpdateId: async (gamePk, updateId, timestamp) => {
