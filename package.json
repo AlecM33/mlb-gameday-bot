@@ -27,6 +27,7 @@
     "@babel/eslint-parser": "^7.16.5",
     "@babel/plugin-transform-object-assign": "^7.16.5",
     "@babel/preset-env": "^7.16.5",
+    "@types/node": "^26.0.0",
     "babel-eslint": "^10.1.0",
     "babel-loader": "^8.2.3",
     "eslint": "^8.20.0",

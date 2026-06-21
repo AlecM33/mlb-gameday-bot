@@ -1,5 +1,7 @@
+// @ts-check
 const { LOG_LEVEL } = require('../config/globals');
 
+/** @returns {Logger} */
 module.exports = function (logLevel = LOG_LEVEL.INFO) {
     return {
         logLevel,

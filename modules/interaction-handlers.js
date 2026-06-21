@@ -1,3 +1,4 @@
+// @ts-check
 const { AttachmentBuilder, EmbedBuilder, PermissionsBitField } = require('discord.js');
 const globalCache = require('./global-cache');
 const mlbAPIUtil = require('./MLB-API-util');
@@ -10,13 +11,17 @@ const exampleLiveFeed = require('../spec/data/example-live-feeds/live-feed-2024'
 const liveFeed = require('./livefeed');
 const currentPlayProcessor = require('./current-play-processor');
 
+/** @typedef {import('discord.js').ChatInputCommandInteraction} SlashInteraction */
+
 module.exports = {
 
+    /** @param {SlashInteraction} interaction */
     helpHandler: async (interaction) => {
         console.info(`HELP command invoked by guild: ${interaction.guildId}`);
-        interaction.reply({ content: globals.HELP_MESSAGE, ephemeral: true });
+        await interaction.reply({ content: globals.HELP_MESSAGE, ephemeral: true });
     },
 
+    /** @param {SlashInteraction} interaction */
     startersHandler: async (interaction) => {
         console.info(`STARTERS command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
@@ -78,6 +83,7 @@ module.exports = {
             });
     },
 
+    /** @param {SlashInteraction} interaction */
     scheduleHandler: async (interaction) => {
         console.info(`SCHEDULE command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
@@ -129,6 +135,7 @@ module.exports = {
         }
     },
 
+    /** @param {SlashInteraction} interaction */
     standingsHandler: async (interaction) => {
         await interaction.deferReply();
         console.info(`STANDINGS command invoked by guild: ${interaction.guildId}`);
@@ -160,6 +167,7 @@ module.exports = {
         });
     },
 
+    /** @param {SlashInteraction} interaction */
     wildcardHandler: async (interaction) => {
         await interaction.deferReply();
         console.info(`WILDCARD command invoked by guild: ${interaction.guildId}`);
@@ -184,6 +192,7 @@ module.exports = {
         }
     },
 
+    /** @param {SlashInteraction} interaction */
     subscribeGamedayHandler: async (interaction) => {
         console.info(`SUBSCRIBE GAMEDAY command invoked by guild: ${interaction.guildId}`);
         if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
@@ -230,6 +239,7 @@ module.exports = {
         }
     },
 
+    /** @param {SlashInteraction} interaction */
     testGamedayReportingHandler: async (interaction) => {
         console.info(`TEST GAMEDAY REPORTING command invoked by guild: ${interaction.guildId}`);
         if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
@@ -279,6 +289,7 @@ module.exports = {
         }
     },
 
+    /** @param {SlashInteraction} interaction */
     gamedayPreferenceHandler: async (interaction) => {
         console.info(`GAMEDAY PREFERENCE command invoked by guild: ${interaction.guildId}`);
         if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
@@ -327,6 +338,7 @@ module.exports = {
         }
     },
 
+    /** @param {SlashInteraction} interaction */
     unSubscribeGamedayHandler: async (interaction) => {
         console.info(`UNSUBSCRIBE GAMEDAY command invoked by guild: ${interaction.guildId}`);
         if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
@@ -350,6 +362,7 @@ module.exports = {
         globalCache.values.subscribedChannels = await queries.getAllSubscribedChannels();
     },
 
+    /** @param {SlashInteraction} interaction */
     linescoreHandler: async (interaction) => {
         console.info(`LINESCORE command invoked by guild: ${interaction.guildId}`);
         if (!globalCache.values.game.isDoubleHeader) {
@@ -385,6 +398,7 @@ module.exports = {
         }
     },
 
+    /** @param {SlashInteraction} interaction */
     boxScoreHandler: async (interaction) => {
         console.info(`BOXSCORE command invoked by guild: ${interaction.guildId}`);
         if (!globalCache.values.game.isDoubleHeader) {
@@ -437,6 +451,7 @@ module.exports = {
         }
     },
 
+    /** @param {SlashInteraction} interaction */
     lineupHandler: async (interaction) => {
         console.info(`LINEUP command invoked by guild: ${interaction.guildId}`);
         if (!globalCache.values.game.isDoubleHeader) {
@@ -484,6 +499,7 @@ module.exports = {
         }
     },
 
+    /** @param {SlashInteraction} interaction */
     highlightsHandler: async (interaction) => {
         console.info(`HIGHLIGHTS command invoked by guild: ${interaction.guildId}`);
         if (!globalCache.values.game.isDoubleHeader) {
@@ -512,6 +528,7 @@ module.exports = {
         }
     },
 
+    /** @param {SlashInteraction} interaction */
     playerHandler: async (interaction) => {
         console.info(`PLAYER command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
@@ -582,6 +599,7 @@ module.exports = {
         }
     },
 
+    /** @param {SlashInteraction} interaction */
     playerSavantHandler: async (interaction) => {
         console.info(`PLAYER SAVANT command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
@@ -651,6 +669,7 @@ module.exports = {
         }
     },
 
+    /** @param {SlashInteraction} interaction */
     scoringPlaysHandler: async (interaction) => {
         console.info(`SCORING PLAYS command invoked by guild: ${interaction.guildId}`);
         if (!globalCache.values.game.isDoubleHeader) {
@@ -708,6 +727,7 @@ module.exports = {
         }
     },
 
+    /** @param {SlashInteraction} interaction */
     attendanceHandler: async (interaction) => {
         console.info(`ATTENDANCE command invoked by guild: ${interaction.guildId}`);
         if (!globalCache.values.game.isDoubleHeader) {
@@ -736,6 +756,7 @@ module.exports = {
         }
     },
 
+    /** @param {SlashInteraction} interaction */
     weatherHandler: async (interaction) => {
         console.info(`WEATHER command invoked by guild: ${interaction.guildId}`);
         if (!globalCache.values.game.isDoubleHeader) {
@@ -765,6 +786,7 @@ module.exports = {
         }
     },
 
+    /** @param {SlashInteraction} interaction */
     bullpenHandler: async (interaction) => {
         console.info(`BULLPEN command invoked by guild: ${interaction.guildId}`);
         if (!globalCache.values.game.isDoubleHeader) {

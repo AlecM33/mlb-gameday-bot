@@ -1,6 +1,11 @@
+// @ts-check
 const { LOG_LEVEL } = require('../config/globals');
 const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || LOG_LEVEL.INFO);
 
+/**
+ * @param {string} url
+ * @param {ReconnectingWebSocketOptions} [options]
+ */
 module.exports = (url, {
     heartbeatMessage,
     heartbeatInterval,
@@ -9,11 +14,16 @@ module.exports = (url, {
     WebSocket: WSClass = require('ws').WebSocket
 } = {}) => {
     const listeners = { open: [], close: [], message: [], error: [] };
+    /** @type {import('ws').WebSocket | null} */
     let socket = null;
     let intentionallyClosed = false;
     let heartbeatTimer = null;
     let connectTimeout = null;
 
+    /**
+     * @param {() => void} fn
+     * @returns {void}
+     */
     const heartbeat = () => {
         LOGGER.trace(`ping: ${heartbeatMessage}`);
         if (socket?.readyState === WSClass.OPEN) {
@@ -21,6 +31,9 @@ module.exports = (url, {
         }
     };
 
+    /**
+     * @returns {void}
+     */
     const connect = () => {
         if (intentionallyClosed) {
             return;
@@ -63,12 +76,18 @@ module.exports = (url, {
 
     connect();
 
+    /** @returns {ReconnectingWebSocket} */
     return {
+        /**
+         * @param {WebSocketEventType} event
+         * @param {(event: any) => void} fn
+         */
         addEventListener: (event, fn) => {
             if (listeners[event]) {
                 listeners[event].push(fn);
             }
         },
+        /** @param {string} data */
         send: (data) => {
             if (socket?.readyState === WSClass.OPEN) {
                 socket.send(data);

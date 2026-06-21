@@ -162,6 +162,9 @@ mlb-gameday-bot/
 │   ├── db.js                  # PostgreSQL connection pool
 │   ├── queries.js             # All database queries
 │   └── schema.sql
+├── types/                     # Typescript type declarations
+│   ├── custom.d.ts            # Ambient type declarations for custom objects
+│   ├── mlb-api.d.ts           # Ambient type declarations for MLB API objects
 └── spec/                      # Jasmine unit tests
 ```
 

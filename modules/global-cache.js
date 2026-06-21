@@ -1,3 +1,6 @@
+// @ts-check
+
+/** @returns {GameCache} */
 const gameDefaults = () => ({
     currentLiveFeed: null,
     currentGamePk: null,
@@ -15,6 +18,7 @@ const gameDefaults = () => ({
     lastSocketMessageLength: null
 });
 
+/** @type {GlobalCacheValues} */
 const values = {
     nearestGames: null,
     currentGames: null,

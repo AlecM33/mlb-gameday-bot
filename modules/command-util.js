@@ -1,3 +1,4 @@
+// @ts-check
 const { drawSimpleTables, drawSavantTables } = require('./canvas-util');
 const { createCanvas, Image } = require('canvas');
 const globalCache = require('./global-cache');
@@ -12,6 +13,11 @@ const jsdom = require('jsdom');
 const levenshtein = require('./levenshtein');
 
 module.exports = {
+    /**
+     * @param {(Buffer | ArrayBuffer)[]} spots
+     * @param {{ direction?: string, offset?: number, margin?: number, color?: string }} [options]
+     * @returns {Promise<Buffer>}
+     */
     joinPlayerSpots: async (spots, options = {}) => {
         const margin = options.offset ?? options.margin ?? 10;
         const loadImage = (src) => new Promise((resolve, reject) => {
@@ -32,6 +38,12 @@ module.exports = {
         }
         return Promise.resolve(canvas.toBuffer('image/png'));
     },
+
+    /**
+     * @param {Array<{ id: number, primaryPosition: { abbreviation: string } }>} lineup
+     * @param {string} gameType
+     * @returns {Promise<Buffer>}
+     */
     getLineupCardTable: async (lineup, gameType) => {
         const table = new AsciiTable();
         const people = (await mlbAPIUtil.people(lineup.map(lineupPlayer => lineupPlayer.id), gameType)).people;
@@ -63,6 +75,13 @@ module.exports = {
         table.removeBorder();
         return drawSimpleTables([table], 800, 350);
     },
+
+    /**
+     * @param {number | null} probable - personId, or null if TBD
+     * @param {string} statType
+     * @param {number} [season]
+     * @returns {Promise<HydratedProbable>}
+     */
     hydrateProbable: async (probable, statType, season = (new Date().getFullYear())) => {
         const [spot, savant, people] = await Promise.all([
             new Promise((resolve, reject) => {
@@ -96,6 +115,12 @@ module.exports = {
         };
     },
 
+    /**
+     * @param {number | null} hitter - personId, or null if TBD
+     * @param {string} statType
+     * @param {number} [season]
+     * @returns {Promise<HydratedHitter>}
+     */
     hydrateHitter: async (hitter, statType, season = new Date().getFullYear()) => {
         const [spot, stats] = await Promise.all([
             new Promise((resolve, reject) => {
@@ -125,6 +150,12 @@ module.exports = {
         };
     },
 
+    /**
+     * @param {PersonStat | undefined} season
+     * @param {PersonStat | undefined} splitStats
+     * @param {PersonStat | undefined} lastXGamesStats
+     * @returns {string}
+     */
     formatSplits: (season, splitStats, lastXGamesStats) => {
         const vsLeft = (splitStats.splits.find(split => split?.split?.code === 'vl' && !split.team)
             || splitStats.splits.find(split => split?.split?.code === 'vl'));
@@ -160,6 +191,11 @@ module.exports = {
         return formattedSplits;
     },
 
+    /**
+     * @param {GameDisplayable} game
+     * @param {Linescore} linescore
+     * @returns {Buffer}
+     */
     buildLineScoreTable: (game, linescore) => {
         const awayAbbreviation = game.teams.away.team?.abbreviation || game.teams.away.abbreviation;
         const homeAbbreviation = game.teams.home.team?.abbreviation || game.teams.home.abbreviation;
@@ -180,6 +216,14 @@ module.exports = {
         return drawSimpleTables([linescoreTable], 1000, 1000);
     },
 
+    /**
+     * @param {ScheduleGame} game
+     * @param {Boxscore} boxScore
+     * @param {any} boxScoreNames
+     * @param {GameStatus} status
+     * @param {{ customId: string }} boxScoreChoiceToHandle
+     * @returns {Buffer}
+     */
     buildBoxScoreTable: (game, boxScore, boxScoreNames, status, boxScoreChoiceToHandle) => {
         const tables = [];
         const players = boxScore.teams.away.team.id === parseInt(boxScoreChoiceToHandle.customId)
@@ -229,6 +273,11 @@ module.exports = {
         return drawSimpleTables(tables, 600, 800);
     },
 
+    /**
+     * @param {StandingsRecord} standings
+     * @param {string} divisionName
+     * @returns {Buffer}
+     */
     buildStandingsTable: (standings, divisionName) => {
         const centralMap = mapStandings(standings);
         const table = new AsciiTable(divisionName + '\n');
@@ -243,6 +292,12 @@ module.exports = {
         return drawSimpleTables([table], 600, 300);
     },
 
+    /**
+     * @param {StandingsRecord} divisionLeaders
+     * @param {StandingsRecord} wildcard
+     * @param {string} leagueName
+     * @returns {Buffer}
+     */
     buildWildcardTable: (divisionLeaders, wildcard, leagueName) => {
         const divisionLeadersMap = mapStandings(divisionLeaders);
         const wildcardMap = mapStandings(wildcard, true);
@@ -282,6 +337,11 @@ module.exports = {
         return drawSimpleTables([table], 1000, 1000);
     },
 
+    /**
+     * @param {string} savantText
+     * @param {number | string | undefined} season
+     * @returns {{ matchingStatcast?: any, metricSummaryJSON?: Record<string, any>, matchingMetricYear?: string | number } | {}}
+     */
     getStatcastData: (savantText, season) => {
         const statcast = /statcast: \[(?<statcast>.+)],/.exec(savantText)?.groups.statcast;
         const metricSummaries = /metricSummaryStats: {(?<metricSummaries>.+)},/.exec(savantText)?.groups.metricSummaries;
@@ -307,6 +367,12 @@ module.exports = {
         return {};
     },
 
+    /**
+     * @param {Record<string, any>} statcast
+     * @param {Record<string, { avg_metric: number, stddev_metric: number }>} metricSummaries
+     * @param {ArrayBuffer} spot
+     * @returns {Buffer}
+     */
     buildBatterSavantTable: (statcast, metricSummaries, spot) => {
         const value = [
             {
@@ -463,6 +529,12 @@ module.exports = {
         ], spot);
     },
 
+    /**
+     * @param {Record<string, any>} statcast
+     * @param {Record<string, { avg_metric: number, stddev_metric: number }>} metricSummaries
+     * @param {ArrayBuffer} spot
+     * @returns {Buffer}
+     */
     buildPitcherSavantTable: (statcast, metricSummaries, spot) => {
         const value = [
             {
@@ -576,6 +648,11 @@ module.exports = {
         ], spot);
     },
 
+    /**
+     * Returns undefined if no active game; handles double-headers.
+     * @param {import('discord.js').ChatInputCommandInteraction} interaction
+     * @returns {Promise<import('discord.js').ChatInputCommandInteraction | import('discord.js').MessageComponentInteraction | undefined>}
+     */
     screenInteraction: async (interaction) => {
         if (globalCache.values.nearestGames.length === 0 || globalCache.values.nearestGames instanceof Error) {
             await interaction.followUp({
@@ -589,6 +666,12 @@ module.exports = {
         }
     },
 
+    /**
+     * @param {string} playerName
+     * @param {number | undefined} season
+     * @param {number} [ttlMs]
+     * @returns {Promise<Person | null>}
+     */
     findPlayer: async (playerName, season, ttlMs = globals.PLAYER_CACHE_TTL_MS) => {
         const year = season || new Date().getFullYear();
         const people = await module.exports.getPlayersForYear(year, ttlMs);
@@ -599,12 +682,21 @@ module.exports = {
         ) || null;
     },
 
+    /**
+     * @param {import('discord.js').ChatInputCommandInteraction | import('discord.js').MessageComponentInteraction} toHandle
+     * @param {object} options
+     */
     giveFinalCommandResponse: async (toHandle, options) => {
         await toHandle.update
             ? toHandle.update(options)
             : toHandle.followUp(options);
     },
 
+    /**
+     * Handles multiple game object shapes from different API endpoints.
+     * @param {GameDisplayable} game
+     * @returns {string}
+     */
     constructGameDisplayString: (game) => {
         const startTimeTBD = game.gameData?.status?.startTimeTBD || game.status?.startTimeTBD;
         // the game object can be passed here in a few different forms. We just check for them all
@@ -623,6 +715,16 @@ module.exports = {
             }));
     },
 
+    /**
+     * @param {StatSplitStat | undefined} pitchingStats
+     * @param {string[][] | Error | undefined} pitchMix
+     * @param {StatSplitStat | undefined} lastThree
+     * @param {StatSplitStat | undefined} seasonAdvanced
+     * @param {StatSplitStat | undefined} sabermetrics
+     * @param {string} gameType
+     * @param {boolean} [starterMode]
+     * @returns {string}
+     */
     buildPitchingStatsMarkdown: (pitchingStats, pitchMix, lastThree, seasonAdvanced, sabermetrics, gameType, starterMode = true) => {
         let reply = '';
 
@@ -660,13 +762,15 @@ module.exports = {
             reply += `WHIP: ${pitchingStats.whip} `;
             if (!starterMode && (seasonAdvanced || sabermetrics)) {
                 reply += '\n---\n';
+                reply += `Holds: ${pitchingStats.holds ?? '-'}\n`;
+                reply += `Inh. Runners Scored: ${pitchingStats.inheritedRunnersScored ?? '-'}/${pitchingStats.inheritedRunners ?? '-'}\n`;
+                reply += `Saves/Opps: ${pitchingStats.saves}/${pitchingStats.saveOpportunities}\n`;
                 reply += `K/BB: ${seasonAdvanced.strikesoutsToWalks}\n`;
                 reply += `BABIP: ${seasonAdvanced.babip}\n`;
                 reply += `SLG: ${seasonAdvanced.slg}\n`;
                 if (sabermetrics) { // not available if filtering by postseason only
-                    reply += `WAR: ${sabermetrics.war.toFixed(2)}\n`;
+                    reply += `WAR: ${sabermetrics.war.toFixed(2)}`;
                 }
-                reply += `Saves/Opps: ${pitchingStats.saves}/${pitchingStats.saveOpportunities}`;
             }
         }
         reply += '\n**Arsenal:**' + '\n';
@@ -690,6 +794,10 @@ module.exports = {
         return reply;
     },
 
+    /**
+     * @param {string} condition
+     * @returns {string}
+     */
     getWeatherEmoji: (condition) => {
         switch (condition) {
             case 'Clear':
@@ -714,6 +822,11 @@ module.exports = {
         }
     },
 
+    /**
+     * @param {LiveFeedResponse} liveFeed
+     * @param {Play} currentPlayJSON
+     * @returns {string}
+     */
     getScoreString: (liveFeed, currentPlayJSON) => {
         const homeScore = currentPlayJSON.result.homeScore;
         const awayScore = currentPlayJSON.result.awayScore;
@@ -724,6 +837,16 @@ module.exports = {
             liveFeed.gameData.teams.home.abbreviation + ' ' + homeScore + '**');
     },
 
+    /**
+     * @param {Person} pitcher
+     * @param {HydratedProbable} pitcherInfo
+     * @param {string | null} description
+     * @param {string} [statType]
+     * @param {boolean} [savantMode]
+     * @param {number | undefined} [season]
+     * @param {string | undefined} [twoWayLabel]
+     * @returns {import('discord.js').EmbedBuilder}
+     */
     getPitcherEmbed: (pitcher, pitcherInfo, description, statType = 'R', savantMode = false, season = undefined, twoWayLabel = undefined) => {
         const twoWaySuffix = twoWayLabel ? ` (${twoWayLabel})` : '';
         const embed = new EmbedBuilder()
@@ -757,6 +880,16 @@ module.exports = {
         return embed;
     },
 
+    /**
+     * @param {Person} batter
+     * @param {HydratedHitter} batterInfo
+     * @param {string | null} description
+     * @param {string} [statType]
+     * @param {boolean} [savantMode]
+     * @param {number | undefined} [season]
+     * @param {string | undefined} [twoWayLabel]
+     * @returns {import('discord.js').EmbedBuilder}
+     */
     getBatterEmbed: (batter, batterInfo, description, statType = 'R', savantMode = false, season = undefined, twoWayLabel = undefined) => {
         const twoWaySuffix = twoWayLabel ? ` (${twoWayLabel})` : '';
         const yearLabel = season || batterInfo.stats?.season || 'Latest';
@@ -787,6 +920,12 @@ module.exports = {
         return embed;
     },
 
+    /**
+     * Falls back to fuzzy matching if exact name not found.
+     * @param {import('discord.js').ChatInputCommandInteraction} interaction
+     * @param {string} playerName
+     * @returns {Promise<{ player: Person } | undefined>}
+     */
     resolvePlayer: async (interaction, playerName) => {
         const year = interaction.options.getInteger('year') || new Date().getFullYear();
         const removeDiacritics = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -820,6 +959,12 @@ module.exports = {
         return { player };
     },
 
+    /**
+     * @param {import('discord.js').ChatInputCommandInteraction | import('discord.js').MessageComponentInteraction} interaction
+     * @param {{ home: ScheduleGameTeam, away: ScheduleGameTeam }} teams
+     * @param {string} question
+     * @returns {Promise<import('discord.js').MessageComponentInteraction>}
+     */
     getHomeAwayChoice: async (interaction, teams, question) => {
         const buttons = Object.keys(teams).map(key => {
             const emoji = globalCache.values.emojis
@@ -854,6 +999,11 @@ module.exports = {
         }
     },
 
+    /**
+     * @param {{ home: { team: { id: number, name: string } }, away: { team: { id: number, name: string } } }} teams
+     * @param {number} chosenTeamId
+     * @returns {string}
+     */
     getTeamDisplayString: (teams, chosenTeamId) => {
         const emoji = globalCache.values.emojis
             .find(v => v.name.includes(chosenTeamId));
@@ -861,6 +1011,9 @@ module.exports = {
         return `${emoji ? `<:${emoji.name}:${emoji.id}>` : ''} ${team.name}`;
     },
 
+    /**
+     * @param {number} [ttlMs]
+     */
     buildPlayerCache: async (ttlMs = globals.PLAYER_CACHE_TTL_MS) => {
         const currentYear = new Date().getFullYear();
         for (let year = currentYear; year >= globals.PLAYER_STATS_MIN_YEAR; year --) {
@@ -883,6 +1036,11 @@ module.exports = {
         }
     },
 
+    /**
+     * @param {number} year
+     * @param {number} [ttlMs]
+     * @returns {Promise<Person[]>}
+     */
     getPlayersForYear: async (year, ttlMs = globals.PLAYER_CACHE_TTL_MS) => {
         const currentYear = new Date().getFullYear();
         const timestamp = globalCache.values.playerCacheTimestamps[year];
@@ -904,6 +1062,9 @@ module.exports = {
         return globalCache.values.playersByYear[year] || [];
     },
 
+    /**
+     * @param {import('discord.js').AutocompleteInteraction} interaction
+     */
     playerAutocomplete: async (interaction) => {
         try {
             const focusedValue = interaction.options.getFocused().trim().toLowerCase();
@@ -940,6 +1101,10 @@ module.exports = {
         }
     },
 
+    /**
+     * @param {import('discord.js').ChatInputCommandInteraction} interaction
+     * @returns {Promise<import('discord.js').MessageComponentInteraction | undefined>}
+     */
     resolveTwoWayPlayerSelection: async (interaction) => {
         const buttons = [
             new ButtonBuilder()
@@ -966,9 +1131,13 @@ module.exports = {
             });
         }
     }
-
 };
 
+/**
+ * @param {StandingsRecord} standings
+ * @param {boolean} [wildcard]
+ * @returns {StandingsEntry[]}
+ */
 function mapStandings (standings, wildcard = false) {
     return standings.teamRecords.map(teamRecord => {
         return {
@@ -1000,6 +1169,11 @@ function mapStandings (standings, wildcard = false) {
     });
 }
 
+/**
+ * Returns [pitchNames, percentages, MPHs, battingAvgsAgainst].
+ * @param {import('jsdom').JSDOM} dom
+ * @returns {string[][]}
+ */
 function getPitchCollections (dom) {
     const document = dom.window.document;
 
@@ -1044,6 +1218,10 @@ function getPitchCollections (dom) {
     return [pitches, percentages, MPHs, battingAvgsAgainst];
 }
 
+/**
+ * @param {import('discord.js').ChatInputCommandInteraction} interaction
+ * @returns {Promise<import('discord.js').MessageComponentInteraction | undefined>}
+ */
 async function resolveDoubleHeaderSelection (interaction) {
     const buttons = globalCache.values.nearestGames.map(game =>
         new ButtonBuilder()
@@ -1074,6 +1252,11 @@ async function resolveDoubleHeaderSelection (interaction) {
     }
 }
 
+/**
+ * @param {PeopleResponse | undefined} people
+ * @param {string} statType
+ * @returns {PitchingStats}
+ */
 function parsePitchingStats (people, statType) {
     return {
         yearOfStats: findSplit(people?.people[0]?.stats?.find(stat => stat?.type?.displayName === 'season'))?.season,
@@ -1084,10 +1267,19 @@ function parsePitchingStats (people, statType) {
     };
 }
 
+/**
+ * @param {PersonStat | undefined} stat
+ * @returns {StatSplit | undefined}
+ */
 function findSplit (stat) {
     return stat?.splits?.find(s => !s.team) || stat?.splits[0];
 }
 
+/**
+ * @param {SavantMetric[]} statCollection
+ * @param {Record<string, { avg_metric: number, stddev_metric: number }>} metricSummaries
+ * @returns {SavantMetric[]}
+ */
 function addAdditionalDataToStats (statCollection, metricSummaries) {
     const scale = chroma.scale(['#325aa1', '#a8c1c3', '#c91f26']);
     const sliderScale = chroma.scale(['#3661ad', '#b4cfd1', '#d8221f']);
@@ -1114,6 +1306,14 @@ function addAdditionalDataToStats (statCollection, metricSummaries) {
     return statCollection;
 }
 
+/**
+ * @param {string} metric
+ * @param {number | string} value
+ * @param {number} mean
+ * @param {number} standardDeviation
+ * @param {boolean | undefined} shouldInvert
+ * @returns {number}
+ */
 function calculateRoundedPercentileFromNormalDistribution (metric, value, mean, standardDeviation, shouldInvert) {
     if (mean == null || standardDeviation == null || isNaN(value) || isNaN(mean) || isNaN(standardDeviation)) {
         return 0;
@@ -1129,6 +1329,10 @@ function calculateRoundedPercentileFromNormalDistribution (metric, value, mean, 
     );
 }
 
+/**
+ * @param {string} division
+ * @returns {'E' | 'W' | 'C'}
+ */
 function getDivisionAbbreviation (division) {
     if (division.toLowerCase().includes('east')) {
         return 'E';
@@ -1139,6 +1343,10 @@ function getDivisionAbbreviation (division) {
     }
 }
 
+/**
+ * @param {string} gameType
+ * @returns {string}
+ */
 function resolveGameType (gameType) {
     switch (gameType) {
         case 'R':

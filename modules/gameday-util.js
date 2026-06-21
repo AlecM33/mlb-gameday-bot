@@ -1,3 +1,4 @@
+// @ts-check
 const liveFeed = require('./livefeed');
 const globalCache = require('./global-cache');
 const globals = require('../config/globals');
@@ -6,10 +7,19 @@ const mlbAPIUtil = require('./MLB-API-util');
 const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_LEVEL.INFO);
 
 module.exports = {
+    /**
+     * @param {string} halfInningFull
+     * @returns {'TOP'|'BOT'}
+     */
     deriveHalfInning: (halfInningFull) => {
         return halfInningFull === 'top' ? 'TOP' : 'BOT';
     },
 
+    /**
+     * @param {number} homeScore
+     * @param {number} awayScore
+     * @returns {boolean}
+     */
     didGameEnd: (homeScore, awayScore) => {
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         return feed.inning() >= 9
@@ -19,6 +29,11 @@ module.exports = {
             );
     },
 
+    /**
+     * @param {number} homeScore
+     * @param {number} awayScore
+     * @returns {boolean}
+     */
     didOurTeamWin: (homeScore, awayScore) => {
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         return (homeScore > awayScore && feed.homeTeamId() === parseInt(process.env.TEAM_ID))
@@ -47,6 +62,10 @@ module.exports = {
         globalCache.values.game.awayTeamEmoji = globalCache.values.emojis.find(e => e.name.includes(feed.awayTeamId()));
     },
 
+    /**
+     * @param {ProcessedPlay} play
+     * @returns {string}
+     */
     getPitchesStrikesForPitchersInHalfInning: (play) => {
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         const boxscore = feed.boxscore();
@@ -62,6 +81,7 @@ module.exports = {
             `${value?.person.fullName} (${value?.stats.pitching.numberOfPitches} P - ${value?.stats.pitching.strikes} S)${pitchersFromThisHalfInning.indexOf(value) === pitchersFromThisHalfInning.length - 1 ? '' : ', '}`, '')}\n`;
     },
 
+    /** @returns {string} */
     getDueUp: () => {
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         const linescore = feed.linescore();
@@ -75,6 +95,13 @@ module.exports = {
             inHoleIndex + '. ' + linescore.offense?.inHole?.fullName;
     },
 
+    /**
+     * Returns null if data not yet available (caller should retry), '' if no annotation needed.
+     * @param {number} gamePk
+     * @param {string} playId
+     * @param {number} numberOfParks
+     * @returns {Promise<string | null>}
+     */
     getXParks: async (gamePk, playId, numberOfParks) => {
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         const isHome = feed.homeTeamId() === parseInt(process.env.TEAM_ID);
