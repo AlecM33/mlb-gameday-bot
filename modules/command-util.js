@@ -762,13 +762,15 @@ module.exports = {
             reply += `WHIP: ${pitchingStats.whip} `;
             if (!starterMode && (seasonAdvanced || sabermetrics)) {
                 reply += '\n---\n';
+                reply += `Holds: ${pitchingStats.holds ?? '-'}\n`;
+                reply += `Inh. Runners Scored: ${pitchingStats.inheritedRunnersScored ?? '-'}/${pitchingStats.inheritedRunners ?? '-'}\n`;
+                reply += `Saves/Opps: ${pitchingStats.saves}/${pitchingStats.saveOpportunities}\n`;
                 reply += `K/BB: ${seasonAdvanced.strikesoutsToWalks}\n`;
                 reply += `BABIP: ${seasonAdvanced.babip}\n`;
                 reply += `SLG: ${seasonAdvanced.slg}\n`;
                 if (sabermetrics) { // not available if filtering by postseason only
-                    reply += `WAR: ${sabermetrics.war.toFixed(2)}\n`;
+                    reply += `WAR: ${sabermetrics.war.toFixed(2)}`;
                 }
-                reply += `Saves/Opps: ${pitchingStats.saves}/${pitchingStats.saveOpportunities}`;
             }
         }
         reply += '\n**Arsenal:**' + '\n';
