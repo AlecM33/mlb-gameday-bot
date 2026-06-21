@@ -1,4 +1,11 @@
+// @ts-check
+
 module.exports = {
+    /**
+     * Wraps a raw live feed response with typed accessor methods.
+     * @param {LiveFeedResponse} liveFeed
+     * @returns {LiveFeedWrapper}
+     */
     init: (liveFeed) => {
         return {
             gamePk: () => {

@@ -1,9 +1,18 @@
+// @ts-check
 const globalCache = require('./global-cache');
 const globals = require('../config/globals');
 const commandUtil = require('./command-util');
 const { CHALLENGE_TYPES } = require('../config/globals');
 
 module.exports = {
+    /**
+     * Two shapes accepted: complete at-bats (have `result`) and sub-events (have `details`).
+     * @param {Play | PlayEvent} currentPlayJSON
+     * @param {LiveFeedWrapper} feed
+     * @param {DiscordEmoji | null} homeTeamEmoji
+     * @param {DiscordEmoji | null} awayTeamEmoji
+     * @returns {ProcessedPlay}
+     */
     process: (currentPlayJSON, feed, homeTeamEmoji, awayTeamEmoji) => {
         let reply = '';
         const halfInning = currentPlayJSON.about?.halfInning || feed.halfInning();
@@ -73,6 +82,15 @@ module.exports = {
     }
 };
 
+/**
+ * @param {string} reply
+ * @param {Play | PlayEvent} currentPlayJSON
+ * @param {string} halfInning
+ * @param {LiveFeedWrapper} feed
+ * @param {DiscordEmoji | null} homeTeamEmoji
+ * @param {DiscordEmoji | null} awayTeamEmoji
+ * @returns {string}
+ */
 function addScore (reply, currentPlayJSON, halfInning, feed, homeTeamEmoji, awayTeamEmoji) {
     reply += '\n';
     let homeScore, awayScore;
@@ -92,6 +110,12 @@ function addScore (reply, currentPlayJSON, halfInning, feed, homeTeamEmoji, away
     return reply;
 }
 
+/**
+ * @param {PlayEvent} lastEvent
+ * @param {string} reply
+ * @param {string} eventType
+ * @returns {string}
+ */
 function addMetrics (lastEvent, reply, eventType) {
     const isSacBunt = globals.SAC_BUNT_EVENT_TYPES.includes(eventType);
     if (lastEvent.hitData.launchSpeed) { // this data can be randomly unavailable

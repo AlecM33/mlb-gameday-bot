@@ -1,3 +1,4 @@
+// @ts-check
 const globalCache = require('./global-cache');
 const globals = require('../config/globals');
 const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_LEVEL.INFO);
@@ -10,6 +11,11 @@ const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_
     to point to defined values, I have to recursively descend the tree, constructing the object if needed.
  */
 module.exports = {
+    /**
+     * Applies a diffPatch response to the live game feed in globalCache.
+     * Supports RFC-6902 operations: add, replace, remove, copy, move.
+     * @param {DiffPatchResponse} patch
+     */
     hydrate: (patch) => {
         try {
             patch.diff.forEach(difference => {
@@ -80,10 +86,22 @@ module.exports = {
     }
 };
 
+/**
+ * @param {string} slashPath
+ * @returns {string}
+ */
 function toJsonPath (slashPath) {
     return slashPath.replaceAll('/', '.').replaceAll(/\.([0-9]+)/g, '[$1]');
 }
 
+/**
+ * Recursively sets or removes a value by walking `accessors`, constructing
+ * objects/arrays as needed.
+ * @param {Record<string, any>} root
+ * @param {string[]} accessors
+ * @param {unknown} value
+ * @param {DiffPatchDifference['op'] | 'add'} op
+ */
 function setJSONValue (root, accessors, value, op) {
     const currentAccessor = accessors[0];
     if (accessors.length === 1) {
