@@ -1,12 +1,8 @@
+// @ts-check
 /**
- * This component concerns subscribing to MLB.com's websocket feed for a live game and in turn reporting that to subscribed Discord channels.
- * It does that very consistently well, and it took a lot of work to get to that point. But it is not perfect, and I don't think it ever will be.
- * Once in a while, you will see a missed event, or a misreported event, or some other weird bug. From what I have observed, that is a consequence of MLB's
- * data feed, which also occasionally makes mistakes. In fact, I have witnessed them sending rare "correction" events live in the wild. And while
- * corrections can be handled nicely on a webpage, once my bot has broadcast an event out to Discord channels, I can't really
- * correct it, at least not easily. I don't want to be in the business of trying to fish for and correct previously sent messages - that
- * is too much overhead and too much complexity for not enough payoff. So, all this to say, if you come into this component
- * looking to perfect it, while I'm sure there are improvements to make, just be aware: the API we are consuming is not perfect either.
+ * Subscribes to MLB's WebSocket gameday feed and reports live plays to Discord channels. Note: MLB's live game API
+ * is not perfect. Once in a while we may miss an event or receive and report data that is off in some way. We've done our
+ * best to mitigate this. By-and-large we are consistent, stable, and accurate, but it's not foolproof.
  */
 
 const mlbAPIUtil = require('./MLB-API-util');
@@ -19,7 +15,7 @@ const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_
 const liveFeed = require('./livefeed');
 const gamedayUtil = require('./gameday-util');
 
-// Shared queue for savant polling: playId -> { gamePk, messages, hitDistance, embed, activeTimers, attempts }
+/** @type {Map<string, SavantQueueEntry>} */
 const savantQueue = new Map();
 let savantLoopRunning = false;
 
@@ -40,6 +36,10 @@ module.exports = {
     get savantLoopRunning () { return savantLoopRunning; }
 };
 
+/**
+ * Starts the polling loop that watches for a game to go live, then hands off to subscribe().
+ * @param {import('discord.js').Client} bot
+ */
 async function statusPoll (bot) {
     const pollingFunction = async () => {
         LOGGER.info('Games: polling...');
@@ -78,12 +78,19 @@ async function statusPoll (bot) {
     await pollingFunction();
 }
 
+/**
+ * Subscribes to the MLB gameday WebSocket for the given game and begins processing events.
+ * @param {import('discord.js').Client} bot
+ * @param {ScheduleGame} liveGame
+ * @param {ScheduleGame[]} games
+ */
 function subscribe (bot, liveGame, games) {
     LOGGER.trace('Gameday: subscribing...');
     const ws = mlbAPIUtil.websocketSubscribe(liveGame.gamePk);
     ws.addEventListener('message', async (e) => {
         try {
             const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
+            /** @type {GamedaySocketEvent} */
             const eventJSON = JSON.parse(e.data);
             /*
                 Once in a while, Gameday will send us duplicate messages. They have different updateIds, but the exact
@@ -145,6 +152,11 @@ function subscribe (bot, liveGame, games) {
     ws.addEventListener('close', (e) => LOGGER.info('Gameday socket closed: ' + JSON.stringify(e)));
 }
 
+/**
+ * Processes all at-bats and events since the last reported index and pushes them to Discord.
+ * @param {import('discord.js').Client} bot
+ * @param {number} gamePk
+ */
 async function reportPlays (bot, gamePk) {
     const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
     const currentPlay = feed.currentPlay();
@@ -182,6 +194,13 @@ async function reportPlays (bot, gamePk) {
     ), gamePk, atBatIndex);
 }
 
+/**
+ * Reports any notable play-events within an at-bat that haven't been reported yet.
+ * @param {Play} atBat
+ * @param {import('discord.js').Client} bot
+ * @param {number} gamePk
+ * @param {number} atBatIndex
+ */
 async function reportAnyMissedEvents (atBat, bot, gamePk, atBatIndex) {
     const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
     const missedEventsToReport = atBat.playEvents?.filter(event => globals.EVENT_WHITELIST.includes(event?.details?.eventType)
@@ -229,6 +248,14 @@ function alreadyReported (description, atBatIndex) {
     });
 }
 
+/**
+ * Sends a processed play to all subscribed Discord channels, respecting per-channel delay settings.
+ * @param {import('discord.js').Client} bot
+ * @param {ProcessedPlay} play
+ * @param {number} gamePk
+ * @param {number} atBatIndex
+ * @param {boolean} [includeTitle]
+ */
 async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle = true) {
     if (play.reply
         && play.reply.length > 0
@@ -278,6 +305,17 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle =
     }
 }
 
+/**
+ * Builds a Discord EmbedBuilder for the given processed play.
+ * @param {ProcessedPlay} play
+ * @param {LiveFeedWrapper} feed
+ * @param {boolean} includeTitle
+ * @param {string} homeTeamColor
+ * @param {string} awayTeamColor
+ * @param {DiscordEmoji | null} homeTeamEmoji
+ * @param {DiscordEmoji | null} awayTeamEmoji
+ * @returns {import('discord.js').EmbedBuilder}
+ */
 function constructPlayEmbed (play, feed, includeTitle, homeTeamColor, awayTeamColor, homeTeamEmoji, awayTeamEmoji) {
     const halfInning = play.halfInning || feed.halfInning();
     const inning = play.inning || feed.inning();
@@ -306,6 +344,12 @@ function constructPlayEmbed (play, feed, includeTitle, homeTeamColor, awayTeamCo
     return embed;
 }
 
+/**
+ * Sends the embed to a channel immediately and tracks the Discord message for later edits.
+ * @param {import('discord.js').TextBasedChannel} returnedChannel
+ * @param {import('discord.js').EmbedBuilder} embed
+ * @param {MessageEntry} message
+ */
 async function sendMessage (returnedChannel, embed, message) {
     LOGGER.debug('Sending!');
     try {
@@ -318,6 +362,15 @@ async function sendMessage (returnedChannel, embed, message) {
     }
 }
 
+/**
+ * Schedules an embed send for a channel with a configured delay.
+ * @param {ProcessedPlay} play
+ * @param {number} gamePk
+ * @param {ChannelSubscription} channelSubscription
+ * @param {import('discord.js').TextBasedChannel} returnedChannel
+ * @param {import('discord.js').EmbedBuilder} embed
+ * @param {MessageEntry} message
+ */
 function sendDelayedMessage (play, gamePk, channelSubscription, returnedChannel, embed, message) {
     setTimeout(async () => {
         LOGGER.debug('Sending!');
@@ -331,6 +384,13 @@ function sendDelayedMessage (play, gamePk, channelSubscription, returnedChannel,
     }, channelSubscription.delay * 1000);
 }
 
+/**
+ * Decides whether to poll for Savant metrics, and kicks off polling if applicable.
+ * @param {ProcessedPlay} play
+ * @param {MessageEntry[]} messages
+ * @param {number} gamePk
+ * @param {import('discord.js').EmbedBuilder} embed
+ */
 async function maybePopulateAdvancedStatcastMetrics (play, messages, gamePk, embed) {
     if (play.isInPlay && play.metricsAvailable) {
         if (play.playId) {
@@ -351,6 +411,11 @@ async function maybePopulateAdvancedStatcastMetrics (play, messages, gamePk, emb
     }
 }
 
+/**
+ * Replaces all "Pending..." placeholders in the embed with "Not Available." and marks messages done.
+ * @param {MessageEntry[]} messages
+ * @param {import('discord.js').EmbedBuilder} embed
+ */
 function notifySavantDataUnavailable (messages, embed) {
     embed.data.description = embed.data.description.replaceAll('Pending...', 'Not Available.');
     editMessages(messages, embed);
@@ -359,6 +424,12 @@ function notifySavantDataUnavailable (messages, embed) {
     }
 }
 
+/**
+ * Edits all already-sent Discord messages in the list with the updated embed.
+ * @param {MessageEntry[]} messages
+ * @param {import('discord.js').EmbedBuilder} embed
+ * @param {string} [logLabel]
+ */
 function editMessages (messages, embed, logLabel = 'Edited') {
     for (const message of messages) {
         if (message.discordMessage && !message.doneEditing) {
@@ -372,6 +443,12 @@ function editMessages (messages, embed, logLabel = 'Edited') {
     }
 }
 
+/**
+ * Edits all Discord messages (including delayed ones) with updated park data.
+ * @param {MessageEntry[]} messages
+ * @param {import('discord.js').EmbedBuilder} embed
+ * @param {string} logLabel
+ */
 function editMessagesWithXParks (messages, embed, logLabel) {
     for (const message of messages) {
         if (message.discordMessage) {
@@ -382,8 +459,14 @@ function editMessagesWithXParks (messages, embed, logLabel) {
     }
 }
 
-/* Enqueues a play for savant data polling. A single shared polling loop handles all queued plays. If the loop is already
-    running, the play is simply added to the queue. If not, the loop is started first. */
+/**
+ * Enqueues a play and starts the shared polling loop if not already running.
+ * @param {number} gamePk
+ * @param {string} playId
+ * @param {MessageEntry[]} messages
+ * @param {number | undefined} hitDistance
+ * @param {import('discord.js').EmbedBuilder} embed
+ */
 async function pollForSavantData (gamePk, playId, messages, hitDistance, embed) {
     const activeTimers = new Set();
     const startTimer = (label) => { console.time(label); activeTimers.add(label); };
@@ -403,8 +486,6 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance, embed) 
     }
 }
 
-/* Single shared polling loop for all queued savant plays. Fetches the savant game feed once per iteration
-   and processes all queued plays against it. Stops when the queue is empty. */
 async function runSavantPollingLoop () {
     const pollingFunction = async () => {
         if (savantQueue.size === 0) {
@@ -451,10 +532,14 @@ async function runSavantPollingLoop () {
     await pollingFunction();
 }
 
-/*
-    When XParks data wasn't ready at the time of first edit, poll the endpoint until it becomes available,
-    then edit messages with the park details appended to the existing HR/Park description.
-*/
+/**
+ * @param {number} gamePk
+ * @param {string} playId
+ * @param {number} numberOfParks
+ * @param {string} baseHRParkDescription
+ * @param {MessageEntry[]} messages
+ * @param {import('discord.js').EmbedBuilder} embed
+ */
 async function pollForXParksAndEdit (gamePk, playId, numberOfParks, baseHRParkDescription, messages, embed) {
     let attempts = 1;
     let currentInterval = globals.SAVANT_XPARKS_POLLING_INTERVAL;
@@ -486,10 +571,14 @@ async function pollForXParksAndEdit (gamePk, playId, numberOfParks, baseHRParkDe
     await pollingFunction();
 }
 
-/* Takes a "play" from the baseball savant game feed and attempts to update any already-sent Discord messages with the metrics.
-    Notably, the list of messages can include messages with a reporting delay that have not yet been sent. We only attempt
-    to edit messages that have been sent.
-*/
+/**
+ * @param {SavantPlayMetrics} matchingPlay
+ * @param {MessageEntry[]} messages
+ * @param {string} playId
+ * @param {number | undefined} hitDistance
+ * @param {import('discord.js').EmbedBuilder} embed
+ * @param {Set<string>} [activeTimers]
+ */
 async function processMatchingPlay (matchingPlay, messages, playId, hitDistance, embed, activeTimers = new Set()) {
     const endTimer = (label) => { if (activeTimers.has(label)) { console.timeEnd(label); activeTimers.delete(label); } };
     const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);

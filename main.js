@@ -76,7 +76,7 @@ BOT.on('interactionCreate', async interaction => {
             }
         } catch (replyError) {
             LOGGER.error('Cannot send response to interaction:');
-            LOGGER.error(error);
+            LOGGER.error(replyError);
         }
     }
 });

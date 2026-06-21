@@ -1,5 +1,14 @@
+// @ts-check
 const { createCanvas, Image } = require('canvas');
+
 module.exports = {
+    /**
+     * Renders one or more ascii-table strings onto a canvas and returns a cropped PNG buffer.
+     * @param {object[]} tables - ascii-table instances
+     * @param {number} canvasWidth
+     * @param {number} canvasHeight
+     * @returns {Buffer}
+     */
     drawSimpleTables: (tables, canvasWidth, canvasHeight) => {
         const width = canvasWidth;
         const height = canvasHeight;
@@ -25,6 +34,13 @@ module.exports = {
         return croppedCanvas.toBuffer('image/png');
     },
 
+    /**
+     * Renders Baseball Savant percentile metric bars alongside a player headshot spot image.
+     * @param {SavantMetric[][]} statCollections - groups of metrics; inner arrays are one stat section each
+     * @param {string[]} collectionLabels - display label for each section
+     * @param {ArrayBuffer} spot - raw image bytes for the player spot
+     * @returns {Buffer}
+     */
     drawSavantTables: (statCollections, collectionLabels, spot) => {
         const width = 500;
         const height = 1000;
@@ -103,6 +119,12 @@ module.exports = {
     }
 };
 
+/**
+ * Creates a repeating diagonal stripe canvas pattern using the given chroma color.
+ * @param {import('canvas').CanvasRenderingContext2D} ctx
+ * @param {any} sliderColor - chroma-js Color object
+ * @returns {CanvasPattern}
+ */
 function createStripePattern (ctx, sliderColor) {
     const stripeCanvas = createCanvas(8, 8);
     const stripeCtx = stripeCanvas.getContext('2d');
@@ -122,6 +144,13 @@ function createStripePattern (ctx, sliderColor) {
     return ctx.createPattern(stripeCanvas, 'repeat');
 }
 
+/**
+ * Returns the bounding box (plus padding) of non-background pixels in a canvas.
+ * @param {import('canvas').CanvasRenderingContext2D} ctx
+ * @param {number} width
+ * @param {number} height
+ * @returns {{ minX: number, minY: number, width: number, height: number } | null}
+ */
 function getBoundingBox (ctx, width, height) {
     const imageData = ctx.getImageData(0, 0, width, height);
     const data = imageData.data;
@@ -156,6 +185,12 @@ function getBoundingBox (ctx, width, height) {
     return { minX, minY, width: maxX - minX + 1, height: maxY - minY + 1 };
 }
 
+/**
+ * Returns a new canvas cropped to the content bounding box.
+ * @param {import('canvas').Canvas} canvas
+ * @param {number} [padding]
+ * @returns {import('canvas').Canvas | null}
+ */
 function cropCanvas (canvas, padding) {
     const ctx = canvas.getContext('2d');
     const boundingBox = getBoundingBox(ctx, canvas.width, canvas.height);
