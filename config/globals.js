@@ -372,6 +372,7 @@ module.exports = {
     },
     HELP_MESSAGE: '`/attendance` - view the attendance for the current game.\n'
     +    '`/box_score` - view the box score for the current game, including hitting and pitching stats.\n'
+    +    '`/bullpen` - view the bullpen availability and usage for either team for the current game.\n'
     +    '`/gameday_preference` - change which plays the bot will report or the reporting delay.\n'
     +    '`/highlights` - get a link to key moments from the game.\n'
     +    '`/line_score` - view the line score for the current game.\n'
