@@ -705,10 +705,10 @@ module.exports = {
             (game.teams?.away?.team?.abbreviation || game.teams?.away?.abbreviation || game.gameData?.teams?.away?.abbreviation) +
             ', ' + (startTimeTBD
             ? 'Start Time TBD'
-            : new Date((game.gameDate || game.datetime?.dateTime || game.gameData?.datetime?.dateTime)).toLocaleString('default', {
+            : new Date((game.gameDate || game.datetime?.dateTime || game.gameData?.datetime?.dateTime)).toLocaleString(globals.LOCALE, {
                 month: 'short',
                 day: 'numeric',
-                timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
+                timeZone: globals.TIME_ZONE,
                 hour: 'numeric',
                 minute: '2-digit',
                 timeZoneName: 'short'
@@ -1228,8 +1228,8 @@ async function resolveDoubleHeaderSelection (interaction) {
             .setCustomId(game.gamePk.toString())
             .setLabel((game.status.startTimeTBD
                 ? 'Start Time TBD'
-                : new Date(game.gameDate).toLocaleString('en-US', {
-                    timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
+                : new Date(game.gameDate).toLocaleString(globals.LOCALE, {
+                    timeZone: globals.TIME_ZONE,
                     hour: 'numeric',
                     minute: '2-digit',
                     timeZoneName: 'short'

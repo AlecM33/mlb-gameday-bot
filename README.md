@@ -7,7 +7,8 @@
 
 This bot and its author are not affiliated with the MLB. The bot uses the MLB Stats API, which is subject to the notice posted at http://gdx.mlb.com/components/copyright.txt
 
-A Discord bot that integrates with the MLB Stats API to track your team of choice. For me, it's the Cleveland Guardians.
+A Discord bot that integrates with the MLB Stats API to track your team of choice. 
+This is designed to be a low-overhead, self-hostable solution to follow one team, ideal for a Discord server dedicated to that team.
 
 When running, the bot periodically polls for games in a 48-hour window centered on the current date. Whichever game is closest in time is considered
 the "current" game, and will be the game for which a lot of the commands returns data. If there's a doubleheader, the bot may ask you to specify which game. If a game is live, the bot subscribes to its MLB.com Gameday live feed,
@@ -58,8 +59,12 @@ Requires a machine with the [Docker](https://docs.docker.com/) Engine running.
     - `TEAM_ID` - the id of the team you want the bot to follow. These match those of the "teams" resource in the MLB stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1 . They are also stored statically in `config/globals.js`. Applicable commands will be configured for that team.
     - `LOG_LEVEL` - your chosen log level (`info`, `error`, `warn`, `debug`, or `trace`)
     - `DISCORD_CLIENT_ID` - the client ID of your Discord application
-    - `REQUIRE_SSL` - whether the postgres database connection should require SSL
-    - `TIME_ZONE` - your chosen time zone. Defaults to EST. Time zone names correspond to the Zone and Link names of the [IANA Time Zone Database](https://www.iana.org/time-zones), such as `"UTC"`, `"Asia/Shanghai"`, `"Asia/Kolkata"`, and `"America/New_York"`. Additionally, time zones can be given as UTC offsets in the format `"±hh:mm"`, `"±hhmm"`, or `"±hh"`, for example `"+01:00"`, `"-2359"`, or `"+23"`.
+    - `REQUIRE_SSL` - whether the PostgreSQL connection requires SSL. Set to `true` for remote or managed database instances (e.g. Aiven, RDS, Cloud SQL); `false` for a local or Docker-networked database (the default).
+    - `DB_SSL_CA` - the full PEM certificate content for SSL verification (e.g. the CA cert downloaded from your managed DB provider). Required when `REQUIRE_SSL=true`; ignored otherwise.
+    - `TIME_ZONE` - your chosen time zone. Defaults to the system timezone. Time zone names correspond to the Zone and Link names of the [IANA Time Zone Database](https://www.iana.org/time-zones), such as `"UTC"`, `"Asia/Shanghai"`, `"Asia/Kolkata"`, and `"America/New_York"`. Additionally, time zones can be given as UTC offsets in the format `"±hh:mm"`, `"±hhmm"`, or `"±hh"`, for example `"+01:00"`, `"-2359"`, or `"+23"`.
+    - `LOCALE` - the [BCP 47 locale tag](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl#locales_argument) used when formatting dates and times (e.g. `"en-US"`, `"en-GB"`, `"ja-JP"`). Defaults to `en-US`.
+    - `HC_PING_URL` *(optional)* - a [healthchecks.io](https://healthchecks.io) ping URL (e.g. `https://hc-ping.com/<uuid>`). When set, the bot sends a GET request to this URL on the configured interval for uptime monitoring. Omit or leave empty to disable.
+    - `HC_PING_INTERVAL_MS` *(optional)* - how often to ping the healthcheck URL, in milliseconds. Defaults to `600000` (10 minutes). Should match the schedule configured in your healthchecks.io check.
 
 
 2. Run `docker-compose up`
@@ -74,7 +79,6 @@ Requires [Node.js](https://nodejs.org/) and a running [PostgreSQL](https://www.p
    ```
    psql -U <your_user> -d <your_db> -f database/schema.sql
    ```
-   If SSL is required, place your certificate in `database/certs/`.
 
 3. Populate the following environment variables:
    - `CLIENT_ID` - your bot's client ID, AKA application ID
@@ -82,7 +86,12 @@ Requires [Node.js](https://nodejs.org/) and a running [PostgreSQL](https://www.p
    - `DATABASE_STRING` - a PostgreSQL connection string **(sensitive)**, e.g. `postgresql://user:password@host:5432/dbname`
    - `TEAM_ID` - the team you want to follow. These match those of the "teams" resource in the MLB stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1 . They are also stored statically in `config/globals.js`.
    - `LOG_LEVEL` - your chosen log level (`info`, `error`, `warn`, `debug`, or `trace`)
-   - `TIME_ZONE` - your chosen time zone. Defaults to EST. Follows the same format as the Docker section above.
+   - `REQUIRE_SSL` - whether the PostgreSQL connection requires SSL. Set to `true` for remote or managed database instances (e.g. Aiven, RDS, Cloud SQL); `false` for a local database.
+   - `DB_SSL_CA` - the full PEM certificate content for SSL verification. Required when `REQUIRE_SSL=true`; ignored otherwise.
+   - `TIME_ZONE` - your chosen time zone. Defaults to the system timezone. Follows the same format as the Docker section above.
+   - `LOCALE` - the BCP 47 locale tag used when formatting dates and times. Defaults to `en-US`. Follows the same format as the Docker section above.
+   - `HC_PING_URL` *(optional)* - a [healthchecks.io](https://healthchecks.io) ping URL (e.g. `https://hc-ping.com/<uuid>`). Omit or leave empty to disable.
+   - `HC_PING_INTERVAL_MS` *(optional)* - how often to ping the healthcheck URL, in milliseconds. Defaults to `600000` (10 minutes).
 
 4. Register slash commands with Discord, then start the bot:
    ```
@@ -153,6 +162,7 @@ mlb-gameday-bot/
 │   ├── diff-patch.js          # Applies JSON Patch updates to the cached live feed based on events received from the websocket
 │   ├── MLB-API-util.js        # Functions for all calls to the MLB Stats API and Baseball Savant
 │   ├── global-cache.js        # In-memory cache for live feed data, among other things
+│   ├── healthcheck.js         # Sends periodic ping to healthcheck.io if configured
 │   ├── canvas-util.js         # Helper functions for generating images attached to certain commands
 │   ├── command-util.js        # General helpers used across commands
 │   ├── interaction-handlers.js # contains a handler function for each command

@@ -358,6 +358,8 @@ module.exports = {
             "abbreviation": "NYM"
         }
     ],
+    TIME_ZONE: process.env.TIME_ZONE?.trim() || Intl.DateTimeFormat().resolvedOptions().timeZone,
+    LOCALE: process.env.LOCALE?.trim() || 'en-US',
     GAME_STATUS_CODES: {
         IN_PROGRESS: "I",
         WARMUP: "PW"
