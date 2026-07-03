@@ -162,6 +162,7 @@ mlb-gameday-bot/
 │   ├── diff-patch.js          # Applies JSON Patch updates to the cached live feed based on events received from the websocket
 │   ├── MLB-API-util.js        # Functions for all calls to the MLB Stats API and Baseball Savant
 │   ├── global-cache.js        # In-memory cache for live feed data, among other things
+│   ├── healthcheck.js         # Sends periodic ping to healthcheck.io if configured
 │   ├── canvas-util.js         # Helper functions for generating images attached to certain commands
 │   ├── command-util.js        # General helpers used across commands
 │   ├── interaction-handlers.js # contains a handler function for each command

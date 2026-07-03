@@ -57,4 +57,3 @@ function start () {
 }
 
 module.exports = { start, ping, schedulePings };
-
