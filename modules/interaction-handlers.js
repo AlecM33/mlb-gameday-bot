@@ -104,8 +104,8 @@ module.exports = {
                     .find(v => v.name.includes(
                         (home ? teams.away.team.id : teams.home.team.id)
                     ));
-                reply += `${gameDate.toLocaleString('en-US', {
-                    timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
+                reply += `${gameDate.toLocaleString(globals.LOCALE, {
+                    timeZone: globals.TIME_ZONE,
                     weekday: 'short' 
                 })} ${date.date.substr(6)}` +
                     (home ? ' vs. ' : ' @ ') + (home ? teams.away.team.abbreviation : teams.home.team.abbreviation) +
@@ -113,8 +113,8 @@ module.exports = {
                     ' ' +
                     (game.status.startTimeTBD
                         ? 'Start Time TBD'
-                        : gameDate.toLocaleString('en-US', {
-                            timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
+                        : gameDate.toLocaleString(globals.LOCALE, {
+                            timeZone: globals.TIME_ZONE,
                             hour: 'numeric',
                             minute: '2-digit',
                             timeZoneName: 'short'
@@ -436,10 +436,10 @@ module.exports = {
                 await commandUtil.giveFinalCommandResponse(boxScoreChoiceToHandle, {
                     ephemeral: false,
                     content: homeAbbreviation + ' vs. ' + awayAbbreviation +
-                        ', ' + new Date(game.gameDate).toLocaleString('default', {
+                        ', ' + new Date(game.gameDate).toLocaleString(globals.LOCALE, {
                         month: 'short',
                         day: 'numeric',
-                        timeZone: (process.env.TIME_ZONE?.trim() || 'America/New_York'),
+                        timeZone: globals.TIME_ZONE,
                         hour: 'numeric',
                         minute: '2-digit',
                         timeZoneName: 'short'

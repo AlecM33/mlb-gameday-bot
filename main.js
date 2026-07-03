@@ -5,6 +5,7 @@ const gameday = require('./modules/gameday');
 const globalCache = require('./modules/global-cache');
 const queries = require('./database/queries');
 const commandUtil = require('./modules/command-util');
+const healthcheck = require('./modules/healthcheck');
 const { LOG_LEVEL } = require('./config/globals');
 const LOGGER = require('./modules/logger')(process.env.LOG_LEVEL?.trim() || LOG_LEVEL.INFO);
 
@@ -39,6 +40,7 @@ BOT.once('ready', async () => {
     globalCache.values.subscribedChannels = await queries.getAllSubscribedChannels();
     LOGGER.info('Subscribed channels: ' + JSON.stringify(globalCache.values.subscribedChannels, null, 2));
     commandUtil.buildPlayerCache().catch(e => LOGGER.error('Failed to build player cache:', e));
+    healthcheck.start();
     await gameday.statusPoll(BOT);
 });
 
