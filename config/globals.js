@@ -1,5 +1,5 @@
 module.exports = {
-    EVENT_WHITELIST:[
+    EVENT_WHITELIST: [
         'pickoff_1b',
         'pickoff_2b',
         'pickoff_3b',
@@ -114,30 +114,30 @@ module.exports = {
     PLAYER_CACHE_TTL_MS: 12 * 60 * 60 * 1000, // 12 hours
     PLAYER_CACHE_RATE_LIMIT_MS: 200,
     CHALLENGE_TYPES: {
-        PITCH_RESULT: "challenged (pitch result)"
+        PITCH_RESULT: 'challenged (pitch result)'
     },
     HALF_INNINGS: {
         TOP: 'top',
         BOTTOM: 'bottom'
     },
     EVENTS: [
-        "Double",
-        "Double Play",
-        "Field Error",
-        "Fielders Choice Out",
-        "Flyout",
-        "Forceout",
-        "Grounded Into DP",
-        "Groundout",
-        "Hit By Pitch",
-        "Home Run",
-        "Intent Walk",
-        "Lineout",
-        "Pop Out",
-        "Single",
-        "Strikeout",
-        "Triple",
-        "Walk"
+        'Double',
+        'Double Play',
+        'Field Error',
+        'Fielders Choice Out',
+        'Flyout',
+        'Forceout',
+        'Grounded Into DP',
+        'Groundout',
+        'Hit By Pitch',
+        'Home Run',
+        'Intent Walk',
+        'Lineout',
+        'Pop Out',
+        'Single',
+        'Strikeout',
+        'Triple',
+        'Walk'
     ],
     LOG_LEVEL: {
         INFO: 'info',
@@ -148,221 +148,221 @@ module.exports = {
     },
     TEAMS: [
         {
-            "id": 133,
-            "name": "Athletics",
-            "primaryColor": "#003831",
-            "secondaryColor": "#EFB21E",
-            "abbreviation": "OAK"
+            id: 133,
+            name: 'Athletics',
+            primaryColor: '#003831',
+            secondaryColor: '#EFB21E',
+            abbreviation: 'OAK'
         },
         {
-            "id": 134,
-            "name": "Pirates",
-            "primaryColor": "#FDB827",
-            "secondaryColor": "#27251F",
-            "abbreviation": "PIT"
+            id: 134,
+            name: 'Pirates',
+            primaryColor: '#FDB827',
+            secondaryColor: '#27251F',
+            abbreviation: 'PIT'
         },
         {
-            "id": 135,
-            "name": "Padres",
-            "primaryColor": "#2F241D",
-            "secondaryColor": "#FFC425",
-            "abbreviation": "SD"
+            id: 135,
+            name: 'Padres',
+            primaryColor: '#2F241D',
+            secondaryColor: '#FFC425',
+            abbreviation: 'SD'
         },
         {
-            "id": 136,
-            "name": "Mariners",
-            "primaryColor": "#005C5C",
-            "secondaryColor": "#0C2C56",
-            "abbreviation": "SEA"
+            id: 136,
+            name: 'Mariners',
+            primaryColor: '#005C5C',
+            secondaryColor: '#0C2C56',
+            abbreviation: 'SEA'
         },
         {
-            "id": 137,
-            "name": "Giants",
-            "primaryColor": "#FD5A1E",
-            "secondaryColor": "#27251F",
-            "abbreviation": "SF"
+            id: 137,
+            name: 'Giants',
+            primaryColor: '#FD5A1E',
+            secondaryColor: '#27251F',
+            abbreviation: 'SF'
         },
         {
-            "id": 138,
-            "name": "Cardinals",
-            "primaryColor": "#C41E3A",
-            "secondaryColor": "#0C2340",
-            "abbreviation": "STL"
+            id: 138,
+            name: 'Cardinals',
+            primaryColor: '#C41E3A',
+            secondaryColor: '#0C2340',
+            abbreviation: 'STL'
         },
         {
-            "id": 139,
-            "name": "Rays",
-            "primaryColor": "#8FBCE6",
-            "secondaryColor": "#092C5C",
-            "abbreviation": "TB"
+            id: 139,
+            name: 'Rays',
+            primaryColor: '#8FBCE6',
+            secondaryColor: '#092C5C',
+            abbreviation: 'TB'
         },
         {
-            "id": 140,
-            "name": "Rangers",
-            "primaryColor": "#003278",
-            "secondaryColor": "#C0111F",
-            "abbreviation": "TEX"
+            id: 140,
+            name: 'Rangers',
+            primaryColor: '#003278',
+            secondaryColor: '#C0111F',
+            abbreviation: 'TEX'
         },
         {
-            "id": 141,
-            "name": "Blue Jays",
-            "primaryColor": "#134A8E",
-            "secondaryColor": "#1D2D5C",
-            "abbreviation": "TOR"
+            id: 141,
+            name: 'Blue Jays',
+            primaryColor: '#134A8E',
+            secondaryColor: '#1D2D5C',
+            abbreviation: 'TOR'
         },
         {
-            "id": 142,
-            "name": "Twins",
-            "primaryColor": "#002B5C",
-            "secondaryColor": "#D31145",
-            "abbreviation": "MIN"
+            id: 142,
+            name: 'Twins',
+            primaryColor: '#002B5C',
+            secondaryColor: '#D31145',
+            abbreviation: 'MIN'
         },
         {
-            "id": 143,
-            "name": "Phillies",
-            "primaryColor": "#E81828",
-            "secondaryColor": "#002D72",
-            "abbreviation": "PHI"
+            id: 143,
+            name: 'Phillies',
+            primaryColor: '#E81828',
+            secondaryColor: '#002D72',
+            abbreviation: 'PHI'
         },
         {
-            "id": 144,
-            "name": "Braves",
-            "primaryColor": "#CE1141",
-            "secondaryColor": "#13274F",
-            "abbreviation": "ATL"
+            id: 144,
+            name: 'Braves',
+            primaryColor: '#CE1141',
+            secondaryColor: '#13274F',
+            abbreviation: 'ATL'
         },
         {
-            "id": 145,
-            "name": "White Sox",
-            "primaryColor": "#27251F",
-            "secondaryColor": "#C4CED4",
-            "abbreviation": "CWS"
+            id: 145,
+            name: 'White Sox',
+            primaryColor: '#27251F',
+            secondaryColor: '#C4CED4',
+            abbreviation: 'CWS'
         },
         {
-            "id": 146,
-            "name": "Marlins",
-            "primaryColor": "#00A3E0",
-            "secondaryColor": "#EF3340",
-            "abbreviation": "MIA"
+            id: 146,
+            name: 'Marlins',
+            primaryColor: '#00A3E0',
+            secondaryColor: '#EF3340',
+            abbreviation: 'MIA'
         },
         {
-            "id": 147,
-            "name": "Yankees",
-            "primaryColor": "#C4CED3",
-            "secondaryColor": "#0C2340",
-            "abbreviation": "NYY"
+            id: 147,
+            name: 'Yankees',
+            primaryColor: '#C4CED3',
+            secondaryColor: '#0C2340',
+            abbreviation: 'NYY'
         },
         {
-            "id": 158,
-            "name": "Brewers",
-            "primaryColor": "#FFC52F",
-            "secondaryColor": "#12284B",
-            "abbreviation": "MIL"
+            id: 158,
+            name: 'Brewers',
+            primaryColor: '#FFC52F',
+            secondaryColor: '#12284B',
+            abbreviation: 'MIL'
         },
         {
-            "id": 108,
-            "name": "Angels",
-            "primaryColor": "#BA0021",
-            "secondaryColor": "#003263",
-            "abbreviation": "LAA"
+            id: 108,
+            name: 'Angels',
+            primaryColor: '#BA0021',
+            secondaryColor: '#003263',
+            abbreviation: 'LAA'
         },
         {
-            "id": 109,
-            "name": "D-backs",
-            "primaryColor": "#A71930",
-            "secondaryColor": "#E3D4AD",
-            "abbreviation": "AZ"
+            id: 109,
+            name: 'Diamondbacks',
+            primaryColor: '#A71930',
+            secondaryColor: '#E3D4AD',
+            abbreviation: 'AZ'
         },
         {
-            "id": 110,
-            "name": "Orioles",
-            "primaryColor": "#DF4601",
-            "secondaryColor": "#030303", // this should be #000000, but there's a Discord bug where embeds don't display that color on mobile.
-            "abbreviation": "BAL"
+            id: 110,
+            name: 'Orioles',
+            primaryColor: '#DF4601',
+            secondaryColor: '#030303', // this should be #000000, but there's a Discord bug where embeds don't display that color on mobile.
+            abbreviation: 'BAL'
         },
         {
-            "id": 111,
-            "name": "Red Sox",
-            "primaryColor": "#BD3039",
-            "secondaryColor": "#0C2340",
-            "abbreviation": "BOS"
+            id: 111,
+            name: 'Red Sox',
+            primaryColor: '#BD3039',
+            secondaryColor: '#0C2340',
+            abbreviation: 'BOS'
         },
         {
-            "id": 112,
-            "name": "Cubs",
-            "primaryColor": "#0E3386",
-            "secondaryColor": "#CC3433",
-            "abbreviation": "CHC"
+            id: 112,
+            name: 'Cubs',
+            primaryColor: '#0E3386',
+            secondaryColor: '#CC3433',
+            abbreviation: 'CHC'
         },
         {
-            "id": 113,
-            "name": "Reds",
-            "primaryColor": "#C6011F",
-            "secondaryColor": "#030303", // this should be #000000, but there's a Discord bug where embeds don't display that color on mobile.
-            "abbreviation": "CIN"
+            id: 113,
+            name: 'Reds',
+            primaryColor: '#C6011F',
+            secondaryColor: '#030303', // this should be #000000, but there's a Discord bug where embeds don't display that color on mobile.
+            abbreviation: 'CIN'
         },
         {
-            "id": 114,
-            "name": "Guardians",
-            "primaryColor": "#E50022",
-            "secondaryColor": "#00385D",
-            "abbreviation": "CLE"
+            id: 114,
+            name: 'Guardians',
+            primaryColor: '#E50022',
+            secondaryColor: '#00385D',
+            abbreviation: 'CLE'
         },
         {
-            "id": 115,
-            "name": "Rockies",
-            "primaryColor": "#333366",
-            "secondaryColor": "#C4CED4",
-            "abbreviation": "COL"
+            id: 115,
+            name: 'Rockies',
+            primaryColor: '#333366',
+            secondaryColor: '#C4CED4',
+            abbreviation: 'COL'
         },
         {
-            "id": 116,
-            "name": "Tigers",
-            "primaryColor": "#0C2340",
-            "secondaryColor": "#FA4616",
-            "abbreviation": "DET"
+            id: 116,
+            name: 'Tigers',
+            primaryColor: '#0C2340',
+            secondaryColor: '#FA4616',
+            abbreviation: 'DET'
         },
         {
-            "id": 117,
-            "name": "Astros",
-            "primaryColor": "#002D62",
-            "secondaryColor": "#EB6E1F",
-            "abbreviation": "HOU"
+            id: 117,
+            name: 'Astros',
+            primaryColor: '#002D62',
+            secondaryColor: '#EB6E1F',
+            abbreviation: 'HOU'
         },
         {
-            "id": 118,
-            "name": "Royals",
-            "primaryColor": "#004687",
-            "secondaryColor": "#BD9B60",
-            "abbreviation": "KC"
+            id: 118,
+            name: 'Royals',
+            primaryColor: '#004687',
+            secondaryColor: '#BD9B60',
+            abbreviation: 'KC'
         },
         {
-            "id": 119,
-            "name": "Dodgers",
-            "primaryColor": "#005A9C",
-            "secondaryColor": "#EF3E42",
-            "abbreviation": "LAD"
+            id: 119,
+            name: 'Dodgers',
+            primaryColor: '#005A9C',
+            secondaryColor: '#EF3E42',
+            abbreviation: 'LAD'
         },
         {
-            "id": 120,
-            "name": "Nationals",
-            "primaryColor": "#AB0003",
-            "secondaryColor": "#14225A",
-            "abbreviation": "WSH"
+            id: 120,
+            name: 'Nationals',
+            primaryColor: '#AB0003',
+            secondaryColor: '#14225A',
+            abbreviation: 'WSH'
         },
         {
-            "id": 121,
-            "name": "Mets",
-            "primaryColor": "#002D72",
-            "secondaryColor": "#FF5910",
-            "abbreviation": "NYM"
+            id: 121,
+            name: 'Mets',
+            primaryColor: '#002D72',
+            secondaryColor: '#FF5910',
+            abbreviation: 'NYM'
         }
     ],
     TIME_ZONE: process.env.TIME_ZONE?.trim() || Intl.DateTimeFormat().resolvedOptions().timeZone,
     LOCALE: process.env.LOCALE?.trim() || 'en-US',
     GAME_STATUS_CODES: {
-        IN_PROGRESS: "I",
-        WARMUP: "PW"
+        IN_PROGRESS: 'I',
+        WARMUP: 'PW'
     },
     MISSED_AT_BAT_INDICATOR: 2,
     /*
@@ -370,23 +370,52 @@ module.exports = {
      See: https://github.com/MajorLeagueBaseball/google-cloud-mlb-hackathon/blob/main/datasets/mlb-statsapi-docs/MLB-StatsAPI%20-%20Lookup%20Values.pdf
      */
     CODED_GAME_STATES: {
-        POSTPONED: "D"
+        POSTPONED: 'D'
     },
-    HELP_MESSAGE: '`/attendance` - view the attendance for the current game.\n'
-    +    '`/box_score` - view the box score for the current game, including hitting and pitching stats.\n'
-    +    '`/bullpen` - view the bullpen availability and usage for either team for the current game.\n'
-    +    '`/gameday_preference` - change which plays the bot will report or the reporting delay.\n'
-    +    '`/highlights` - get a link to key moments from the game.\n'
-    +    '`/line_score` - view the line score for the current game.\n'
-    +    '`/lineup` - view the lineup card for the current game.\n'
-    +    '`/player` - view stats on a specified player.\n'
-    +    '`/player_savant` - view Baseball Savant percentile rankings for a specified player.\n'
-    +    '`/schedule` - view the upcoming schedule for the next week of games.\n'
-    +    '`/scoring_plays` - get a curated list of scoring plays, with direct links to the play on the Gameday page.\n'
-    +    '`/standings` - check the standings for your team\'s division.\n'
-    +    '`/starters` - examine the starting pitching matchup for the upcoming game.\n'
-    +    '`/subscribe_gameday` - subscribe a given Discord channel to receive real-time updates from the "Gameday" feed.\n'
-    +    '`/unsubscribe_gameday` - un-subscribe a given Discord channel from the above functionality.\n'
-    +    '`/weather` - view the weather for the current game.\n'
-    +    '`/wildcard` - view the current wildcard standings.\n'
-}
+    /**
+     * We enhanced the TEAM_ID variable to allow for a team name to be supplied instead
+     * of a numeric ID, so the client doesn't have to look up the ID. The name is resolved
+     * to a numeric ID at runtime so existing code is unaffected. If the name is not recognised we
+     * throw an error and exit.
+     */
+    resolveTeamId () {
+        const raw = process.env.TEAM_ID?.trim();
+        if (!raw) {
+            console.error('FATAL: TEAM_ID environment variable is not set.');
+            process.exit(1);
+            return;
+        }
+        const numeric = parseInt(raw);
+        if (!isNaN(numeric)) {
+            if (!this.TEAMS.find(t => t.id === numeric)) {
+                console.error(`FATAL: TEAM_ID="${raw}" is not a recognised MLB team ID. Valid IDs: ${this.TEAMS.map(t => t.id).join(', ')}`);
+                process.exit(1);
+            }
+            return;
+        }
+        const match = this.TEAMS.find(t => t.name.toLowerCase() === raw.toLowerCase());
+        if (!match) {
+            console.error(`FATAL: TEAM_ID="${raw}" is not a recognised team name. Valid names: ${this.TEAMS.map(t => t.name).join(', ')}`);
+            process.exit(1);
+            return;
+        }
+        process.env.TEAM_ID = String(match.id);
+    },
+    HELP_MESSAGE: '`/attendance` - view the attendance for the current game.\n' +
+    '`/box_score` - view the box score for the current game, including hitting and pitching stats.\n' +
+    '`/bullpen` - view the bullpen availability and usage for either team for the current game.\n' +
+    '`/gameday_preference` - change which plays the bot will report or the reporting delay.\n' +
+    '`/highlights` - get a link to key moments from the game.\n' +
+    '`/line_score` - view the line score for the current game.\n' +
+    '`/lineup` - view the lineup card for the current game.\n' +
+    '`/player` - view stats on a specified player.\n' +
+    '`/player_savant` - view Baseball Savant percentile rankings for a specified player.\n' +
+    '`/schedule` - view the upcoming schedule for the next week of games.\n' +
+    '`/scoring_plays` - get a curated list of scoring plays, with direct links to the play on the Gameday page.\n' +
+    '`/standings` - check the standings for your team\'s division.\n' +
+    '`/starters` - examine the starting pitching matchup for the upcoming game.\n' +
+    '`/subscribe_gameday` - subscribe a given Discord channel to receive real-time updates from the "Gameday" feed.\n' +
+    '`/unsubscribe_gameday` - un-subscribe a given Discord channel from the above functionality.\n' +
+    '`/weather` - view the weather for the current game.\n' +
+    '`/wildcard` - view the current wildcard standings.\n'
+};
