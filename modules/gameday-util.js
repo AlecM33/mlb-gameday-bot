@@ -150,13 +150,26 @@ module.exports = {
         return reply;
     },
 
-    /** @param {string | undefined} description */
+    /**
+     * ABS challenges specifically can be reported with the same result but a different challenger. For example:
+     * "Dodgers challenged (pitch result), call on the field was overturned: Steven Kwan called out on strikes" and then,
+     * shortly after, "Will Smith challenged (pitch result), call on the field was overturned: Steven Kwan called out on strikes".
+     * For these we just need to compare what is consistent between them: the outcome.
+     * @param {string | undefined} description
+     */
     extractReviewOutcome: (description) => {
         const index = description?.indexOf(', call on the field was ');
         return index === -1 ? null : description?.slice(index);
     },
 
-    /** @param {string | undefined} description */
+    /**
+     * Strips the stolen-base count from a description (e.g. "steals (12)" -> "steals") so that
+     * two descriptions for the same steal event don't appear distinct just because the cumulative
+     * count differs between feed snapshots. This is needed to handle reporting quirks where the MLB API messes up
+     * the base/steal count if a player steals multiple bases in an at bat.
+     *
+     * @param {string | undefined} description
+     */
     stripStealCount: (description) => {
         return description?.replace(/ steals \(\d+\) /, ' steals ');
     },
