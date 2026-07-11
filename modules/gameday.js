@@ -212,6 +212,14 @@ async function reportAnyMissedEvents (atBat, bot, gamePk, atBatIndex) {
     }
 }
 
+/**
+ * Sends a processed play to all subscribed Discord channels, respecting per-channel delay settings.
+ * @param {import('discord.js').Client} bot
+ * @param {ProcessedPlay} play
+ * @param {number} gamePk
+ * @param {number} atBatIndex
+ * @param {boolean} [includeTitle]
+ */
 async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle = true) {
     if (play.reply
         && play.reply.length > 0
@@ -495,7 +503,12 @@ async function processMatchingPlay (matchingPlay, messages, playId, hitDistance,
             || sentDescription.includes('HR/Park: Pending...');
         const descriptionChanged = message.discordMessage.embeds[0].data.description !== embed.data.description;
         if (needsEdit && descriptionChanged) {
-            gamedayUtil.editMessages([message], embed);
+            message.discordMessage.edit({ embeds: [embed] })
+                .then((m) => LOGGER.trace('Edited: ' + m.id))
+                .catch((e) => {
+                    console.error(e);
+                    message.doneEditing = true;
+                });
         }
         if (allMetricsDone) {
             message.doneEditing = true;
