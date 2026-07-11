@@ -133,8 +133,14 @@ function subscribe (bot, liveGame, games) {
                         try {
                             diffPatch.hydrate(patch);
                         } catch (e) {
-                            // catching something here means our game object could now be incorrect. reset the live feed.
+                            /*
+                                Catching something here means our game object could now be incorrect, so we fully
+                                reset the live feed. As a result of that, we should no longer be trying to apply
+                                the rest of the "patches" from this batch of updates, so we break out of the loop.
+                             */
                             globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(liveGame.gamePk);
+                            await reportPlays(bot, liveGame.gamePk);
+                            break;
                         }
                         await reportPlays(bot, liveGame.gamePk);
                     }
