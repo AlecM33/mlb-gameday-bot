@@ -56,7 +56,7 @@ Requires a machine with the [Docker](https://docs.docker.com/) Engine running.
     - `DB_NAME` - the name for the postgres database
     - `DB_PORT` - the port for the postgres database
     - `DISCORD_TOKEN` - your discord bot's auth token **(sensitive)**
-    - `TEAM_ID` - the id of the team you want the bot to follow. These match those of the "teams" resource in the MLB stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1 . They are also stored statically in `config/globals.js`. Applicable commands will be configured for that team.
+    - `TEAM_ID` - the team you want the bot to follow. Accepts either a numeric team ID or a team name (e.g. `Padres`, `White Sox`). Team names/IDs match those of the "teams" resource in the MLB Stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1. They are also stored statically in `config/globals.js` under `TEAMS`. Applicable commands will be configured for that team.
     - `LOG_LEVEL` - your chosen log level (`info`, `error`, `warn`, `debug`, or `trace`)
     - `DISCORD_CLIENT_ID` - the client ID of your Discord application
     - `REQUIRE_SSL` - whether the PostgreSQL connection requires SSL. Set to `true` for remote or managed database instances (e.g. Aiven, RDS, Cloud SQL); `false` for a local or Docker-networked database (the default).
@@ -84,7 +84,7 @@ Requires [Node.js](https://nodejs.org/) and a running [PostgreSQL](https://www.p
    - `CLIENT_ID` - your bot's client ID, AKA application ID
    - `TOKEN` - your bot's authentication token **(sensitive)**
    - `DATABASE_STRING` - a PostgreSQL connection string **(sensitive)**, e.g. `postgresql://user:password@host:5432/dbname`
-   - `TEAM_ID` - the team you want to follow. These match those of the "teams" resource in the MLB stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1 . They are also stored statically in `config/globals.js`.
+   - `TEAM_ID` - the team you want to follow. Accepts either a numeric team ID or a team name (e.g. `Padres`, `White Sox`). Team IDs match those of the "teams" resource in the MLB Stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1. They are also stored statically in `config/globals.js` under `TEAMS`.
    - `LOG_LEVEL` - your chosen log level (`info`, `error`, `warn`, `debug`, or `trace`)
    - `REQUIRE_SSL` - whether the PostgreSQL connection requires SSL. Set to `true` for remote or managed database instances (e.g. Aiven, RDS, Cloud SQL); `false` for a local database.
    - `DB_SSL_CA` - the full PEM certificate content for SSL verification. Required when `REQUIRE_SSL=true`; ignored otherwise.

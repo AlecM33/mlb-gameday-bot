@@ -7,7 +7,10 @@ const queries = require('./database/queries');
 const commandUtil = require('./modules/command-util');
 const healthcheck = require('./modules/healthcheck');
 const { LOG_LEVEL } = require('./config/globals');
+const globals = require('./config/globals');
 const LOGGER = require('./modules/logger')(process.env.LOG_LEVEL?.trim() || LOG_LEVEL.INFO);
+
+globals.resolveTeamId();
 
 const BOT = new Client({
     intents: [
