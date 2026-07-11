@@ -845,7 +845,9 @@ describe('gameday', () => {
             expect(gameday.sendMessage).not.toHaveBeenCalled();
         });
     });
+});
 
+describe('gamedayUtil', () => {
     describe('#constructPlayEmbed', () => {
         beforeAll(() => {
             globalCache.values.emojis = [
@@ -883,11 +885,10 @@ describe('gameday', () => {
             globalCache.values.game.currentLiveFeed = require('./data/example-live-feeds/live-feed-2024');
             gamedayUtil.getTeamEmojis();
         });
-        beforeEach(() => {});
 
         it('should title the embed with no emojis for a scoring play', async () => {
             const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
-            const embed = gameday.constructPlayEmbed(
+            const embed = gamedayUtil.constructPlayEmbed(
                 currentPlayProcessor.process(
                     examplePlays.homeRun,
                     feed,
@@ -907,7 +908,7 @@ describe('gameday', () => {
 
         it('should include the score and emojis in the title for non-scoring plays', async () => {
             const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
-            const embed = gameday.constructPlayEmbed(
+            const embed = gamedayUtil.constructPlayEmbed(
                 currentPlayProcessor.process(
                     examplePlays.steal,
                     feed,
@@ -932,7 +933,7 @@ describe('gameday', () => {
                 awayAbbreviation: () => 'CLE',
                 homeAbbreviation: () => 'DET'
             };
-            const embed = gameday.constructPlayEmbed(
+            const embed = gamedayUtil.constructPlayEmbed(
                 {
                     reply: 'Third out recorded.',
                     isScoringPlay: false,

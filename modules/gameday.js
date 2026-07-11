@@ -9,7 +9,6 @@ const mlbAPIUtil = require('./MLB-API-util');
 const globalCache = require('./global-cache');
 const diffPatch = require('./diff-patch');
 const currentPlayProcessor = require('./current-play-processor');
-const { EmbedBuilder } = require('discord.js');
 const globals = require('../config/globals');
 const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_LEVEL.INFO);
 const liveFeed = require('./livefeed');
@@ -23,13 +22,10 @@ module.exports = {
     statusPoll,
     subscribe,
     processAndPushPlay,
-    pollForSavantData,
     runSavantPollingLoop,
-    pollForXParksAndEdit,
     processMatchingPlay,
     sendMessage,
     sendDelayedMessage,
-    constructPlayEmbed,
     reportPlays,
     reportAnyMissedEvents,
     savantQueue,
@@ -204,7 +200,7 @@ async function reportPlays (bot, gamePk) {
 async function reportAnyMissedEvents (atBat, bot, gamePk, atBatIndex) {
     const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
     const missedEventsToReport = atBat.playEvents?.filter(event => globals.EVENT_WHITELIST.includes(event?.details?.eventType)
-        && !alreadyReported(event?.details?.description, atBatIndex)
+        && !gamedayUtil.alreadyReported(event?.details?.description, atBatIndex)
     ) || [];
     for (const missedEvent of missedEventsToReport) {
         await module.exports.processAndPushPlay(bot, currentPlayProcessor.process(
@@ -217,56 +213,20 @@ async function reportAnyMissedEvents (atBat, bot, gamePk, atBatIndex) {
 }
 
 /*
-    ABS challenges specifically can be reported with the same result but a different challenger. For example:
-    "Dodgers challenged (pitch result), call on the field was overturned: Steven Kwan called out on strikes" and then,
-    shortly after, "Will Smith challenged (pitch result), call on the field was overturned: Steven Kwan called out on strikes".
-    For these we just need to compare what is consistent between them: the outcome.
+    ABS challenges / steal count normalization and duplicate-detection logic lives in gameday-util.js
 */
-function extractReviewOutcome (description) {
-    const index = description?.indexOf(', call on the field was ');
-    return index === -1 ? null : description?.slice(index);
-}
 
-function alreadyReported (description, atBatIndex) {
-    const reviewOutcome = extractReviewOutcome(description);
-    return globalCache.values.game.reportedDescriptions.find(reported => {
-        const withinRange = reported.atBatIndex === atBatIndex || reported.atBatIndex === (atBatIndex - 1);
-        if (!withinRange) {
-            return false;
-        }
-        if (reported.description === description) {
-            return true;
-        }
-        // see function extractReviewOutcome - the same challenge result can be reported two different ways.
-        if (reviewOutcome) {
-            const reportedOutcome = extractReviewOutcome(reported.description);
-            if (reportedOutcome && reportedOutcome === reviewOutcome) {
-                return true;
-            }
-        }
-        return false;
-    });
-}
-
-/**
- * Sends a processed play to all subscribed Discord channels, respecting per-channel delay settings.
- * @param {import('discord.js').Client} bot
- * @param {ProcessedPlay} play
- * @param {number} gamePk
- * @param {number} atBatIndex
- * @param {boolean} [includeTitle]
- */
 async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle = true) {
     if (play.reply
         && play.reply.length > 0
-        && !alreadyReported(play.description, atBatIndex)
+        && !gamedayUtil.alreadyReported(play.description, atBatIndex)
     ) {
         globalCache.values.game.reportedDescriptions.push({ description: play.description, atBatIndex });
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         if (play.isComplete) {
             globalCache.values.game.lastReportedCompleteAtBatIndex = atBatIndex;
         }
-        const embed = constructPlayEmbed(
+        const embed = gamedayUtil.constructPlayEmbed(
             play,
             feed,
             includeTitle,
@@ -303,45 +263,6 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle =
             await maybePopulateAdvancedStatcastMetrics(play, messages, gamePk, embed);
         }
     }
-}
-
-/**
- * Builds a Discord EmbedBuilder for the given processed play.
- * @param {ProcessedPlay} play
- * @param {LiveFeedWrapper} feed
- * @param {boolean} includeTitle
- * @param {string} homeTeamColor
- * @param {string} awayTeamColor
- * @param {DiscordEmoji | null} homeTeamEmoji
- * @param {DiscordEmoji | null} awayTeamEmoji
- * @returns {import('discord.js').EmbedBuilder}
- */
-function constructPlayEmbed (play, feed, includeTitle, homeTeamColor, awayTeamColor, homeTeamEmoji, awayTeamEmoji) {
-    const halfInning = play.halfInning || feed.halfInning();
-    const inning = play.inning || feed.inning();
-    const embed = new EmbedBuilder()
-        .setDescription(play.reply + (play.isOut && play.outs === 3 && !(play.hasReview && play.reviewInProgress) && !gamedayUtil.didGameEnd(play.homeScore, play.awayScore)
-            ? `${gamedayUtil.getPitchesStrikesForPitchersInHalfInning(play)}${gamedayUtil.getDueUp()}`
-            : ''))
-        .setColor((halfInning === 'top'
-            ? awayTeamColor
-            : homeTeamColor
-        ));
-    if (includeTitle) {
-        embed.setTitle(`${gamedayUtil.deriveHalfInning(halfInning)} ${inning}, ` +
-            (play.isScoringPlay || !awayTeamEmoji
-                ? `${feed.awayAbbreviation()}`
-                : `<:${awayTeamEmoji.name}:${awayTeamEmoji.id}> ${feed.awayAbbreviation()}`) +
-            (play.isScoringPlay
-                ? ' vs. '
-                : ' ' + play.awayScore + ' - ' + play.homeScore + ' ') +
-            (play.isScoringPlay || !homeTeamEmoji
-                ? `${feed.homeAbbreviation()}`
-                : `${feed.homeAbbreviation()} <:${homeTeamEmoji.name}:${homeTeamEmoji.id}>`) +
-            (play.isScoringPlay ? ' - Scoring Play \u2757' : ''));
-    }
-
-    return embed;
 }
 
 /**
@@ -400,62 +321,14 @@ async function maybePopulateAdvancedStatcastMetrics (play, messages, gamePk, emb
             } catch (e) {
                 LOGGER.error('There was a problem polling for savant data!');
                 LOGGER.error(e);
-                notifySavantDataUnavailable(messages, embed);
+                gamedayUtil.notifySavantDataUnavailable(messages, embed);
             }
         } else {
             LOGGER.info('Play has no play ID.');
-            notifySavantDataUnavailable(messages, embed);
+            gamedayUtil.notifySavantDataUnavailable(messages, embed);
         }
     } else {
         LOGGER.debug('Skipping savant poll - not in play or metrics unavailable.');
-    }
-}
-
-/**
- * Replaces all "Pending..." placeholders in the embed with "Not Available." and marks messages done.
- * @param {MessageEntry[]} messages
- * @param {import('discord.js').EmbedBuilder} embed
- */
-function notifySavantDataUnavailable (messages, embed) {
-    embed.data.description = embed.data.description.replaceAll('Pending...', 'Not Available.');
-    editMessages(messages, embed);
-    for (const message of messages) {
-        message.doneEditing = true;
-    }
-}
-
-/**
- * Edits all already-sent Discord messages in the list with the updated embed.
- * @param {MessageEntry[]} messages
- * @param {import('discord.js').EmbedBuilder} embed
- * @param {string} [logLabel]
- */
-function editMessages (messages, embed, logLabel = 'Edited') {
-    for (const message of messages) {
-        if (message.discordMessage && !message.doneEditing) {
-            message.discordMessage.edit({ embeds: [embed] })
-                .then((m) => LOGGER.trace(logLabel + ': ' + m.id))
-                .catch((e) => {
-                    console.error(e);
-                    message.doneEditing = true;
-                });
-        }
-    }
-}
-
-/**
- * Edits all Discord messages (including delayed ones) with updated park data.
- * @param {MessageEntry[]} messages
- * @param {import('discord.js').EmbedBuilder} embed
- * @param {string} logLabel
- */
-function editMessagesWithXParks (messages, embed, logLabel) {
-    for (const message of messages) {
-        if (message.discordMessage) {
-            message.discordMessage.edit({ embeds: [embed] })
-                .then((m) => LOGGER.trace(logLabel + ': ' + m.id))
-                .catch((e) => console.error(e));
-        }
     }
 }
 
@@ -507,7 +380,7 @@ async function runSavantPollingLoop () {
                 entry.attempts ++;
                 if (entry.attempts >= globals.SAVANT_POLLING_ATTEMPTS) {
                     LOGGER.debug('Savant: max attempts reached for: ' + playId + '. Removing from queue.');
-                    notifySavantDataUnavailable(messages, embed);
+                    gamedayUtil.notifySavantDataUnavailable(messages, embed);
                     savantQueue.delete(playId);
                     continue;
                 }
@@ -549,18 +422,17 @@ async function pollForXParksAndEdit (gamePk, playId, numberOfParks, baseHRParkDe
             const pendingPlaceholder = baseHRParkDescription + globals.XPARKS_PENDING_PLACEHOLDER_SUFFIX;
             if (embed.data.description.includes(pendingPlaceholder)) {
                 embed.data.description = embed.data.description.replace(pendingPlaceholder, baseHRParkDescription);
-                editMessagesWithXParks(messages, embed, 'XParks Timeout Edit');
+                gamedayUtil.editMessagesWithXParks(messages, embed, 'XParks Timeout Edit');
             }
             return;
         }
         LOGGER.trace('XParks: polling for ' + playId + '...');
         const xParksText = await gamedayUtil.getXParks(gamePk, playId, numberOfParks);
         if (xParksText !== null) {
-            // Data is now available (even if xParksText is ''), replace the pending placeholder.
             const pendingPlaceholder = baseHRParkDescription + globals.XPARKS_PENDING_PLACEHOLDER_SUFFIX;
             if (embed.data.description.includes(pendingPlaceholder)) {
                 embed.data.description = embed.data.description.replace(pendingPlaceholder, baseHRParkDescription + xParksText);
-                editMessagesWithXParks(messages, embed, 'XParks Edited');
+                gamedayUtil.editMessagesWithXParks(messages, embed, 'XParks Edited');
             }
             return;
         }
@@ -627,12 +499,7 @@ async function processMatchingPlay (matchingPlay, messages, playId, hitDistance,
             || sentDescription.includes('HR/Park: Pending...');
         const descriptionChanged = message.discordMessage.embeds[0].data.description !== embed.data.description;
         if (needsEdit && descriptionChanged) {
-            message.discordMessage.edit({ embeds: [embed] })
-                .then((m) => LOGGER.trace('Edited: ' + m.id))
-                .catch((e) => {
-                    console.error(e);
-                    message.doneEditing = true;
-                });
+            gamedayUtil.editMessages([message], embed);
         }
         if (allMetricsDone) {
             message.doneEditing = true;

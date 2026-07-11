@@ -4,6 +4,7 @@ const globalCache = require('./global-cache');
 const globals = require('../config/globals');
 const ColorContrastChecker = require('color-contrast-checker');
 const mlbAPIUtil = require('./MLB-API-util');
+const { EmbedBuilder } = require('discord.js');
 const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_LEVEL.INFO);
 
 module.exports = {
@@ -147,5 +148,115 @@ module.exports = {
         }
 
         return reply;
+    },
+
+    /** @param {string | undefined} description */
+    extractReviewOutcome: (description) => {
+        const index = description?.indexOf(', call on the field was ');
+        return index === -1 ? null : description?.slice(index);
+    },
+
+    /** @param {string | undefined} description */
+    stripStealCount: (description) => {
+        return description?.replace(/ steals \(\d+\) /, ' steals ');
+    },
+
+    /**
+     * @param {string | undefined} description
+     * @param {number} atBatIndex
+     */
+    alreadyReported: (description, atBatIndex) => {
+        const reviewOutcome = module.exports.extractReviewOutcome(description);
+        const normalizedDescription = module.exports.stripStealCount(description);
+        return globalCache.values.game.reportedDescriptions.find(reported => {
+            const withinRange = reported.atBatIndex === atBatIndex || reported.atBatIndex === (atBatIndex - 1);
+            if (!withinRange) return false;
+            if (reported.description === description) return true;
+            if (module.exports.stripStealCount(reported.description) === normalizedDescription) return true;
+            if (reviewOutcome) {
+                const reportedOutcome = module.exports.extractReviewOutcome(reported.description);
+                if (reportedOutcome && reportedOutcome === reviewOutcome) return true;
+            }
+            return false;
+        });
+    },
+
+    /**
+     * @param {MessageEntry[]} messages
+     * @param {import('discord.js').EmbedBuilder} embed
+     */
+    notifySavantDataUnavailable: (messages, embed) => {
+        embed.data.description = embed.data.description.replaceAll('Pending...', 'Not Available.');
+        module.exports.editMessages(messages, embed);
+        for (const message of messages) {
+            message.doneEditing = true;
+        }
+    },
+
+    /**
+     * @param {MessageEntry[]} messages
+     * @param {import('discord.js').EmbedBuilder} embed
+     * @param {string} [logLabel]
+     */
+    editMessages: (messages, embed, logLabel = 'Edited') => {
+        for (const message of messages) {
+            if (message.discordMessage && !message.doneEditing) {
+                message.discordMessage.edit({ embeds: [embed] })
+                    .then((m) => LOGGER.trace(logLabel + ': ' + m.id))
+                    .catch((e) => {
+                        console.error(e);
+                        message.doneEditing = true;
+                    });
+            }
+        }
+    },
+
+    /**
+     * @param {MessageEntry[]} messages
+     * @param {import('discord.js').EmbedBuilder} embed
+     * @param {string} logLabel
+     */
+    editMessagesWithXParks: (messages, embed, logLabel) => {
+        for (const message of messages) {
+            if (message.discordMessage) {
+                message.discordMessage.edit({ embeds: [embed] })
+                    .then((m) => LOGGER.trace(logLabel + ': ' + m.id))
+                    .catch((e) => console.error(e));
+            }
+        }
+    },
+
+    /**
+     * @param {ProcessedPlay} play
+     * @param {LiveFeedWrapper} feed
+     * @param {boolean} includeTitle
+     * @param {string} homeTeamColor
+     * @param {string} awayTeamColor
+     * @param {DiscordEmoji | null} homeTeamEmoji
+     * @param {DiscordEmoji | null} awayTeamEmoji
+     * @returns {import('discord.js').EmbedBuilder}
+     */
+    constructPlayEmbed: (play, feed, includeTitle, homeTeamColor, awayTeamColor, homeTeamEmoji, awayTeamEmoji) => {
+        const halfInning = play.halfInning || feed.halfInning();
+        const inning = play.inning || feed.inning();
+        const embed = new EmbedBuilder()
+            .setDescription(play.reply + (play.isOut && play.outs === 3 && !(play.hasReview && play.reviewInProgress) && !module.exports.didGameEnd(play.homeScore, play.awayScore)
+                ? `${module.exports.getPitchesStrikesForPitchersInHalfInning(play)}${module.exports.getDueUp()}`
+                : ''))
+            .setColor((halfInning === 'top' ? awayTeamColor : homeTeamColor));
+        if (includeTitle) {
+            embed.setTitle(`${module.exports.deriveHalfInning(halfInning)} ${inning}, ` +
+                (play.isScoringPlay || !awayTeamEmoji
+                    ? `${feed.awayAbbreviation()}`
+                    : `<:${awayTeamEmoji.name}:${awayTeamEmoji.id}> ${feed.awayAbbreviation()}`) +
+                (play.isScoringPlay
+                    ? ' vs. '
+                    : ' ' + play.awayScore + ' - ' + play.homeScore + ' ') +
+                (play.isScoringPlay || !homeTeamEmoji
+                    ? `${feed.homeAbbreviation()}`
+                    : `${feed.homeAbbreviation()} <:${homeTeamEmoji.name}:${homeTeamEmoji.id}>`) +
+                (play.isScoringPlay ? ' - Scoring Play \u2757' : ''));
+        }
+        return embed;
     }
 };
