@@ -212,10 +212,6 @@ async function reportAnyMissedEvents (atBat, bot, gamePk, atBatIndex) {
     }
 }
 
-/*
-    ABS challenges / steal count normalization and duplicate-detection logic lives in gameday-util.js
-*/
-
 async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle = true) {
     if (play.reply
         && play.reply.length > 0
