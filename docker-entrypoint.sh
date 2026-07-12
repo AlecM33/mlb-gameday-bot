@@ -5,5 +5,5 @@ echo "Running database migrations..."
 node database/migrate.js
 
 echo "Starting bot..."
-exec node main.js
+exec npm start
 
