@@ -238,7 +238,7 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle =
         if (play.isComplete) {
             globalCache.values.game.lastReportedCompleteAtBatIndex = atBatIndex;
         }
-        const embed = gamedayUtil.constructPlayEmbed(
+        const embedWithStats = gamedayUtil.constructPlayEmbed(
             play,
             feed,
             includeTitle,
@@ -247,7 +247,30 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle =
             globalCache.values.game.homeTeamEmoji,
             globalCache.values.game.awayTeamEmoji
         );
-        const messages = [];
+        // For channels that opt out of advanced stats, strip "Pending..." placeholders from a separate embed copy.
+        const embedBasic = play.metricsAvailable
+            ? gamedayUtil.constructPlayEmbed(
+                play,
+                feed,
+                includeTitle,
+                globalCache.values.game.homeTeamColor,
+                globalCache.values.game.awayTeamColor,
+                globalCache.values.game.homeTeamEmoji,
+                globalCache.values.game.awayTeamEmoji
+            )
+            : embedWithStats;
+        if (play.metricsAvailable) {
+            embedBasic.data.description = embedBasic.data.description
+                .replaceAll('xBA: Pending...', '')
+                .replaceAll('Bat Speed: Pending...', '')
+                .replaceAll('HR/Park: Pending...', '')
+                .replace(/\n{3,}/g, '\n\n')
+                .trimEnd();
+        }
+        /** @type {MessageEntry[]} */
+        const advancedStatsMessages = [];
+        /** @type {MessageEntry[]} */
+        const allMessages = [];
         for (const channelSubscription of globalCache.values.subscribedChannels) {
             let returnedChannel;
             try {
@@ -260,7 +283,8 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle =
             if (!play.isScoringPlay && channelSubscription.scoring_plays_only) {
                 LOGGER.debug('Skipping - against the channel\'s preference');
             } else {
-                const message = { channel: returnedChannel, play, delayed: false, doneEditing: false };
+                const embed = channelSubscription.advanced_stats ? embedWithStats : embedBasic;
+                const message = { channel: returnedChannel, play, delayed: false, doneEditing: !channelSubscription.advanced_stats };
                 if (channelSubscription.delay === 0 || play.isStartEvent) {
                     await module.exports.sendMessage(returnedChannel, embed, message);
                 } else {
@@ -268,11 +292,14 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle =
                     message.delayed = true;
                     sendDelayedMessage(play, gamePk, channelSubscription, returnedChannel, embed, message);
                 }
-                messages.push(message);
+                allMessages.push(message);
+                if (channelSubscription.advanced_stats) {
+                    advancedStatsMessages.push(message);
+                }
             }
         }
-        if (messages.length > 0) {
-            await maybePopulateAdvancedStatcastMetrics(play, messages, gamePk, embed);
+        if (advancedStatsMessages.length > 0) {
+            await maybePopulateAdvancedStatcastMetrics(play, advancedStatsMessages, gamePk, embedWithStats);
         }
     }
 }

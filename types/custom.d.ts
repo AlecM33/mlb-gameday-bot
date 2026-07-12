@@ -6,6 +6,7 @@ interface ChannelSubscription {
     channel_id: string;
     scoring_plays_only: boolean;
     delay: number; // seconds
+    advanced_stats: boolean;
 }
 
 interface GameCache {

@@ -373,6 +373,9 @@ module.exports = {
     CODED_GAME_STATES: {
         POSTPONED: 'D'
     },
+    PG_ERROR_CODES: {
+        UNDEFINED_COLUMN: '42703'
+    },
     /**
      * We enhanced the TEAM_ID variable to allow for a team name to be supplied instead
      * of a numeric ID, so the client doesn't have to look up the ID. The name is resolved

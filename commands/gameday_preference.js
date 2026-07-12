@@ -4,10 +4,10 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('gameday_preference')
-        .setDescription('Change which plays the bot will report, or the reporting delay.')
+        .setDescription('Change the reporting delay, which plays the bot reports, and whether to include advanced stats.')
         .addBooleanOption(option =>
             option.setName('scoring_plays_only')
-                .setDescription('If true, the bot will only report scoring plays. Else, it reports at-bat results + other key events.')
+                .setDescription('Report only scoring plays?')
                 .setRequired(true))
         .addIntegerOption(option =>
             option.setName('reporting_delay')
@@ -15,7 +15,11 @@ module.exports = {
                 .setRequired(true)
                 .setMinValue(0)
                 .setMaxValue(180)
-        ),
+        )
+        .addBooleanOption(option =>
+            option.setName('advanced_stats')
+                .setDescription('Include advanced stats (xBA, HR/Park, Bat Speed) for balls in play?')
+                .setRequired(true)),
     async execute (interaction) {
         try {
             await interactionHandlers.gamedayPreferenceHandler(interaction);
