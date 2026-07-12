@@ -19,5 +19,6 @@ RUN npm install --only=production
 # Copy local code to the container image.
 COPY . ./
 
-# Run the web service on container startup.
-CMD [ "npm", "start" ]
+RUN chmod +x docker-entrypoint.sh
+
+ENTRYPOINT ["./docker-entrypoint.sh"]

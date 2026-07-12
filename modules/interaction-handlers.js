@@ -205,12 +205,14 @@ module.exports = {
         await interaction.deferReply();
         const scoringPlaysOnly = interaction.options.getBoolean('scoring_plays_only');
         const reportingDelay = interaction.options.getInteger('reporting_delay');
+        const advancedStats = interaction.options.getBoolean('advanced_stats');
         if (interaction.channel) {
             await queries.addToSubscribedChannels(
                 interaction.guild.id,
                 interaction.channel.id,
                 scoringPlaysOnly || false,
-                reportingDelay || 0
+                reportingDelay || 0,
+                advancedStats ?? true
             ).catch(async (e) => {
                 if (e.message.includes('duplicate key')) {
                     await interaction.followUp({
@@ -234,7 +236,8 @@ module.exports = {
                 ephemeral: false,
                 content: 'Subscribed this channel to the gameday feed.\n' +
                     'Events: ' + (scoringPlaysOnly ? '**Scoring Plays Only**' : '**All Plays**') + '\n' +
-                    'Reporting Delay: **' + (reportingDelay || 0) + ' seconds**'
+                    'Reporting Delay: **' + (reportingDelay || 0) + ' seconds**\n' +
+                    'Advanced Stats (xBA, HR/Park, Bat Speed): **' + ((advancedStats ?? true) ? 'Enabled' : 'Disabled') + '**'
             });
         }
     },
@@ -302,12 +305,14 @@ module.exports = {
         await interaction.deferReply();
         const scoringPlaysOnly = interaction.options.getBoolean('scoring_plays_only');
         const reportingDelay = interaction.options.getInteger('reporting_delay');
+        const advancedStats = interaction.options.getBoolean('advanced_stats');
         if (interaction.channel) {
             await queries.updatePlayPreference(
                 interaction.guild.id,
                 interaction.channel.id,
                 scoringPlaysOnly,
-                reportingDelay
+                reportingDelay,
+                advancedStats ?? true
             )
                 .then(async (rows) => {
                     if (rows.length === 0) {
@@ -333,7 +338,8 @@ module.exports = {
                 ephemeral: false,
                 content: 'Updated this channel\'s Gameday play reporting preferences:\n' +
                     'Events: ' + (scoringPlaysOnly ? '**Scoring Plays Only**' : '**All Plays**') + '\n' +
-                    'Reporting Delay: **' + (reportingDelay || 0) + ' seconds**'
+                    'Reporting Delay: **' + (reportingDelay || 0) + ' seconds**\n' +
+                    'Advanced Stats (xBA, HR/Park, Bat Speed): **' + ((advancedStats ?? true) ? 'Enabled' : 'Disabled') + '**'
             });
         }
     },

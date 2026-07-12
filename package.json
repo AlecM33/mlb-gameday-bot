@@ -5,6 +5,7 @@
   "main": "main.js",
   "scripts": {
     "test": "jasmine",
+    "migrate": "node database/migrate.js",
     "start": "NODE_ENV=production && node deploy-commands.js && node main.js",
     "start:dev": "SET NODE_ENV=development && node deploy-commands.js && node main.js"
   },
