@@ -44,7 +44,7 @@ BOT.once('ready', async () => {
         globalCache.values.subscribedChannels = await queries.getAllSubscribedChannels();
     } catch (e) {
         if (e.code === PG_ERROR_CODES.UNDEFINED_COLUMN) {
-            LOGGER.error('DB schema is out of date. Please run "npm run migrate" to safely update.');
+            LOGGER.error('DB schema is out of date. Please run "node database/migrate.js" to safely update (make sure the environment variables for the database are set).');
         } else {
             LOGGER.error('Failed to load subscribed channels:', e);
         }
