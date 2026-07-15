@@ -148,6 +148,22 @@ module.exports = {
     },
     TEAMS: [
         {
+            id: 159,
+            name: 'American League All-Stars',
+            primaryColor: "#0E4082",
+            secondaryColor: "#D50032",
+            abbreviation: 'AL',
+            teamName: 'AL All-Stars'
+        },
+        {
+            id: 160,
+            name: 'National League All-Stars',
+            primaryColor: "#002D72",
+            secondaryColor: "#E0004D",
+            abbreviation: 'NL',
+            teamName: 'NL All-Stars'
+        },
+        {
             id: 133,
             name: 'Athletics',
             primaryColor: '#003831',
