@@ -931,10 +931,14 @@ module.exports = {
         const removeDiacritics = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         const normalizedInput = removeDiacritics(playerName.toLowerCase());
 
-        let player = await module.exports.findPlayer(playerName, year);
+        const currentYear = new Date().getFullYear();
+        const isPastYear = year < currentYear;
+        const preLookupTimestamp = globalCache.values.playerCacheTimestamps[year];
+        const wasStale = !preLookupTimestamp || (!isPastYear && (Date.now() - preLookupTimestamp) >= globals.PLAYER_CACHE_TTL_MS);
 
-        if (!player) {
-            const people = await module.exports.getPlayersForYear(year);
+        const searchPeople = (people) => {
+            const exact = people.find(p => removeDiacritics(p.fullName.toLowerCase()) === normalizedInput) || null;
+            if (exact) return exact;
             let bestDistance = Infinity;
             let bestMatch = null;
             for (const p of people) {
@@ -947,9 +951,19 @@ module.exports = {
             }
             const threshold = Math.max(globals.MIN_LEVENSHTEIN_DISTANCE, Math.floor(normalizedInput.length * globals.MAX_LEVENSHTEIN_LENGTH_RATIO));
             if (bestMatch && bestDistance <= threshold) {
-                player = bestMatch;
-                LOGGER.info(`resolvePlayer: fuzzy matched "${playerName}" -> "${player.fullName}" (distance: ${bestDistance})`);
+                LOGGER.info(`resolvePlayer: fuzzy matched "${playerName}" -> "${bestMatch.fullName}" (distance: ${bestDistance})`);
+                return bestMatch;
             }
+            return null;
+        };
+
+        let people = await module.exports.getPlayersForYear(year);
+        let player = searchPeople(people);
+
+        if (!player && wasStale) {
+            LOGGER.info(`resolvePlayer: player not found after stale cache refresh for ${year}; retrying with forced fetch.`);
+            people = await module.exports.getPlayersForYear(year, 0);
+            player = searchPeople(people);
         }
 
         if (!player) {
