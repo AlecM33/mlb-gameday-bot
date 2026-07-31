@@ -261,7 +261,15 @@ module.exports = {
         try {
             const endpoint = `https://baseballsavant.mlb.com/gf?game_pk=${gamePk}`;
             LOGGER.debug(endpoint);
-            return await (await fetch(endpoint, { signal: AbortSignal.timeout(3000) })).json();
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3000);
+            try {
+                const response = await fetch(endpoint, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                return await response.json();
+            } finally {
+                clearTimeout(timeoutId);
+            }
         } catch (e) {
             LOGGER.error(e);
             return {};
