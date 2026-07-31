@@ -276,6 +276,6 @@ module.exports = {
         const highlightsUrl = globals.MLB_HIGHLIGHTS_URL + gamePk;
         const boxScoreUrl = globals.MLB_BOX_SCORE_URL.replace('{gamePk}', String(gamePk));
         return `## Final: ${awayEmojiStr}${feed.awayAbbreviation()} ${feed.awayTeamScore()} - ${feed.homeTeamScore()} ${feed.homeAbbreviation()}${homeEmojiStr}\n` +
-            `[Highlights](${highlightsUrl}) | [Box Score](${boxScoreUrl})`;
+            `### [Highlights](${highlightsUrl}) | [Box Score](${boxScoreUrl})`;
     }
 };
