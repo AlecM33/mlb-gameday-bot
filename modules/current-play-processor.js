@@ -26,7 +26,7 @@ module.exports = {
         const description = currentPlayJSON.result?.description || currentPlayJSON.details?.description;
         if (currentPlayJSON.about?.isComplete
             || globals.EVENT_WHITELIST.includes((currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType))) {
-            reply += getDescription(currentPlayJSON, feed);
+            reply += getDescription(currentPlayJSON);
             if (currentPlayJSON.result?.isOut || currentPlayJSON.details?.isOut) {
                 reply += ' **' + currentPlayJSON.count.outs + (currentPlayJSON.count.outs > 1 ? ' outs. **' : ' out. **');
             }
@@ -149,7 +149,7 @@ function getFireEmojis (launchSpeed) {
     }
 }
 
-function getDescription (currentPlayJSON, feed) {
+function getDescription (currentPlayJSON) {
     return (currentPlayJSON.result?.description || currentPlayJSON.details.description || '');
 }
 

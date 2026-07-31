@@ -21,7 +21,6 @@ module.exports = (url, {
     let connectTimeout = null;
 
     /**
-     * @param {() => void} fn
      * @returns {void}
      */
     const heartbeat = () => {

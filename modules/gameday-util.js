@@ -30,17 +30,6 @@ module.exports = {
             );
     },
 
-    /**
-     * @param {number} homeScore
-     * @param {number} awayScore
-     * @returns {boolean}
-     */
-    didOurTeamWin: (homeScore, awayScore) => {
-        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
-        return (homeScore > awayScore && feed.homeTeamId() === parseInt(process.env.TEAM_ID))
-                || (awayScore > homeScore && feed.awayTeamId() === parseInt(process.env.TEAM_ID));
-    },
-
     getConstrastingEmbedColors: () => {
         const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
         globalCache.values.game.homeTeamColor = globals.TEAMS.find(
@@ -271,5 +260,22 @@ module.exports = {
                 (play.isScoringPlay ? ' - Scoring Play \u2757' : ''));
         }
         return embed;
+    },
+
+    /**
+     * Builds the reply string for the game-conclusion message.
+     * @param {LiveFeedWrapper} feed
+     * @param {number} gamePk
+     * @param {DiscordEmoji | null} awayTeamEmoji
+     * @param {DiscordEmoji | null} homeTeamEmoji
+     * @returns {string}
+     */
+    buildFinalMessage: (feed, gamePk, awayTeamEmoji, homeTeamEmoji) => {
+        const awayEmojiStr = awayTeamEmoji ? `<:${awayTeamEmoji.name}:${awayTeamEmoji.id}> ` : '';
+        const homeEmojiStr = homeTeamEmoji ? ` <:${homeTeamEmoji.name}:${homeTeamEmoji.id}>` : '';
+        const highlightsUrl = globals.MLB_HIGHLIGHTS_URL + gamePk;
+        const boxScoreUrl = globals.MLB_BOX_SCORE_URL.replace('{gamePk}', String(gamePk));
+        return `## Final: ${awayEmojiStr}${feed.awayAbbreviation()} ${feed.awayTeamScore()} - ${feed.homeTeamScore()} ${feed.homeAbbreviation()}${homeEmojiStr}\n` +
+            `### [Highlights](${highlightsUrl}) | [Box Score](${boxScoreUrl})`;
     }
 };

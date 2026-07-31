@@ -56,4 +56,4 @@ function start () {
     schedulePings(HC_PING_INTERVAL_MS);
 }
 
-module.exports = { start, ping, schedulePings };
+module.exports = { start, ping };

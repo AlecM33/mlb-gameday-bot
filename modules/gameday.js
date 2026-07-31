@@ -62,7 +62,7 @@ async function statusPoll (bot) {
                 globalCache.values.game.currentGamePk = inProgressGame.gamePk;
                 gamedayUtil.getConstrastingEmbedColors();
                 gamedayUtil.getTeamEmojis();
-                module.exports.subscribe(bot, inProgressGame, nearestGames);
+                module.exports.subscribe(bot, inProgressGame);
             } else {
                 setTimeout(pollingFunction, globals.SLOW_POLL_INTERVAL);
             }
@@ -78,9 +78,8 @@ async function statusPoll (bot) {
  * Subscribes to the MLB gameday WebSocket for the given game and begins processing events.
  * @param {import('discord.js').Client} bot
  * @param {ScheduleGame} liveGame
- * @param {ScheduleGame[]} games
  */
-function subscribe (bot, liveGame, games) {
+function subscribe (bot, liveGame) {
     LOGGER.trace('Gameday: subscribing...');
     const ws = mlbAPIUtil.websocketSubscribe(liveGame.gamePk);
     ws.addEventListener('message', async (e) => {
@@ -106,12 +105,17 @@ function subscribe (bot, liveGame, games) {
                 globalCache.values.game.startReported = false;
                 LOGGER.info('NOTIFIED OF GAME CONCLUSION: CLOSING...');
                 await module.exports.processAndPushPlay(bot, {
-                    reply: `## Final: ${feed.awayAbbreviation()} ${feed.awayTeamScore()} - ${feed.homeTeamScore()} ${feed.homeAbbreviation()}`,
+                    reply: gamedayUtil.buildFinalMessage(
+                        feed,
+                        liveGame.gamePk,
+                        globalCache.values.game.awayTeamEmoji,
+                        globalCache.values.game.homeTeamEmoji
+                    ),
                     isScoringPlay: true,
                     isOut: false
-                }, liveGame, globalCache.values.game.lastReportedCompleteAtBatIndex, false);
+                }, liveGame.gamePk, globalCache.values.game.lastReportedCompleteAtBatIndex, false);
                 ws.close();
-                await module.exports.statusPoll(bot, games);
+                await module.exports.statusPoll(bot);
             } else if (!globalCache.values.game.finished) {
                 LOGGER.trace('RECEIVED: ' + eventJSON.updateId);
                 if (eventJSON.changeEvent?.type === 'full_refresh') {
@@ -407,6 +411,10 @@ async function runSavantPollingLoop () {
         LOGGER.trace('Savant: polling game feed for gamePk ' + gamePk + ' (' + savantQueue.size + ' play(s) queued)...');
         try {
             const gameFeed = await mlbAPIUtil.savantGameFeed(gamePk);
+            const hasFeedData = gameFeed?.team_away || gameFeed?.team_home;
+            if (!hasFeedData) {
+                LOGGER.debug('Savant: no data in feed (possible exception when retrieving)');
+            }
             for (const [playId, entry] of savantQueue) {
                 const { messages, hitDistance, embed, activeTimers } = entry;
                 if (!entry.embed.data.description.includes('Pending...')) {
@@ -421,12 +429,14 @@ async function runSavantPollingLoop () {
                     savantQueue.delete(playId);
                     continue;
                 }
-                const matchingPlay = gameFeed?.team_away?.find(play => play?.play_id === playId)
-                    || gameFeed?.team_home?.find(play => play?.play_id === playId);
-                if (matchingPlay && (matchingPlay.xba
-                    || matchingPlay.contextMetrics?.homeRunBallparks !== undefined
-                    || matchingPlay.batSpeed !== undefined)) {
-                    await module.exports.processMatchingPlay(matchingPlay, messages, playId, hitDistance, embed, activeTimers);
+                if (hasFeedData) {
+                    const matchingPlay = gameFeed?.team_away?.find(play => play?.play_id === playId)
+                        || gameFeed?.team_home?.find(play => play?.play_id === playId);
+                    if (matchingPlay && (matchingPlay.xba
+                        || matchingPlay.contextMetrics?.homeRunBallparks !== undefined
+                        || matchingPlay.batSpeed !== undefined)) {
+                        await module.exports.processMatchingPlay(matchingPlay, messages, playId, hitDistance, embed, activeTimers);
+                    }
                 }
             }
         } catch (e) {

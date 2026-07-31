@@ -423,13 +423,11 @@ describe('gameday', () => {
     describe('#subscribe', () => {
         let mockBot;
         let mockLiveGame;
-        let mockGames;
         let mockWebSocket;
 
         beforeEach(() => {
             mockBot = {};
             mockLiveGame = { gamePk: 12345 };
-            mockGames = [mockLiveGame];
             spyOn(gamedayUtil, 'getConstrastingEmbedColors').and.stub();
             spyOn(gamedayUtil, 'getTeamEmojis').and.stub();
             mockWebSocket = {
@@ -486,7 +484,7 @@ describe('gameday', () => {
         });
 
         it('should create a WebSocket connection', () => {
-            gameday.subscribe(mockBot, mockLiveGame, mockGames);
+            gameday.subscribe(mockBot, mockLiveGame);
 
             expect(mlbAPIUtil.websocketSubscribe).toHaveBeenCalledWith(12345);
             expect(mockWebSocket.addEventListener).toHaveBeenCalledWith('message', jasmine.any(Function));
@@ -495,7 +493,7 @@ describe('gameday', () => {
         });
 
         it('should handle game_finished event and set game.finished to true', async () => {
-            gameday.subscribe(mockBot, mockLiveGame, mockGames);
+            gameday.subscribe(mockBot, mockLiveGame);
 
             const messageHandler = mockWebSocket.addEventListener.calls.all()
                 .find(call => call.args[0] === 'message').args[1];
@@ -515,7 +513,7 @@ describe('gameday', () => {
         });
 
         it('should ignore duplicate messages with same timestamp and length', async () => {
-            gameday.subscribe(mockBot, mockLiveGame, mockGames);
+            gameday.subscribe(mockBot, mockLiveGame);
 
             const messageHandler = mockWebSocket.addEventListener.calls.all()
                 .find(call => call.args[0] === 'message').args[1];
@@ -539,7 +537,7 @@ describe('gameday', () => {
         });
 
         it('should handle full_refresh events', async () => {
-            gameday.subscribe(mockBot, mockLiveGame, mockGames);
+            gameday.subscribe(mockBot, mockLiveGame);
 
             const messageHandler = mockWebSocket.addEventListener.calls.all()
                 .find(call => call.args[0] === 'message').args[1];
@@ -563,7 +561,7 @@ describe('gameday', () => {
         });
 
         it('should handle normal update events', async () => {
-            gameday.subscribe(mockBot, mockLiveGame, mockGames);
+            gameday.subscribe(mockBot, mockLiveGame);
 
             const messageHandler = mockWebSocket.addEventListener.calls.all()
                 .find(call => call.args[0] === 'message').args[1];
@@ -588,7 +586,7 @@ describe('gameday', () => {
 
         it('should not process events after game is finished', async () => {
             globalCache.values.game.finished = true;
-            gameday.subscribe(mockBot, mockLiveGame, mockGames);
+            gameday.subscribe(mockBot, mockLiveGame);
 
             const messageHandler = mockWebSocket.addEventListener.calls.all()
                 .find(call => call.args[0] === 'message').args[1];

@@ -420,5 +420,7 @@ module.exports = {
     '`/subscribe_gameday` - subscribe a given Discord channel to receive real-time updates from the "Gameday" feed.\n' +
     '`/unsubscribe_gameday` - un-subscribe a given Discord channel from the above functionality.\n' +
     '`/weather` - view the weather for the current game.\n' +
-    '`/wildcard` - view the current wildcard standings.\n'
+    '`/wildcard` - view the current wildcard standings.\n',
+    MLB_HIGHLIGHTS_URL: 'https://www.mlb.com/stories/game/',
+    MLB_BOX_SCORE_URL: 'https://www.mlb.com/gameday/{gamePk}/final/box'
 };
