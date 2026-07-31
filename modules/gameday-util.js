@@ -275,7 +275,20 @@ module.exports = {
         const homeEmojiStr = homeTeamEmoji ? ` <:${homeTeamEmoji.name}:${homeTeamEmoji.id}>` : '';
         const highlightsUrl = globals.MLB_HIGHLIGHTS_URL + gamePk;
         const boxScoreUrl = globals.MLB_BOX_SCORE_URL.replace('{gamePk}', String(gamePk));
-        return `## Final: ${awayEmojiStr}${feed.awayAbbreviation()} ${feed.awayTeamScore()} - ${feed.homeTeamScore()} ${feed.homeAbbreviation()}${homeEmojiStr}\n` +
+        return `${didOurTeamWin(feed.homeTeamScore(), feed.awayTeamScore())
+            ? '## BALLGAME!\n\n'
+            : ''} ## Final: ${awayEmojiStr}${feed.awayAbbreviation()} ${feed.awayTeamScore()} - ${feed.homeTeamScore()} ${feed.homeAbbreviation()}${homeEmojiStr}\n` +
             `### [Highlights](${highlightsUrl}) | [Box Score](${boxScoreUrl})`;
     }
 };
+
+/**
+ * @param {number} homeScore
+ * @param {number} awayScore
+ * @returns {boolean}
+ */
+function didOurTeamWin (homeScore, awayScore) {
+    const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
+    return (homeScore > awayScore && feed.homeTeamId() === parseInt(process.env.TEAM_ID))
+        || (awayScore > homeScore && feed.awayTeamId() === parseInt(process.env.TEAM_ID));
+}
