@@ -11,6 +11,7 @@ module.exports = (url, {
     heartbeatInterval,
     connectionTimeout = 10000,
     reconnectDelay = 3000,
+    inactivityTimeout,
     WebSocket: WSClass = require('ws').WebSocket
 } = {}) => {
     const listeners = { open: [], close: [], message: [], error: [] };
@@ -19,6 +20,7 @@ module.exports = (url, {
     let intentionallyClosed = false;
     let heartbeatTimer = null;
     let connectTimeout = null;
+    let inactivityTimer = null;
 
     /**
      * @returns {void}
@@ -28,6 +30,18 @@ module.exports = (url, {
         if (socket?.readyState === WSClass.OPEN) {
             socket.send(heartbeatMessage);
         }
+    };
+
+    /**
+     * @returns {void}
+     */
+    const resetInactivityTimer = () => {
+        if (!inactivityTimeout) return;
+        clearTimeout(inactivityTimer);
+        inactivityTimer = setTimeout(() => {
+            LOGGER.debug(`WebSocket inactivity timeout after ${inactivityTimeout}ms. Reconnecting...`);
+            socket.terminate();
+        }, inactivityTimeout);
     };
 
     /**
@@ -50,10 +64,12 @@ module.exports = (url, {
             if (heartbeatMessage && heartbeatInterval) {
                 heartbeatTimer = setInterval(heartbeat, heartbeatInterval);
             }
+            resetInactivityTimer();
             listeners.open.forEach(fn => fn({}));
         });
 
         socket.on('message', (data) => {
+            resetInactivityTimer();
             listeners.message.forEach(fn => fn({ data: data.toString() }));
         });
 
@@ -64,6 +80,7 @@ module.exports = (url, {
 
         socket.on('close', () => {
             clearTimeout(connectTimeout);
+            clearTimeout(inactivityTimer);
             clearInterval(heartbeatTimer);
             listeners.close.forEach(fn => fn({}));
             if (!intentionallyClosed) {
@@ -95,6 +112,7 @@ module.exports = (url, {
         close: () => {
             intentionallyClosed = true;
             clearTimeout(connectTimeout);
+            clearTimeout(inactivityTimer);
             clearInterval(heartbeatTimer);
             socket?.close();
         }

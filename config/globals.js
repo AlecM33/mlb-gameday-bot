@@ -102,6 +102,7 @@ module.exports = {
     HOME_RUN_BALLPARKS_MIN_DISTANCE: 300,
     SLOW_POLL_INTERVAL: 300000,
     GAMEDAY_PING_INTERVAL: 10000,
+    GAMEDAY_INACTIVITY_TIMEOUT: 120000,
     HIGHLIGHTS_PER_MESSAGE: 8,
     SCORING_PLAYS_PER_MESSAGE: 8,
     DATE: null, // used for testing purposes to have the bot operate using a future date

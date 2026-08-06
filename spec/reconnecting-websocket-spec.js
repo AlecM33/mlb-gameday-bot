@@ -185,4 +185,51 @@ describe('reconnecting-websocket', () => {
         jasmine.clock().tick(10000);
         expect(MockWebSocket.instances[0]._sent.length).toBe(0);
     });
+
+    it('should terminate and reconnect when no message is received within the inactivity timeout', () => {
+        createReconnectingWebSocket(URL, { ...BASE, inactivityTimeout: 60000 });
+        MockWebSocket.instances[0].simulateOpen();
+        jasmine.clock().tick(60000);
+        jasmine.clock().tick(3000);
+        expect(MockWebSocket.instances.length).toBe(2);
+    });
+
+    it('should reset the inactivity timer on each received message', () => {
+        createReconnectingWebSocket(URL, { ...BASE, inactivityTimeout: 60000 });
+        MockWebSocket.instances[0].simulateOpen();
+        jasmine.clock().tick(50000);
+        MockWebSocket.instances[0].simulateMessage({ toString: () => 'msg' });
+        jasmine.clock().tick(50000); // 50s since last message — should NOT have timed out yet
+        expect(MockWebSocket.instances.length).toBe(1);
+        jasmine.clock().tick(10000); // now 60s since last message — should time out
+        jasmine.clock().tick(3000);
+        expect(MockWebSocket.instances.length).toBe(2);
+    });
+
+    it('should clear the inactivity timer on intentional close', () => {
+        const ws = createReconnectingWebSocket(URL, { ...BASE, inactivityTimeout: 60000 });
+        MockWebSocket.instances[0].simulateOpen();
+        ws.close();
+        jasmine.clock().tick(60000);
+        jasmine.clock().tick(3000);
+        expect(MockWebSocket.instances.length).toBe(1);
+    });
+
+    it('should restart the inactivity timer after reconnection', () => {
+        createReconnectingWebSocket(URL, { ...BASE, inactivityTimeout: 60000 });
+        MockWebSocket.instances[0].simulateOpen();
+        MockWebSocket.instances[0].simulateClose();
+        jasmine.clock().tick(3000);
+        MockWebSocket.instances[1].simulateOpen();
+        jasmine.clock().tick(60000);
+        jasmine.clock().tick(3000);
+        expect(MockWebSocket.instances.length).toBe(3);
+    });
+
+    it('should not trigger inactivity timeout when inactivityTimeout is not configured', () => {
+        createReconnectingWebSocket(URL, BASE); // no inactivityTimeout
+        MockWebSocket.instances[0].simulateOpen();
+        jasmine.clock().tick(300000);
+        expect(MockWebSocket.instances.length).toBe(1);
+    });
 });
