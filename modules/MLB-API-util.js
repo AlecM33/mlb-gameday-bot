@@ -148,7 +148,8 @@ module.exports = {
             heartbeatMessage: 'Gameday5',
             heartbeatInterval: globals.GAMEDAY_PING_INTERVAL,
             connectionTimeout: 10000,
-            reconnectDelay: 3000
+            reconnectDelay: 3000,
+            inactivityTimeout: globals.GAMEDAY_INACTIVITY_TIMEOUT
         });
     },
 

@@ -165,6 +165,7 @@ interface ReconnectingWebSocketOptions {
     heartbeatInterval?: number;
     connectionTimeout?: number;
     reconnectDelay?: number;
+    inactivityTimeout?: number;
     WebSocket?: typeof import('ws').WebSocket;
 }
 
