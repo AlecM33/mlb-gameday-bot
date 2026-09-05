@@ -277,5 +277,25 @@ module.exports = {
         const boxScoreUrl = globals.MLB_BOX_SCORE_URL.replace('{gamePk}', String(gamePk));
         return `## Final: ${awayEmojiStr}${feed.awayAbbreviation()} ${feed.awayTeamScore()} - ${feed.homeTeamScore()} ${feed.homeAbbreviation()}${homeEmojiStr}\n` +
             `### [Highlights](${highlightsUrl}) | [Box Score](${boxScoreUrl})`;
+    },
+
+    /**
+      * Waits for the live feed status to change to Final, then refreshes the cached live feed.
+      * @param {number} gamePk
+      * @returns {Promise<LiveFeedResponse | null>}
+      */
+    waitForFinalLiveFeed: async (gamePk) => {
+        for (let attempt = 0; attempt < globals.FINAL_STATUS_POLL_ATTEMPTS; attempt ++) {
+            const statusCheck = await mlbAPIUtil.statusCheck(gamePk);
+            if (statusCheck?.gameData?.status?.abstractGameState === 'Final') {
+                globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(gamePk);
+                return globalCache.values.game.currentLiveFeed;
+            }
+            if (attempt < globals.FINAL_STATUS_POLL_ATTEMPTS - 1) {
+                await new Promise(resolve => setTimeout(resolve, globals.FINAL_STATUS_POLL_INTERVAL_MS));
+            }
+        }
+        LOGGER.warn(`Timed out waiting for final live feed for gamePk ${gamePk}.`);
+        return null;
     }
 };

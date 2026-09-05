@@ -17,8 +17,6 @@ const gamedayUtil = require('./gameday-util');
 /** @type {Map<string, SavantQueueEntry>} */
 const savantQueue = new Map();
 let savantLoopRunning = false;
-const FINAL_STATUS_POLL_INTERVAL_MS = 1000;
-const FINAL_STATUS_POLL_ATTEMPTS = 15;
 
 module.exports = {
     statusPoll,
@@ -106,7 +104,7 @@ function subscribe (bot, liveGame) {
                 globalCache.values.game.startReported = false;
                 LOGGER.info('NOTIFIED OF GAME CONCLUSION: CLOSING...');
                 ws.close();
-                const finalLiveFeed = await waitForFinalLiveFeed(liveGame.gamePk);
+                const finalLiveFeed = await gamedayUtil.waitForFinalLiveFeed(liveGame.gamePk);
                 await module.exports.processAndPushPlay(bot, {
                     reply: gamedayUtil.buildFinalMessage(
                         liveFeed.init(finalLiveFeed || globalCache.values.game.currentLiveFeed),
@@ -158,26 +156,6 @@ function subscribe (bot, liveGame) {
     });
     ws.addEventListener('error', (e) => LOGGER.error('Gameday socket error: ' + e.message));
     ws.addEventListener('close', (e) => LOGGER.info('Gameday socket closed: ' + JSON.stringify(e)));
-}
-
-/**
- * Waits for the live feed status to change to Final, then refreshes the cached live feed.
- * @param {number} gamePk
- * @returns {Promise<LiveFeedResponse | null>}
- */
-async function waitForFinalLiveFeed (gamePk) {
-    for (let attempt = 0; attempt < FINAL_STATUS_POLL_ATTEMPTS; attempt ++) {
-        const statusCheck = await mlbAPIUtil.statusCheck(gamePk);
-        if (statusCheck?.gameData?.status?.abstractGameState === 'Final') {
-            globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(gamePk);
-            return globalCache.values.game.currentLiveFeed;
-        }
-        if (attempt < FINAL_STATUS_POLL_ATTEMPTS - 1) {
-            await new Promise(resolve => setTimeout(resolve, FINAL_STATUS_POLL_INTERVAL_MS));
-        }
-    }
-    LOGGER.warn(`Timed out waiting for final live feed for gamePk ${gamePk}.`);
-    return null;
 }
 
 /**
