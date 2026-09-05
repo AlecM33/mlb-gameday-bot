@@ -342,5 +342,12 @@ describe('command-util', () => {
             expect(result).toBeUndefined();
             expect(interaction.followUp).toHaveBeenCalledWith(jasmine.stringContaining('No player found'));
         });
+
+        it('should match player names that include autocomplete suffix text', async () => {
+            const interaction = makeInteraction();
+            const result = await commandUtil.resolvePlayer(interaction, 'Shane Bieber (P, CLE)');
+            expect(result.player).toEqual(PITCHER);
+            expect(interaction.followUp).not.toHaveBeenCalled();
+        });
     });
 });

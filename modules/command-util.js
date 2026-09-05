@@ -928,8 +928,9 @@ module.exports = {
      */
     resolvePlayer: async (interaction, playerName) => {
         const year = interaction.options.getInteger('year') || new Date().getFullYear();
+        const normalizedSearchName = playerName.replace(/\s+\([^)]*\)\s*$/, '').trim();
         const removeDiacritics = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        const normalizedInput = removeDiacritics(playerName.toLowerCase());
+        const normalizedInput = removeDiacritics(normalizedSearchName.toLowerCase());
 
         const currentYear = new Date().getFullYear();
         const isPastYear = year < currentYear;
@@ -951,7 +952,7 @@ module.exports = {
             }
             const threshold = Math.max(globals.MIN_LEVENSHTEIN_DISTANCE, Math.floor(normalizedInput.length * globals.MAX_LEVENSHTEIN_LENGTH_RATIO));
             if (bestMatch && bestDistance <= threshold) {
-                LOGGER.info(`resolvePlayer: fuzzy matched "${playerName}" -> "${bestMatch.fullName}" (distance: ${bestDistance})`);
+                LOGGER.info(`resolvePlayer: fuzzy matched "${normalizedSearchName}" -> "${bestMatch.fullName}" (distance: ${bestDistance})`);
                 return bestMatch;
             }
             return null;
