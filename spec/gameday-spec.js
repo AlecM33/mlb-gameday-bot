@@ -622,6 +622,73 @@ describe('gameday', () => {
             }), 12345, globalCache.values.game.lastReportedCompleteAtBatIndex, false);
         });
 
+        it('should fall back to the cached live feed if the game feed never reaches Final', async () => {
+            const staleLiveFeed = {
+                metaData: {
+                    timeStamp: '2024-01-01T11:00:00Z'
+                },
+                liveData: {
+                    plays: {
+                        currentPlay: {
+                            result: {
+                                awayScore: 3,
+                                homeScore: 3
+                            }
+                        }
+                    }
+                },
+                gameData: {
+                    teams: {
+                        away: { abbreviation: 'DET' },
+                        home: { abbreviation: 'CLE' }
+                    }
+                }
+            };
+
+            globalCache.values.game.currentLiveFeed = staleLiveFeed;
+            mlbAPIUtil.statusCheck.and.returnValue(Promise.resolve({
+                gameData: {
+                    status: {
+                        abstractGameState: 'Live'
+                    }
+                }
+            }));
+            liveFeed.init.and.callFake((feedData) => ({
+                awayAbbreviation: () => feedData.gameData.teams.away.abbreviation,
+                homeAbbreviation: () => feedData.gameData.teams.home.abbreviation,
+                awayTeamScore: () => feedData.liveData.plays.currentPlay.result.awayScore,
+                homeTeamScore: () => feedData.liveData.plays.currentPlay.result.homeScore,
+                halfInning: () => 'top',
+                inning: () => 1,
+                currentPlay: () => ({ atBatIndex: 0, about: { hasReview: false }, playEvents: [] }),
+                allPlays: () => []
+            }));
+            spyOn(global, 'setTimeout').and.callFake((fn) => {
+                fn();
+                return /** @type {any} */ (0);
+            });
+
+            gameday.subscribe(mockBot, mockLiveGame);
+
+            const messageHandler = mockWebSocket.addEventListener.calls.all()
+                .find(call => call.args[0] === 'message').args[1];
+
+            await messageHandler({
+                data: JSON.stringify({
+                    gameEvents: ['game_finished'],
+                    updateId: 'update-123',
+                    timeStamp: '2024-01-01T12:00:00Z'
+                })
+            });
+
+            expect(mlbAPIUtil.statusCheck).toHaveBeenCalledTimes(15);
+            expect(mlbAPIUtil.liveFeed).not.toHaveBeenCalled();
+            expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, jasmine.objectContaining({
+                reply: jasmine.stringContaining('DET 3 - 3 CLE')
+            }), 12345, globalCache.values.game.lastReportedCompleteAtBatIndex, false);
+            expect(gameday.statusPoll).toHaveBeenCalledWith(mockBot);
+        });
+
         it('should ignore duplicate messages with same timestamp and length', async () => {
             gameday.subscribe(mockBot, mockLiveGame);
 
