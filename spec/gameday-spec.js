@@ -631,6 +631,7 @@ describe('gameday', () => {
             expect(mlbAPIUtil.liveFeed).toHaveBeenCalledTimes(2);
             expect(gameday.reportPlays).toHaveBeenCalledTimes(2);
             expect(gameday.reportPlays).toHaveBeenCalledWith(mockBot, 12345);
+            expect(global.setTimeout).toHaveBeenCalledWith(jasmine.any(Function), globals.FINAL_STATUS_POLL_INTERVAL_MS);
             expect(gameday.reportPlays.calls.mostRecent().invocationOrder)
                 .toBeLessThan(gameday.processAndPushPlay.calls.mostRecent().invocationOrder);
             expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, jasmine.objectContaining({
@@ -692,6 +693,8 @@ describe('gameday', () => {
             });
 
             expect(mlbAPIUtil.liveFeed).toHaveBeenCalledTimes(globals.FINAL_STATUS_POLL_ATTEMPTS);
+            expect(global.setTimeout.calls.count()).toBe(globals.FINAL_STATUS_POLL_ATTEMPTS - 1);
+            expect(global.setTimeout).toHaveBeenCalledWith(jasmine.any(Function), globals.FINAL_STATUS_POLL_INTERVAL_MS);
             expect(gameday.reportPlays).not.toHaveBeenCalled();
             expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, jasmine.objectContaining({
                 reply: jasmine.stringContaining('DET 3 - 3 CLE')
