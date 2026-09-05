@@ -99,12 +99,19 @@ function subscribe (bot, liveGame) {
             }
             globalCache.values.game.lastSocketMessageTimestamp = eventJSON.timeStamp;
             globalCache.values.game.lastSocketMessageLength = e.data.length;
+            LOGGER.debug('SOCKET EVENT TYPES: ' + JSON.stringify({
+                gameEvents: eventJSON.gameEvents || [],
+                changeEventType: eventJSON.changeEvent?.type || null
+            }));
             if (eventJSON.gameEvents.includes('game_finished') && !globalCache.values.game.finished) {
                 globalCache.values.game.finished = true;
                 globalCache.values.game.startReported = false;
                 LOGGER.info('NOTIFIED OF GAME CONCLUSION: CLOSING...');
                 ws.close();
-                const finalLiveFeed = await gamedayUtil.waitForFinalLiveFeed(liveGame.gamePk);
+                const finalLiveFeed = await gamedayUtil.waitForFinalLiveFeed(
+                    liveGame.gamePk,
+                    async () => await module.exports.reportPlays(bot, liveGame.gamePk)
+                );
                 await module.exports.processAndPushPlay(bot, {
                     reply: gamedayUtil.buildFinalMessage(
                         liveFeed.init(finalLiveFeed || globalCache.values.game.currentLiveFeed),

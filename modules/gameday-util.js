@@ -280,22 +280,30 @@ module.exports = {
     },
 
     /**
-      * Waits for the live feed status to change to Final, then refreshes the cached live feed.
+      * Waits for the live feed status to change to Final while checking refreshed feed snapshots for missed plays.
       * @param {number} gamePk
+      * @param {(liveFeed: LiveFeedResponse) => Promise<void>} [onUpdatedLiveFeed]
       * @returns {Promise<LiveFeedResponse | null>}
       */
-    waitForFinalLiveFeed: async (gamePk) => {
+    waitForFinalLiveFeed: async (gamePk, onUpdatedLiveFeed = async () => {}) => {
+        let latestLiveFeed = globalCache.values.game.currentLiveFeed;
+        let latestTimestamp = latestLiveFeed?.metaData?.timeStamp;
         for (let attempt = 0; attempt < globals.FINAL_STATUS_POLL_ATTEMPTS; attempt ++) {
-            const statusCheck = await mlbAPIUtil.statusCheck(gamePk);
-            if (statusCheck?.gameData?.status?.abstractGameState === 'Final') {
-                globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(gamePk);
-                return globalCache.values.game.currentLiveFeed;
+            latestLiveFeed = await mlbAPIUtil.liveFeed(gamePk);
+            globalCache.values.game.currentLiveFeed = latestLiveFeed;
+            const polledTimestamp = latestLiveFeed?.metaData?.timeStamp;
+            if (polledTimestamp !== latestTimestamp) {
+                latestTimestamp = polledTimestamp;
+                await onUpdatedLiveFeed(latestLiveFeed);
+            }
+            if (latestLiveFeed?.gameData?.status?.abstractGameState === 'Final') {
+                return latestLiveFeed;
             }
             if (attempt < globals.FINAL_STATUS_POLL_ATTEMPTS - 1) {
                 await new Promise(resolve => setTimeout(resolve, globals.FINAL_STATUS_POLL_INTERVAL_MS));
             }
         }
         LOGGER.warn(`Timed out waiting for final live feed for gamePk ${gamePk}.`);
-        return null;
+        return latestLiveFeed || null;
     }
 };

@@ -468,9 +468,10 @@ describe('gameday', () => {
             spyOn(mlbAPIUtil, 'wsLiveFeed').and.returnValue(Promise.resolve({
                 metaData: { timeStamp: '2024-01-01T12:00:00Z' }
             }));
-            spyOn(mlbAPIUtil, 'liveFeed').and.returnValue(Promise.resolve({}));
-            spyOn(mlbAPIUtil, 'statusCheck').and.returnValue(Promise.resolve({
+            spyOn(mlbAPIUtil, 'liveFeed').and.callFake(() => Promise.resolve({
+                ...globalCache.values.game.currentLiveFeed,
                 gameData: {
+                    ...globalCache.values.game.currentLiveFeed.gameData,
                     status: {
                         abstractGameState: 'Final'
                     }
@@ -487,6 +488,7 @@ describe('gameday', () => {
                 allPlays: () => []
             });
             spyOn(gameday, 'processAndPushPlay').and.stub();
+            spyOn(gameday, 'reportPlays').and.resolveTo();
             spyOn(gameday, 'statusPoll').and.resolveTo();
         });
 
@@ -544,6 +546,30 @@ describe('gameday', () => {
                     }
                 }
             };
+            const updatedLiveFeed = {
+                metaData: {
+                    timeStamp: '2024-01-01T12:00:00Z'
+                },
+                liveData: {
+                    plays: {
+                        currentPlay: {
+                            result: {
+                                awayScore: 3,
+                                homeScore: 3
+                            }
+                        }
+                    }
+                },
+                gameData: {
+                    teams: {
+                        away: { abbreviation: 'DET' },
+                        home: { abbreviation: 'CLE' }
+                    },
+                    status: {
+                        abstractGameState: 'Live'
+                    }
+                }
+            };
             const finalLiveFeed = {
                 metaData: {
                     timeStamp: '2024-01-01T12:00:05Z'
@@ -570,23 +596,10 @@ describe('gameday', () => {
             };
 
             globalCache.values.game.currentLiveFeed = staleLiveFeed;
-            mlbAPIUtil.statusCheck.and.returnValues(
-                Promise.resolve({
-                    gameData: {
-                        status: {
-                            abstractGameState: 'Live'
-                        }
-                    }
-                }),
-                Promise.resolve({
-                    gameData: {
-                        status: {
-                            abstractGameState: 'Final'
-                        }
-                    }
-                })
+            mlbAPIUtil.liveFeed.and.returnValues(
+                Promise.resolve(updatedLiveFeed),
+                Promise.resolve(finalLiveFeed)
             );
-            mlbAPIUtil.liveFeed.and.returnValue(Promise.resolve(finalLiveFeed));
             liveFeed.init.and.callFake((feedData) => ({
                 awayAbbreviation: () => feedData.gameData.teams.away.abbreviation,
                 homeAbbreviation: () => feedData.gameData.teams.home.abbreviation,
@@ -615,8 +628,9 @@ describe('gameday', () => {
                 })
             });
 
-            expect(mlbAPIUtil.statusCheck).toHaveBeenCalledTimes(2);
-            expect(mlbAPIUtil.liveFeed).toHaveBeenCalledWith(12345);
+            expect(mlbAPIUtil.liveFeed).toHaveBeenCalledTimes(2);
+            expect(gameday.reportPlays).toHaveBeenCalledTimes(2);
+            expect(gameday.reportPlays).toHaveBeenCalledWith(mockBot, 12345);
             expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, jasmine.objectContaining({
                 reply: jasmine.stringContaining('DET 3 - 4 CLE')
             }), 12345, globalCache.values.game.lastReportedCompleteAtBatIndex, false);
@@ -646,13 +660,7 @@ describe('gameday', () => {
             };
 
             globalCache.values.game.currentLiveFeed = staleLiveFeed;
-            mlbAPIUtil.statusCheck.and.returnValue(Promise.resolve({
-                gameData: {
-                    status: {
-                        abstractGameState: 'Live'
-                    }
-                }
-            }));
+            mlbAPIUtil.liveFeed.and.returnValue(Promise.resolve(staleLiveFeed));
             liveFeed.init.and.callFake((feedData) => ({
                 awayAbbreviation: () => feedData.gameData.teams.away.abbreviation,
                 homeAbbreviation: () => feedData.gameData.teams.home.abbreviation,
@@ -681,8 +689,8 @@ describe('gameday', () => {
                 })
             });
 
-            expect(mlbAPIUtil.statusCheck).toHaveBeenCalledTimes(15);
-            expect(mlbAPIUtil.liveFeed).not.toHaveBeenCalled();
+            expect(mlbAPIUtil.liveFeed).toHaveBeenCalledTimes(15);
+            expect(gameday.reportPlays).not.toHaveBeenCalled();
             expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, jasmine.objectContaining({
                 reply: jasmine.stringContaining('DET 3 - 3 CLE')
             }), 12345, globalCache.values.game.lastReportedCompleteAtBatIndex, false);
