@@ -17,6 +17,8 @@ const gamedayUtil = require('./gameday-util');
 /** @type {Map<string, SavantQueueEntry>} */
 const savantQueue = new Map();
 let savantLoopRunning = false;
+const FINAL_STATUS_POLL_INTERVAL_MS = 1000;
+const FINAL_STATUS_POLL_ATTEMPTS = 15;
 
 module.exports = {
     statusPoll,
@@ -84,7 +86,6 @@ function subscribe (bot, liveGame) {
     const ws = mlbAPIUtil.websocketSubscribe(liveGame.gamePk);
     ws.addEventListener('message', async (e) => {
         try {
-            const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
             /** @type {GamedaySocketEvent} */
             const eventJSON = JSON.parse(e.data);
             /*
@@ -104,9 +105,11 @@ function subscribe (bot, liveGame) {
                 globalCache.values.game.finished = true;
                 globalCache.values.game.startReported = false;
                 LOGGER.info('NOTIFIED OF GAME CONCLUSION: CLOSING...');
+                ws.close();
+                const finalLiveFeed = await waitForFinalLiveFeed(liveGame.gamePk);
                 await module.exports.processAndPushPlay(bot, {
                     reply: gamedayUtil.buildFinalMessage(
-                        feed,
+                        liveFeed.init(finalLiveFeed || globalCache.values.game.currentLiveFeed),
                         liveGame.gamePk,
                         globalCache.values.game.awayTeamEmoji,
                         globalCache.values.game.homeTeamEmoji
@@ -114,7 +117,6 @@ function subscribe (bot, liveGame) {
                     isScoringPlay: true,
                     isOut: false
                 }, liveGame.gamePk, globalCache.values.game.lastReportedCompleteAtBatIndex, false);
-                ws.close();
                 await module.exports.statusPoll(bot);
             } else if (!globalCache.values.game.finished) {
                 LOGGER.trace('RECEIVED: ' + eventJSON.updateId);
@@ -156,6 +158,26 @@ function subscribe (bot, liveGame) {
     });
     ws.addEventListener('error', (e) => LOGGER.error('Gameday socket error: ' + e.message));
     ws.addEventListener('close', (e) => LOGGER.info('Gameday socket closed: ' + JSON.stringify(e)));
+}
+
+/**
+ * Waits for the live feed status to change to Final, then refreshes the cached live feed.
+ * @param {number} gamePk
+ * @returns {Promise<LiveFeedResponse | null>}
+ */
+async function waitForFinalLiveFeed (gamePk) {
+    for (let attempt = 0; attempt < FINAL_STATUS_POLL_ATTEMPTS; attempt ++) {
+        const statusCheck = await mlbAPIUtil.statusCheck(gamePk);
+        if (statusCheck?.gameData?.status?.abstractGameState === 'Final') {
+            globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(gamePk);
+            return globalCache.values.game.currentLiveFeed;
+        }
+        if (attempt < FINAL_STATUS_POLL_ATTEMPTS - 1) {
+            await new Promise(resolve => setTimeout(resolve, FINAL_STATUS_POLL_INTERVAL_MS));
+        }
+    }
+    LOGGER.warn(`Timed out waiting for final live feed for gamePk ${gamePk}.`);
+    return null;
 }
 
 /**
