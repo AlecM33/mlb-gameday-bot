@@ -84,7 +84,6 @@ function subscribe (bot, liveGame) {
     const ws = mlbAPIUtil.websocketSubscribe(liveGame.gamePk);
     ws.addEventListener('message', async (e) => {
         try {
-            const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
             /** @type {GamedaySocketEvent} */
             const eventJSON = JSON.parse(e.data);
             /*
@@ -100,13 +99,22 @@ function subscribe (bot, liveGame) {
             }
             globalCache.values.game.lastSocketMessageTimestamp = eventJSON.timeStamp;
             globalCache.values.game.lastSocketMessageLength = e.data.length;
+            LOGGER.debug('SOCKET EVENT TYPES: ' + JSON.stringify({
+                gameEvents: eventJSON.gameEvents || [],
+                changeEventType: eventJSON.changeEvent?.type || null
+            }));
             if (eventJSON.gameEvents.includes('game_finished') && !globalCache.values.game.finished) {
                 globalCache.values.game.finished = true;
                 globalCache.values.game.startReported = false;
                 LOGGER.info('NOTIFIED OF GAME CONCLUSION: CLOSING...');
+                ws.close();
+                const finalLiveFeed = await gamedayUtil.waitForFinalLiveFeed(
+                    liveGame.gamePk,
+                    async () => await module.exports.reportPlays(bot, liveGame.gamePk)
+                );
                 await module.exports.processAndPushPlay(bot, {
                     reply: gamedayUtil.buildFinalMessage(
-                        feed,
+                        liveFeed.init(finalLiveFeed || globalCache.values.game.currentLiveFeed),
                         liveGame.gamePk,
                         globalCache.values.game.awayTeamEmoji,
                         globalCache.values.game.homeTeamEmoji
@@ -114,7 +122,6 @@ function subscribe (bot, liveGame) {
                     isScoringPlay: true,
                     isOut: false
                 }, liveGame.gamePk, globalCache.values.game.lastReportedCompleteAtBatIndex, false);
-                ws.close();
                 await module.exports.statusPoll(bot);
             } else if (!globalCache.values.game.finished) {
                 LOGGER.trace('RECEIVED: ' + eventJSON.updateId);

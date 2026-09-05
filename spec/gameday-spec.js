@@ -468,7 +468,15 @@ describe('gameday', () => {
             spyOn(mlbAPIUtil, 'wsLiveFeed').and.returnValue(Promise.resolve({
                 metaData: { timeStamp: '2024-01-01T12:00:00Z' }
             }));
-            spyOn(mlbAPIUtil, 'liveFeed').and.returnValue(Promise.resolve({}));
+            spyOn(mlbAPIUtil, 'liveFeed').and.callFake(() => Promise.resolve({
+                ...globalCache.values.game.currentLiveFeed,
+                gameData: {
+                    ...globalCache.values.game.currentLiveFeed.gameData,
+                    status: {
+                        abstractGameState: 'Final'
+                    }
+                }
+            }));
             spyOn(liveFeed, 'init').and.returnValue({
                 awayAbbreviation: () => 'MIL',
                 homeAbbreviation: () => 'LAA',
@@ -480,6 +488,7 @@ describe('gameday', () => {
                 allPlays: () => []
             });
             spyOn(gameday, 'processAndPushPlay').and.stub();
+            spyOn(gameday, 'reportPlays').and.resolveTo();
             spyOn(gameday, 'statusPoll').and.resolveTo();
         });
 
@@ -510,6 +519,187 @@ describe('gameday', () => {
 
             expect(globalCache.values.game.finished).toBe(true);
             expect(globalCache.values.game.startReported).toBe(false);
+            expect(mockWebSocket.close).toHaveBeenCalled();
+            expect(gameday.processAndPushPlay).toHaveBeenCalled();
+            expect(gameday.statusPoll).toHaveBeenCalledWith(mockBot);
+        });
+
+        it('should wait for the live feed to reach Final before building the final message', async () => {
+            const staleLiveFeed = {
+                metaData: {
+                    timeStamp: '2024-01-01T11:00:00Z'
+                },
+                liveData: {
+                    plays: {
+                        currentPlay: {
+                            result: {
+                                awayScore: 3,
+                                homeScore: 3
+                            }
+                        }
+                    }
+                },
+                gameData: {
+                    teams: {
+                        away: { abbreviation: 'DET' },
+                        home: { abbreviation: 'CLE' }
+                    }
+                }
+            };
+            const updatedLiveFeed = {
+                metaData: {
+                    timeStamp: '2024-01-01T12:00:00Z'
+                },
+                liveData: {
+                    plays: {
+                        currentPlay: {
+                            result: {
+                                awayScore: 3,
+                                homeScore: 3
+                            }
+                        }
+                    }
+                },
+                gameData: {
+                    teams: {
+                        away: { abbreviation: 'DET' },
+                        home: { abbreviation: 'CLE' }
+                    },
+                    status: {
+                        abstractGameState: 'Live'
+                    }
+                }
+            };
+            const finalLiveFeed = {
+                metaData: {
+                    timeStamp: '2024-01-01T12:00:05Z'
+                },
+                liveData: {
+                    plays: {
+                        currentPlay: {
+                            result: {
+                                awayScore: 3,
+                                homeScore: 4
+                            }
+                        }
+                    }
+                },
+                gameData: {
+                    teams: {
+                        away: { abbreviation: 'DET' },
+                        home: { abbreviation: 'CLE' }
+                    },
+                    status: {
+                        abstractGameState: 'Final'
+                    }
+                }
+            };
+
+            globalCache.values.game.currentLiveFeed = staleLiveFeed;
+            mlbAPIUtil.liveFeed.and.returnValues(
+                Promise.resolve(updatedLiveFeed),
+                Promise.resolve(finalLiveFeed)
+            );
+            liveFeed.init.and.callFake((feedData) => ({
+                awayAbbreviation: () => feedData.gameData.teams.away.abbreviation,
+                homeAbbreviation: () => feedData.gameData.teams.home.abbreviation,
+                awayTeamScore: () => feedData.liveData.plays.currentPlay.result.awayScore,
+                homeTeamScore: () => feedData.liveData.plays.currentPlay.result.homeScore,
+                halfInning: () => 'top',
+                inning: () => 1,
+                currentPlay: () => ({ atBatIndex: 0, about: { hasReview: false }, playEvents: [] }),
+                allPlays: () => []
+            }));
+            spyOn(global, 'setTimeout').and.callFake((fn) => {
+                fn();
+                return /** @type {any} */ (0);
+            });
+
+            gameday.subscribe(mockBot, mockLiveGame);
+
+            const messageHandler = mockWebSocket.addEventListener.calls.all()
+                .find(call => call.args[0] === 'message').args[1];
+
+            await messageHandler({
+                data: JSON.stringify({
+                    gameEvents: ['game_finished'],
+                    updateId: 'update-123',
+                    timeStamp: '2024-01-01T12:00:00Z'
+                })
+            });
+
+            expect(mlbAPIUtil.liveFeed).toHaveBeenCalledTimes(2);
+            expect(gameday.reportPlays).toHaveBeenCalledTimes(2);
+            expect(gameday.reportPlays).toHaveBeenCalledWith(mockBot, 12345);
+            expect(global.setTimeout).toHaveBeenCalledWith(jasmine.any(Function), globals.FINAL_STATUS_POLL_INTERVAL_MS);
+            expect(gameday.reportPlays.calls.mostRecent().invocationOrder)
+                .toBeLessThan(gameday.processAndPushPlay.calls.mostRecent().invocationOrder);
+            expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, jasmine.objectContaining({
+                reply: jasmine.stringContaining('DET 3 - 4 CLE')
+            }), 12345, globalCache.values.game.lastReportedCompleteAtBatIndex, false);
+        });
+
+        it('should fall back to the cached live feed if the game feed never reaches Final', async () => {
+            const staleLiveFeed = {
+                metaData: {
+                    timeStamp: '2024-01-01T11:00:00Z'
+                },
+                liveData: {
+                    plays: {
+                        currentPlay: {
+                            result: {
+                                awayScore: 3,
+                                homeScore: 3
+                            }
+                        }
+                    }
+                },
+                gameData: {
+                    teams: {
+                        away: { abbreviation: 'DET' },
+                        home: { abbreviation: 'CLE' }
+                    }
+                }
+            };
+
+            globalCache.values.game.currentLiveFeed = staleLiveFeed;
+            mlbAPIUtil.liveFeed.and.returnValue(Promise.resolve(staleLiveFeed));
+            liveFeed.init.and.callFake((feedData) => ({
+                awayAbbreviation: () => feedData.gameData.teams.away.abbreviation,
+                homeAbbreviation: () => feedData.gameData.teams.home.abbreviation,
+                awayTeamScore: () => feedData.liveData.plays.currentPlay.result.awayScore,
+                homeTeamScore: () => feedData.liveData.plays.currentPlay.result.homeScore,
+                halfInning: () => 'top',
+                inning: () => 1,
+                currentPlay: () => ({ atBatIndex: 0, about: { hasReview: false }, playEvents: [] }),
+                allPlays: () => []
+            }));
+            spyOn(global, 'setTimeout').and.callFake((fn) => {
+                fn();
+                return /** @type {any} */ (0);
+            });
+
+            gameday.subscribe(mockBot, mockLiveGame);
+
+            const messageHandler = mockWebSocket.addEventListener.calls.all()
+                .find(call => call.args[0] === 'message').args[1];
+
+            await messageHandler({
+                data: JSON.stringify({
+                    gameEvents: ['game_finished'],
+                    updateId: 'update-123',
+                    timeStamp: '2024-01-01T12:00:00Z'
+                })
+            });
+
+            expect(mlbAPIUtil.liveFeed).toHaveBeenCalledTimes(globals.FINAL_STATUS_POLL_ATTEMPTS);
+            expect(global.setTimeout.calls.count()).toBe(globals.FINAL_STATUS_POLL_ATTEMPTS - 1);
+            expect(global.setTimeout).toHaveBeenCalledWith(jasmine.any(Function), globals.FINAL_STATUS_POLL_INTERVAL_MS);
+            expect(gameday.reportPlays).not.toHaveBeenCalled();
+            expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, jasmine.objectContaining({
+                reply: jasmine.stringContaining('DET 3 - 3 CLE')
+            }), 12345, globalCache.values.game.lastReportedCompleteAtBatIndex, false);
+            expect(gameday.statusPoll).toHaveBeenCalledWith(mockBot);
         });
 
         it('should ignore duplicate messages with same timestamp and length', async () => {
