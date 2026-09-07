@@ -523,7 +523,6 @@ module.exports = {
     linescoreHandler: async (interaction) => {
         console.info(`LINESCORE command invoked by guild: ${interaction.guildId}`);
         await deferIfNeeded(interaction);
-        const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
             const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
@@ -556,7 +555,6 @@ module.exports = {
     boxScoreHandler: async (interaction) => {
         console.info(`BOXSCORE command invoked by guild: ${interaction.guildId}`);
         await deferIfNeeded(interaction);
-        const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
             const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
@@ -606,7 +604,6 @@ module.exports = {
     lineupHandler: async (interaction) => {
         console.info(`LINEUP command invoked by guild: ${interaction.guildId}`);
         await deferIfNeeded(interaction);
-        const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
             const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
@@ -659,7 +656,6 @@ module.exports = {
     highlightsHandler: async (interaction) => {
         console.info(`HIGHLIGHTS command invoked by guild: ${interaction.guildId}`);
         await deferIfNeeded(interaction);
-        const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
             const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
@@ -826,7 +822,6 @@ module.exports = {
     scoringPlaysHandler: async (interaction) => {
         console.info(`SCORING PLAYS command invoked by guild: ${interaction.guildId}`);
         await deferIfNeeded(interaction);
-        const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
             const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
@@ -881,7 +876,6 @@ module.exports = {
     attendanceHandler: async (interaction) => {
         console.info(`ATTENDANCE command invoked by guild: ${interaction.guildId}`);
         await deferIfNeeded(interaction);
-        const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
             const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
@@ -907,7 +901,6 @@ module.exports = {
     weatherHandler: async (interaction) => {
         console.info(`WEATHER command invoked by guild: ${interaction.guildId}`);
         await deferIfNeeded(interaction);
-        const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
             const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
@@ -934,7 +927,6 @@ module.exports = {
     bullpenHandler: async (interaction) => {
         console.info(`BULLPEN command invoked by guild: ${interaction.guildId}`);
         await deferIfNeeded(interaction);
-        const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
             const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
