@@ -56,7 +56,7 @@ Requires a machine with the [Docker](https://docs.docker.com/) Engine running.
     - `DB_NAME` - the name for the postgres database
     - `DB_PORT` - the port for the postgres database
     - `DISCORD_TOKEN` - your discord bot's auth token **(sensitive)**
-    - `TEAM_ID` - optional default team fallback. Accepts either a numeric team ID or a team name (e.g. `Padres`, `White Sox`). Team names/IDs match those of the "teams" resource in the MLB Stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1. They are also stored statically in `config/globals.js` under `TEAMS`. This is used when a server has not yet run `/set_team`.
+    - `TEAM_ID` - required default team fallback. Accepts either a numeric team ID or a team name (e.g. `Padres`, `White Sox`). Team names/IDs match those of the "teams" resource in the MLB Stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1. They are also stored statically in `config/globals.js` under `TEAMS`. This is used when a server has not yet run `/set_team`.
     - `LOG_LEVEL` - your chosen log level (`info`, `error`, `warn`, `debug`, or `trace`)
     - `DISCORD_CLIENT_ID` - the client ID of your Discord application
     - `DB_SSL_CA` - the full PEM certificate content for SSL verification (e.g. the CA cert downloaded from your managed DB provider). Required when `REQUIRE_SSL=true`; ignored otherwise.

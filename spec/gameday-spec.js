@@ -14,12 +14,24 @@ describe('gameday', () => {
             fetch: jasmine.createSpy('fetch')
         }
     };
+    let originalTeamId;
 
     beforeEach(() => {
+        originalTeamId = process.env.TEAM_ID;
+        delete process.env.TEAM_ID;
+        gameday.stopStatusPoll();
         globalCache.values.guildTeams = {};
         globalCache.values.subscribedChannels = [];
         globalCache.values.activeTrackersByTeamId = {};
         mockBot.channels.fetch.calls.reset();
+    });
+
+    afterEach(() => {
+        if (originalTeamId === undefined) {
+            delete process.env.TEAM_ID;
+        } else {
+            process.env.TEAM_ID = originalTeamId;
+        }
     });
 
     describe('#statusPoll', () => {
@@ -99,6 +111,23 @@ describe('gameday', () => {
             await expectAsync(gameday.statusPoll()).toBeRejectedWithError(
                 'gameday.statusPoll requires a Discord client with channels.fetch().'
             );
+        });
+
+        it('should not start a second polling loop when called again', async () => {
+            globalCache.values.guildTeams = {
+                guild1: { guild_id: 'guild1', team_id: 114 }
+            };
+            globalCache.values.subscribedChannels = [
+                { guild_id: 'guild1', channel_id: 'channel-1', scoring_plays_only: false, delay: 0, advanced_stats: true }
+            ];
+            spyOn(mlbAPIUtil, 'currentGames').and.resolveTo(mockResponses.currentGamesNoneInProgress);
+            jasmine.clock().install();
+
+            await gameday.statusPoll(mockBot);
+            await gameday.statusPoll(mockBot);
+
+            expect(mlbAPIUtil.currentGames).toHaveBeenCalledTimes(1);
+            jasmine.clock().uninstall();
         });
     });
 
@@ -966,6 +995,27 @@ describe('gameday', () => {
             );
             expect(gameday.processAndPushPlay).not.toHaveBeenCalled();
         });
+
+        it('should ignore stale full_refresh messages after tracker reset', async () => {
+            gameday.subscribe(mockBot, teamId, mockLiveGame);
+            const messageHandler = mockWebSocket.addEventListener.calls.all()
+                .find(call => call.args[0] === 'message').args[1];
+
+            globalCache.resetGameCache(teamId);
+
+            await messageHandler({
+                data: JSON.stringify({
+                    gameEvents: [],
+                    updateId: 'stale-full-refresh',
+                    timeStamp: '2024-01-01T12:03:00Z',
+                    gamePk: 12345,
+                    changeEvent: { type: 'full_refresh' }
+                })
+            });
+
+            expect(mlbAPIUtil.wsLiveFeed).not.toHaveBeenCalledWith(12345, 'stale-full-refresh');
+            expect(gameday.processAndPushPlay).not.toHaveBeenCalled();
+        });
     });
 
     describe('#processAndPushPlay', () => {
@@ -1230,6 +1280,31 @@ describe('gameday', () => {
 
             expect(mockBot.channels.fetch).toHaveBeenCalledTimes(1);
             expect(mockBot.channels.fetch).toHaveBeenCalledWith('channel-123');
+        });
+
+        it('should re-check guild team before sending a delayed message', async () => {
+            const originalTeamId = process.env.TEAM_ID;
+            process.env.TEAM_ID = '114';
+            const channelSubscription = {
+                guild_id: 'guild1',
+                channel_id: 'channel-123',
+                scoring_plays_only: false,
+                delay: 5,
+                advanced_stats: true
+            };
+            const returnedChannel = {
+                send: jasmine.createSpy('send').and.resolveTo({ id: 'message-123' })
+            };
+            const message = { doneEditing: false };
+            jasmine.clock().install();
+
+            gameday.sendDelayedMessage(mockPlay, 12345, channelSubscription, returnedChannel, { data: { description: 'desc' } }, message, 114);
+            globalCache.values.guildTeams.guild1.team_id = 121;
+            jasmine.clock().tick(channelSubscription.delay * 1000);
+
+            expect(returnedChannel.send).not.toHaveBeenCalled();
+            jasmine.clock().uninstall();
+            process.env.TEAM_ID = originalTeamId;
         });
     });
 });

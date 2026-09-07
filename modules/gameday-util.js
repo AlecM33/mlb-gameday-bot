@@ -9,10 +9,45 @@ const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_
 
 module.exports = {
     /**
+      * @returns {number | null}
+      */
+    getConfiguredFallbackTeamId: () => {
+        const fallbackTeamId = parseInt(process.env.TEAM_ID);
+        return isNaN(fallbackTeamId) ? null : fallbackTeamId;
+    },
+
+    /**
+      * @param {string | null | undefined} guildId
+      * @returns {number | null}
+      */
+    getEffectiveTeamIdForGuild: (guildId) => {
+        const configuredTeamId = guildId ? globalCache.values.guildTeams[guildId]?.team_id : null;
+        if (configuredTeamId) {
+            return configuredTeamId;
+        }
+        return module.exports.getConfiguredFallbackTeamId();
+    },
+
+    /**
      * @returns {number[]}
      */
     getTrackedTeamIds: () => {
-        return [...new Set(Object.values(globalCache.values.guildTeams).map(guildTeam => guildTeam.team_id))];
+        const trackedTeamIds = new Set(Object.values(globalCache.values.guildTeams).map(guildTeam => guildTeam.team_id));
+        const fallbackTeamId = module.exports.getConfiguredFallbackTeamId();
+        if (fallbackTeamId) {
+            trackedTeamIds.add(fallbackTeamId);
+        }
+        return [...trackedTeamIds];
+    },
+
+    /**
+      * @returns {number[]}
+      */
+    getLiveReportingTeamIds: () => {
+        return [...new Set(globalCache.values.subscribedChannels
+            .map(channelSubscription => module.exports.getEffectiveTeamIdForGuild(channelSubscription.guild_id))
+            .filter(teamId => !!teamId)
+        )];
     },
 
     /**
@@ -21,7 +56,7 @@ module.exports = {
      * @returns {boolean}
      */
     shouldDeliverToChannel: (gameCache, channelSubscription) => {
-        return globalCache.values.guildTeams[channelSubscription.guild_id]?.team_id === gameCache.teamId;
+        return module.exports.getEffectiveTeamIdForGuild(channelSubscription.guild_id) === gameCache.teamId;
     },
 
     /**

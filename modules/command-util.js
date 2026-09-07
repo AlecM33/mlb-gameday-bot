@@ -11,13 +11,14 @@ const chroma = require('chroma-js');
 const ztable = require('ztable');
 const jsdom = require('jsdom');
 const levenshtein = require('./levenshtein');
+const gamedayUtil = require('./gameday-util');
 
 /**
  * @param {string | null | undefined} guildId
  * @returns {GameTracker}
  */
 function getTrackerForGuild (guildId) {
-    const teamId = guildId ? globalCache.values.guildTeams[guildId]?.team_id : null;
+    const teamId = gamedayUtil.getEffectiveTeamIdForGuild(guildId);
     if (!teamId) {
         throw new Error('This server does not have a default team configured yet. Use `/set_team` first.');
     }

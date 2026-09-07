@@ -10,6 +10,7 @@ const examplePlays = require('../spec/data/example-plays');
 const exampleLiveFeed = require('../spec/data/example-live-feeds/live-feed-2024');
 const liveFeed = require('./livefeed');
 const currentPlayProcessor = require('./current-play-processor');
+const gamedayUtil = require('./gameday-util');
 
 /** @typedef {import('discord.js').ChatInputCommandInteraction} SlashInteraction */
 
@@ -29,14 +30,9 @@ function mapGuildTeams (guildSettingsRows) {
  * @returns {number}
  */
 function getGuildTeamIdOrThrow (guildId) {
-    const configuredTeamId = guildId ? globalCache.values.guildTeams[guildId]?.team_id : null;
-    if (configuredTeamId) {
-        return configuredTeamId;
-    }
-
-    const fallbackTeamId = parseInt(process.env.TEAM_ID);
-    if (!isNaN(fallbackTeamId)) {
-        return fallbackTeamId;
+    const effectiveTeamId = gamedayUtil.getEffectiveTeamIdForGuild(guildId);
+    if (effectiveTeamId) {
+        return effectiveTeamId;
     }
 
     throw new Error('This server does not have a default team configured yet. Use `/set_team` first.');
@@ -60,7 +56,6 @@ async function getGuildTrackerWithGamesOrThrow (guildId) {
     if (!tracker.nearestGames) {
         const now = globals.DATE ? new Date(globals.DATE) : new Date();
         tracker.currentGames = await mlbAPIUtil.currentGames(teamId);
-        const gamedayUtil = require('./gameday-util');
         gamedayUtil.updateTrackerGames(tracker, now);
     }
     return tracker;
@@ -92,7 +87,7 @@ function guildHasSubscribedChannelsTrackingAnotherTeam (guildId, excludedTeamId)
         if (channel.guild_id === guildId) {
             return false;
         }
-        return globalCache.values.guildTeams[channel.guild_id]?.team_id === excludedTeamId;
+        return gamedayUtil.getEffectiveTeamIdForGuild(channel.guild_id) === excludedTeamId;
     });
 }
 
@@ -320,7 +315,7 @@ module.exports = {
             globalCache.values.subscribedChannels = await queries.getAllSubscribedChannels();
             if (bot) {
                 const gameday = require('./gameday');
-                await gameday.statusPoll(bot);
+                await gameday.refreshStatus(bot);
             }
         } else {
             throw new Error('Could not subscribe to the gameday feed.');
@@ -483,7 +478,7 @@ module.exports = {
         }
 
         await interaction.deferReply();
-        const previousTeamId = globalCache.values.guildTeams[interaction.guild.id]?.team_id;
+        const previousTeamId = gamedayUtil.getEffectiveTeamIdForGuild(interaction.guild.id);
         const requestedTeam = interaction.options.getString('team');
         const requestedTeamId = parseInt(requestedTeam);
         const matchingTeam = globals.TEAMS.find((team) =>
@@ -513,7 +508,7 @@ module.exports = {
         }
         if (bot && hasSubscribedChannels) {
             const gameday = require('./gameday');
-            await gameday.statusPoll(bot);
+            await gameday.refreshStatus(bot);
         }
 
         await interaction.followUp({

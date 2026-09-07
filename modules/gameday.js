@@ -15,10 +15,16 @@ const gamedayUtil = require('./gameday-util');
 
 /** @type {Map<string, SavantQueueEntry & { teamId: number }>} */
 const savantQueue = new Map();
+/** @type {Map<number, Set<any>>} */
+const xParksRetryTimeoutsByTeamId = new Map();
 let savantLoopRunning = false;
+let statusPollTimeout = null;
+let statusPollLoopStarted = false;
 
 module.exports = {
     statusPoll,
+    refreshStatus,
+    stopStatusPoll,
     subscribe,
     processAndPushPlay,
     runSavantPollingLoop,
@@ -36,6 +42,7 @@ module.exports = {
  * @param {number} teamId
  */
 function clearSavantQueueForTeam (teamId) {
+    clearXParksTimeoutsForTeam(teamId);
     for (const [playId, entry] of savantQueue.entries()) {
         if (entry.teamId === teamId) {
             for (const label of entry.activeTimers || []) {
@@ -50,6 +57,51 @@ function clearSavantQueueForTeam (teamId) {
 }
 
 /**
+ * @param {number} teamId
+ * @returns {boolean}
+ */
+function hasSavantWorkForTeam (teamId) {
+    return [...savantQueue.values()].some(entry => entry.teamId === teamId)
+        || (xParksRetryTimeoutsByTeamId.get(teamId)?.size || 0) > 0;
+}
+
+/**
+ * @param {number} teamId
+ * @param {any} timeoutHandle
+ */
+function registerXParksTimeout (teamId, timeoutHandle) {
+    if (!xParksRetryTimeoutsByTeamId.has(teamId)) {
+        xParksRetryTimeoutsByTeamId.set(teamId, new Set());
+    }
+    xParksRetryTimeoutsByTeamId.get(teamId).add(timeoutHandle);
+}
+
+/**
+ * @param {number} teamId
+ * @param {any} timeoutHandle
+ */
+function unregisterXParksTimeout (teamId, timeoutHandle) {
+    const teamTimeouts = xParksRetryTimeoutsByTeamId.get(teamId);
+    if (!teamTimeouts) return;
+    teamTimeouts.delete(timeoutHandle);
+    if (teamTimeouts.size === 0) {
+        xParksRetryTimeoutsByTeamId.delete(teamId);
+    }
+}
+
+/**
+ * @param {number} teamId
+ */
+function clearXParksTimeoutsForTeam (teamId) {
+    const teamTimeouts = xParksRetryTimeoutsByTeamId.get(teamId);
+    if (!teamTimeouts) return;
+    for (const timeoutHandle of teamTimeouts) {
+        clearTimeout(timeoutHandle);
+    }
+    xParksRetryTimeoutsByTeamId.delete(teamId);
+}
+
+/**
  * Starts the polling loop that watches subscribed teams for games to go live.
  * @param {import('discord.js').Client} bot
  */
@@ -57,44 +109,77 @@ async function statusPoll (bot) {
     if (!bot || !bot.channels || typeof bot.channels.fetch !== 'function') {
         throw new Error('gameday.statusPoll requires a Discord client with channels.fetch().');
     }
+    if (statusPollLoopStarted) {
+        return;
+    }
+    statusPollLoopStarted = true;
     const pollingFunction = async () => {
-        LOGGER.info('Games: polling...');
-        const now = globals.DATE ? new Date(globals.DATE) : new Date();
-        try {
-            const trackedTeamIds = gamedayUtil.getTrackedTeamIds();
-            for (const teamId of trackedTeamIds) {
-                const tracker = globalCache.ensureTracker(teamId);
-                tracker.currentGames = await mlbAPIUtil.currentGames(teamId);
-                LOGGER.trace('Current game PKs for team ' + teamId + ': ' + JSON.stringify(tracker.currentGames
-                    .map(game => { return { key: game.gamePk, date: game.officialDate, status: game.status.statusCode }; }), null, 2));
-                gamedayUtil.updateTrackerGames(tracker, now);
-                const inProgressGame = tracker.nearestGames.find(nearestGame => nearestGame.status.statusCode === globals.GAME_STATUS_CODES.IN_PROGRESS
-                    || nearestGame.status.statusCode === globals.GAME_STATUS_CODES.WARMUP);
-                /*
-                    the "game_finished" socket event is received before a game's status changes to "Final", typically. So we shouldn't try to
-                    re-subscribe just because the status is still "In Progress". We should check if it's a different game.
-                */
-                if (inProgressGame && inProgressGame.gamePk !== tracker.game.currentGamePk) {
-                    LOGGER.info(gamedayUtil.withGameLogContext(inProgressGame, `Gameday: team ${teamId} has a live game.`));
-                    globalCache.resetGameCache(teamId);
-                    const refreshedTracker = globalCache.ensureTracker(teamId);
-                    refreshedTracker.currentGames = tracker.currentGames;
-                    refreshedTracker.nearestGames = tracker.nearestGames;
-                    refreshedTracker.game.isDoubleHeader = tracker.game.isDoubleHeader;
-                    refreshedTracker.game.currentLiveFeed = await mlbAPIUtil.liveFeed(inProgressGame.gamePk);
-                    refreshedTracker.game.currentGamePk = inProgressGame.gamePk;
-                    gamedayUtil.getConstrastingEmbedColors(refreshedTracker.game);
-                    gamedayUtil.getTeamEmojis(refreshedTracker.game);
-                    module.exports.subscribe(bot, teamId, inProgressGame);
-                }
-            }
-            setTimeout(pollingFunction, globals.SLOW_POLL_INTERVAL);
-        } catch (e) {
-            LOGGER.error(e);
-            setTimeout(pollingFunction, globals.SLOW_POLL_INTERVAL);
-        }
+        await module.exports.refreshStatus(bot);
+        statusPollTimeout = setTimeout(pollingFunction, globals.SLOW_POLL_INTERVAL);
     };
     await pollingFunction();
+}
+
+/**
+ * @param {import('discord.js').Client} bot
+ */
+async function refreshStatus (bot) {
+    if (!bot || !bot.channels || typeof bot.channels.fetch !== 'function') {
+        throw new Error('gameday.refreshStatus requires a Discord client with channels.fetch().');
+    }
+    LOGGER.info('Games: polling...');
+    const now = globals.DATE ? new Date(globals.DATE) : new Date();
+    try {
+        const trackedTeamIds = gamedayUtil.getTrackedTeamIds();
+        const liveReportingTeamIds = new Set(gamedayUtil.getLiveReportingTeamIds());
+        for (const [teamIdStr, tracker] of Object.entries(globalCache.values.activeTrackersByTeamId)) {
+            const activeTeamId = parseInt(teamIdStr);
+            if (!liveReportingTeamIds.has(activeTeamId) && (tracker.websocket || hasSavantWorkForTeam(activeTeamId))) {
+                LOGGER.info(`Gameday: team ${activeTeamId} no longer has subscribed channels. Clearing live tracker.`);
+                module.exports.clearSavantQueueForTeam(activeTeamId);
+                globalCache.resetGameCache(activeTeamId);
+            }
+        }
+        for (const teamId of trackedTeamIds) {
+            const tracker = globalCache.ensureTracker(teamId);
+            tracker.currentGames = await mlbAPIUtil.currentGames(teamId);
+            LOGGER.trace('Current game PKs for team ' + teamId + ': ' + JSON.stringify(tracker.currentGames
+                .map(game => { return { key: game.gamePk, date: game.officialDate, status: game.status.statusCode }; }), null, 2));
+            gamedayUtil.updateTrackerGames(tracker, now);
+            if (!liveReportingTeamIds.has(teamId)) {
+                continue;
+            }
+            const inProgressGame = tracker.nearestGames.find(nearestGame => nearestGame.status.statusCode === globals.GAME_STATUS_CODES.IN_PROGRESS
+                || nearestGame.status.statusCode === globals.GAME_STATUS_CODES.WARMUP);
+            /*
+                the "game_finished" socket event is received before a game's status changes to "Final", typically. So we shouldn't try to
+                re-subscribe just because the status is still "In Progress". We should check if it's a different game.
+            */
+            if (inProgressGame && inProgressGame.gamePk !== tracker.game.currentGamePk) {
+                LOGGER.info(gamedayUtil.withGameLogContext(inProgressGame, `Gameday: team ${teamId} has a live game.`));
+                globalCache.resetGameCache(teamId);
+                const refreshedTracker = globalCache.ensureTracker(teamId);
+                refreshedTracker.currentGames = tracker.currentGames;
+                refreshedTracker.nearestGames = tracker.nearestGames;
+                refreshedTracker.game.isDoubleHeader = tracker.game.isDoubleHeader;
+                refreshedTracker.game.currentLiveFeed = await mlbAPIUtil.liveFeed(inProgressGame.gamePk);
+                refreshedTracker.game.currentGamePk = inProgressGame.gamePk;
+                gamedayUtil.getConstrastingEmbedColors(refreshedTracker.game);
+                gamedayUtil.getTeamEmojis(refreshedTracker.game);
+                module.exports.subscribe(bot, teamId, inProgressGame);
+            }
+        }
+    } catch (e) {
+        LOGGER.error(e);
+    }
+}
+
+function stopStatusPoll () {
+    if (statusPollTimeout) {
+        clearTimeout(statusPollTimeout);
+    }
+    statusPollTimeout = null;
+    statusPollLoopStarted = false;
 }
 
 /**
@@ -110,6 +195,10 @@ function subscribe (bot, teamId, liveGame) {
     ws.addEventListener('message', async (e) => {
         try {
             const activeTracker = globalCache.ensureTracker(teamId);
+            if (activeTracker.websocket !== ws) {
+                LOGGER.debug(gamedayUtil.withGameLogContext(liveGame, `Stale websocket message ignored for team ${teamId}.`));
+                return;
+            }
             const gameCache = activeTracker.game;
             /** @type {GamedaySocketEvent} */
             const eventJSON = JSON.parse(e.data);
@@ -163,6 +252,11 @@ function subscribe (bot, teamId, liveGame) {
                         eventJSON.updateId,
                         gameCache.currentLiveFeed.metaData.timeStamp
                     );
+                const refreshedTracker = globalCache.ensureTracker(teamId);
+                if (refreshedTracker.websocket !== ws || refreshedTracker.game !== gameCache) {
+                    LOGGER.debug(gamedayUtil.withGameLogContext(liveGame, `Discarding stale update ${eventJSON.updateId} for team ${teamId}.`));
+                    return;
+                }
                 if (Array.isArray(update)) {
                     for (const patch of update) {
                         try {
@@ -341,7 +435,7 @@ async function processAndPushPlay (bot, teamId, play, gamePk, atBatIndex, includ
                 } else {
                     LOGGER.debug('Waiting ' + channelSubscription.delay + ' seconds for channel: ' + channelSubscription.channel_id);
                     message.delayed = true;
-                    sendDelayedMessage(play, gamePk, channelSubscription, returnedChannel, embed, message);
+                    sendDelayedMessage(play, gamePk, channelSubscription, returnedChannel, embed, message, teamId);
                 }
                 if (channelSubscription.advanced_stats) {
                     advancedStatsMessages.push(message);
@@ -378,9 +472,15 @@ async function sendMessage (returnedChannel, embed, message) {
  * @param {import('discord.js').TextBasedChannel} returnedChannel
  * @param {import('discord.js').EmbedBuilder} embed
  * @param {MessageEntry} message
+ * @param {number} expectedTeamId
  */
-function sendDelayedMessage (play, gamePk, channelSubscription, returnedChannel, embed, message) {
+function sendDelayedMessage (play, gamePk, channelSubscription, returnedChannel, embed, message, expectedTeamId) {
     setTimeout(async () => {
+        if (gamedayUtil.getEffectiveTeamIdForGuild(channelSubscription.guild_id) !== expectedTeamId) {
+            LOGGER.debug('Skipping delayed send: guild switched teams during delay window.');
+            message.doneEditing = true;
+            return;
+        }
         LOGGER.debug('Sending!');
         try {
             message.discordMessage = await returnedChannel.send({
@@ -540,7 +640,11 @@ async function pollForXParksAndEdit (teamId, gamePk, playId, numberOfParks, base
         }
         attempts ++;
         currentInterval = currentInterval + globals.SAVANT_XPARKS_POLLING_BACKOFF_INCREASE;
-        setTimeout(async () => { await pollingFunction(); }, currentInterval);
+        const timeoutHandle = setTimeout(async () => {
+            unregisterXParksTimeout(teamId, timeoutHandle);
+            await pollingFunction();
+        }, currentInterval);
+        registerXParksTimeout(teamId, timeoutHandle);
     };
     await pollingFunction();
 }

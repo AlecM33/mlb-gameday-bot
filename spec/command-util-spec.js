@@ -79,6 +79,40 @@ describe('command-util', () => {
         });
     });
 
+    describe('#screenInteraction', () => {
+        let originalTeamId;
+
+        beforeEach(() => {
+            originalTeamId = process.env.TEAM_ID;
+            process.env.TEAM_ID = '114';
+            globalCache.values.guildTeams = {};
+            globalCache.values.activeTrackersByTeamId = {};
+        });
+
+        afterEach(() => {
+            if (originalTeamId === undefined) {
+                delete process.env.TEAM_ID;
+            } else {
+                process.env.TEAM_ID = originalTeamId;
+            }
+        });
+
+        it('should resolve tracker access through TEAM_ID fallback when no guild row exists', async () => {
+            const tracker = globalCache.ensureTracker(114);
+            tracker.nearestGames = [{ gamePk: 12345 }];
+            tracker.game.isDoubleHeader = false;
+            const interaction = {
+                guildId: 'guild-without-team-row',
+                followUp: jasmine.createSpy('followUp').and.resolveTo()
+            };
+
+            const result = await commandUtil.screenInteraction(interaction);
+
+            expect(result).toBe(interaction);
+            expect(interaction.followUp).not.toHaveBeenCalled();
+        });
+    });
+
     describe('#buildPlayerCache', () => {
         let originalPlayers;
 
