@@ -40,14 +40,6 @@ function getGuildTeamIdOrThrow (guildId) {
 
 /**
  * @param {string | null} guildId
- * @returns {GameTracker}
- */
-function getGuildTrackerOrThrow (guildId) {
-    return globalCache.ensureTracker(getGuildTeamIdOrThrow(guildId));
-}
-
-/**
- * @param {string | null} guildId
  * @returns {Promise<GameTracker>}
  */
 async function getGuildTrackerWithGamesOrThrow (guildId) {
