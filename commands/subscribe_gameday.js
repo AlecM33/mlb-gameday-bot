@@ -20,9 +20,13 @@ module.exports = {
             option.setName('advanced_stats')
                 .setDescription('Include advanced stats (xBA, HR/Park, Bat Speed) for balls in play? Defaults to true.')
                 .setRequired(false)),
-    async execute (interaction) {
+    /**
+     * @param {import('discord.js').ChatInputCommandInteraction} interaction
+     * @param {import('discord.js').Client} bot
+     */
+    async execute (interaction, bot) {
         try {
-            await interactionHandlers.subscribeGamedayHandler(interaction);
+            await interactionHandlers.subscribeGamedayHandler(interaction, bot);
         } catch (e) {
             console.error(e);
             if (interaction.deferred && !interaction.replied) {

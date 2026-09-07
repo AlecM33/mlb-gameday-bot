@@ -45,6 +45,71 @@ module.exports = {
     },
 
     /**
+     * @param {string} hexColor
+     * @returns {string}
+     */
+    hexToAnsi24Bit: (hexColor) => {
+        const hex = hexColor.replace('#', '');
+        const r = parseInt(hex.slice(0, 2), 16);
+        const g = parseInt(hex.slice(2, 4), 16);
+        const b = parseInt(hex.slice(4, 6), 16);
+        return `\x1b[38;2;${r};${g};${b}m`;
+    },
+
+    /**
+     * @param {number | undefined} teamId
+     * @returns {MlbTeam | undefined}
+     */
+    getTeamMetadata: (teamId) => {
+        return globals.TEAMS.find(team => team.id === teamId);
+    },
+
+    /**
+     * @param {{ id?: number, abbreviation?: string, name?: string } | undefined} team
+     * @returns {string}
+     */
+    getLogTeamLabel: (team) => {
+        return team?.abbreviation || '';
+    },
+
+    /**
+     * @param {ScheduleGame | undefined} game
+     * @returns {string}
+     */
+    getGameLogContext: (game) => {
+        const awayTeam = game?.teams?.away?.team;
+        const homeTeam = game?.teams?.home?.team;
+        const awayMetadata = module.exports.getTeamMetadata(awayTeam?.id);
+        const homeMetadata = module.exports.getTeamMetadata(homeTeam?.id);
+        const awayLabel = module.exports.getLogTeamLabel({
+            id: awayTeam?.id,
+            abbreviation: awayTeam?.abbreviation || awayMetadata?.abbreviation,
+            name: awayTeam?.name || awayMetadata?.name
+        });
+        const homeLabel = module.exports.getLogTeamLabel({
+            id: homeTeam?.id,
+            abbreviation: homeTeam?.abbreviation || homeMetadata?.abbreviation,
+            name: homeTeam?.name || homeMetadata?.name
+        });
+        if (!awayLabel || !homeLabel) {
+            return '';
+        }
+        const reset = '\x1b[0m';
+        const awayColor = module.exports.hexToAnsi24Bit(awayMetadata?.secondaryColor || awayMetadata?.primaryColor || '#FFFFFF');
+        const homeColor = module.exports.hexToAnsi24Bit(homeMetadata?.secondaryColor || homeMetadata?.primaryColor || '#FFFFFF');
+        return `[${awayColor}${awayLabel}${reset} vs. ${homeColor}${homeLabel}${reset}] `;
+    },
+
+    /**
+     * @param {ScheduleGame | undefined} game
+     * @param {string} message
+     * @returns {string}
+     */
+    withGameLogContext: (game, message) => {
+        return module.exports.getGameLogContext(game) + message;
+    },
+
+    /**
      * @param {string} halfInningFull
      * @returns {'TOP'|'BOT'}
      */

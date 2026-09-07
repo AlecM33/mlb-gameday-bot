@@ -66,6 +66,20 @@ function resolveTrackedGameOrThrow (guildId, toHandle) {
         : tracker.nearestGames[0];
 }
 
+/**
+ * @param {string} guildId
+ * @param {number} excludedTeamId
+ * @returns {boolean}
+ */
+function guildHasSubscribedChannelsTrackingAnotherTeam (guildId, excludedTeamId) {
+    return globalCache.values.subscribedChannels.some(channel => {
+        if (channel.guild_id === guildId) {
+            return false;
+        }
+        return globalCache.values.guildTeams[channel.guild_id]?.team_id === excludedTeamId;
+    });
+}
+
 module.exports = {
 
     /** @param {SlashInteraction} interaction */
@@ -249,8 +263,11 @@ module.exports = {
         }
     },
 
-    /** @param {SlashInteraction} interaction */
-    subscribeGamedayHandler: async (interaction) => {
+    /**
+     * @param {SlashInteraction} interaction
+     * @param {import('discord.js').Client} [bot]
+     */
+    subscribeGamedayHandler: async (interaction, bot) => {
         console.info(`SUBSCRIBE GAMEDAY command invoked by guild: ${interaction.guildId}`);
         if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
             await interaction.reply({
@@ -285,6 +302,10 @@ module.exports = {
                 }
             });
             globalCache.values.subscribedChannels = await queries.getAllSubscribedChannels();
+            if (bot) {
+                const gameday = require('./gameday');
+                await gameday.statusPoll(bot);
+            }
         } else {
             throw new Error('Could not subscribe to the gameday feed.');
         }
@@ -431,8 +452,11 @@ module.exports = {
         globalCache.values.subscribedChannels = await queries.getAllSubscribedChannels();
     },
 
-    /** @param {SlashInteraction} interaction */
-    setTeamHandler: async (interaction) => {
+    /**
+     * @param {SlashInteraction} interaction
+     * @param {import('discord.js').Client} [bot]
+     */
+    setTeamHandler: async (interaction, bot) => {
         console.info(`SET TEAM command invoked by guild: ${interaction.guildId}`);
         if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
             await interaction.reply({
@@ -443,6 +467,7 @@ module.exports = {
         }
 
         await interaction.deferReply();
+        const previousTeamId = globalCache.values.guildTeams[interaction.guild.id]?.team_id;
         const requestedTeam = interaction.options.getString('team');
         const requestedTeamId = parseInt(requestedTeam);
         const matchingTeam = globals.TEAMS.find((team) =>
@@ -461,6 +486,19 @@ module.exports = {
 
         await queries.upsertGuildTeam(interaction.guild.id, matchingTeam.id);
         globalCache.values.guildTeams = mapGuildTeams(await queries.getAllGuildTeams());
+        const hasSubscribedChannels = globalCache.values.subscribedChannels
+            .some(channel => channel.guild_id === interaction.guild.id);
+        if (previousTeamId && previousTeamId !== matchingTeam.id
+            && hasSubscribedChannels
+            && !guildHasSubscribedChannelsTrackingAnotherTeam(interaction.guild.id, previousTeamId)) {
+            const gameday = require('./gameday');
+            gameday.clearSavantQueueForTeam(previousTeamId);
+            globalCache.resetGameCache(previousTeamId);
+        }
+        if (bot && hasSubscribedChannels) {
+            const gameday = require('./gameday');
+            await gameday.statusPoll(bot);
+        }
 
         await interaction.followUp({
             content: `This server's default team is now **${matchingTeam.name}** (${matchingTeam.abbreviation}).`,

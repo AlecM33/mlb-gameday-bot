@@ -9,10 +9,17 @@ const examplePlays = require('./data/example-plays');
 const currentPlayProcessor = require('../modules/current-play-processor');
 
 describe('gameday', () => {
+    const mockBot = {
+        channels: {
+            fetch: jasmine.createSpy('fetch')
+        }
+    };
+
     beforeEach(() => {
         globalCache.values.guildTeams = {};
         globalCache.values.subscribedChannels = [];
         globalCache.values.activeTrackersByTeamId = {};
+        mockBot.channels.fetch.calls.reset();
     });
 
     describe('#statusPoll', () => {
@@ -33,8 +40,8 @@ describe('gameday', () => {
             spyOn(mlbAPIUtil, 'currentGames').and.callFake(() => Promise.resolve(mockResponses.currentGames));
             spyOn(gameday, 'subscribe').and.stub();
             spyOn(globalCache, 'resetGameCache').and.callThrough();
-            await gameday.statusPoll();
-            expect(gameday.subscribe).toHaveBeenCalledWith(undefined, 114, jasmine.objectContaining({ gamePk: 744834 }));
+            await gameday.statusPoll(mockBot);
+            expect(gameday.subscribe).toHaveBeenCalledWith(mockBot, 114, jasmine.objectContaining({ gamePk: 744834 }));
             expect(mlbAPIUtil.liveFeed).toHaveBeenCalled();
             expect(globalCache.resetGameCache).toHaveBeenCalledWith(114);
             expect(gamedayUtil.getConstrastingEmbedColors).toHaveBeenCalled();
@@ -51,7 +58,7 @@ describe('gameday', () => {
             spyOn(gameday, 'subscribe').and.stub();
             spyOn(globalCache, 'resetGameCache').and.stub();
             jasmine.clock().install();
-            await gameday.statusPoll();
+            await gameday.statusPoll(mockBot);
             jasmine.clock().tick(globals.SLOW_POLL_INTERVAL);
             expect(mlbAPIUtil.currentGames).toHaveBeenCalledTimes(2);
             expect(gameday.subscribe).not.toHaveBeenCalled();
@@ -81,17 +88,82 @@ describe('gameday', () => {
             spyOn(gameday, 'subscribe').and.stub();
             spyOn(globalCache, 'resetGameCache').and.callThrough();
 
-            await gameday.statusPoll();
+            await gameday.statusPoll(mockBot);
 
             expect(mlbAPIUtil.currentGames).toHaveBeenCalledTimes(2);
             expect(gameday.subscribe).toHaveBeenCalledTimes(1);
-            expect(gameday.subscribe).toHaveBeenCalledWith(undefined, 114, jasmine.objectContaining({ gamePk: 744834 }));
+            expect(gameday.subscribe).toHaveBeenCalledWith(mockBot, 114, jasmine.objectContaining({ gamePk: 744834 }));
+        });
+
+        it('should reject polling without a Discord client', async () => {
+            await expectAsync(gameday.statusPoll()).toBeRejectedWithError(
+                'gameday.statusPoll requires a Discord client with channels.fetch().'
+            );
         });
     });
 
     describe('#runSavantPollingLoop', () => {
         beforeEach(() => {
             gameday.savantQueue.clear();
+        });
+
+        it('should clear queued savant entries for a removed team and stop the loop when nothing remains', () => {
+            gameday.savantQueue.set('abc', {
+                teamId: 114,
+                gamePk: 1,
+                messages: [],
+                hitDistance: 350,
+                embed: { data: { description: 'xBA: Pending...' } },
+                activeTimers: new Set(),
+                attempts: 0
+            });
+            gameday.savantQueue.set('xyz', {
+                teamId: 121,
+                gamePk: 2,
+                messages: [],
+                hitDistance: 350,
+                embed: { data: { description: 'xBA: Pending...' } },
+                activeTimers: new Set(),
+                attempts: 0
+            });
+
+            gameday.clearSavantQueueForTeam(114);
+
+            expect(gameday.savantQueue.has('abc')).toBeFalse();
+            expect(gameday.savantQueue.has('xyz')).toBeTrue();
+
+            gameday.clearSavantQueueForTeam(121);
+
+            expect(gameday.savantQueue.size).toBe(0);
+            expect(gameday.savantLoopRunning).toBeFalse();
+        });
+
+        it('should keep other teams queued when clearing one team from savant processing', () => {
+            gameday.savantQueue.set('abc', {
+                teamId: 114,
+                gamePk: 1,
+                messages: [],
+                hitDistance: 350,
+                embed: { data: { description: 'xBA: Pending...' } },
+                activeTimers: new Set(),
+                attempts: 0
+            });
+            gameday.savantQueue.set('xyz', {
+                teamId: 121,
+                gamePk: 2,
+                messages: [],
+                hitDistance: 350,
+                embed: { data: { description: 'xBA: Pending...' } },
+                activeTimers: new Set(),
+                attempts: 0
+            });
+
+            gameday.runSavantPollingLoop();
+            gameday.clearSavantQueueForTeam(114);
+
+            expect(gameday.savantQueue.has('abc')).toBeFalse();
+            expect(gameday.savantQueue.has('xyz')).toBeTrue();
+            expect(gameday.savantLoopRunning).toBeFalse();
         });
 
         it('should call processMatchingPlay and stop the loop when a matching play is found and all messages are done', async () => {
@@ -545,7 +617,6 @@ describe('gameday', () => {
             });
             spyOn(gameday, 'processAndPushPlay').and.stub();
             spyOn(gameday, 'reportPlays').and.resolveTo();
-            spyOn(gameday, 'statusPoll').and.resolveTo();
         });
 
         it('should create a WebSocket connection', () => {
@@ -850,6 +921,51 @@ describe('gameday', () => {
             expect(mlbAPIUtil.websocketQueryUpdateId).not.toHaveBeenCalled();
             expect(mlbAPIUtil.wsLiveFeed).not.toHaveBeenCalled();
         });
+
+        it('should stop orphaned team sockets from processing later messages after reset', async () => {
+            globalCache.values.guildTeams = {
+                guild1: { guild_id: 'guild1', team_id: 121 }
+            };
+            globalCache.values.subscribedChannels = [
+                { guild_id: 'guild1', channel_id: 'channel-999', scoring_plays_only: false, delay: 0, advanced_stats: true }
+            ];
+            spyOn(currentPlayProcessor, 'process').and.returnValue({
+                reply: 'Should not send',
+                description: 'Should not send',
+                isScoringPlay: false,
+                isComplete: false,
+                isOut: false,
+                outs: 0,
+                homeScore: 0,
+                awayScore: 0,
+                isInPlay: false,
+                metricsAvailable: false,
+                isStartEvent: false
+            });
+
+            gameday.subscribe(mockBot, teamId, mockLiveGame);
+            const messageHandler = mockWebSocket.addEventListener.calls.all()
+                .find(call => call.args[0] === 'message').args[1];
+
+            globalCache.resetGameCache(teamId);
+
+            await messageHandler({
+                data: JSON.stringify({
+                    gameEvents: [],
+                    updateId: 'update-after-reset',
+                    timeStamp: '2024-01-01T12:03:00Z',
+                    gamePk: 12345,
+                    changeEvent: { type: 'normal' }
+                })
+            });
+
+            expect(mlbAPIUtil.websocketQueryUpdateId).not.toHaveBeenCalledWith(
+                12345,
+                'update-after-reset',
+                jasmine.anything()
+            );
+            expect(gameday.processAndPushPlay).not.toHaveBeenCalled();
+        });
     });
 
     describe('#processAndPushPlay', () => {
@@ -1015,6 +1131,16 @@ describe('gameday', () => {
 
             await gameday.processAndPushPlay(mockBot, 114, mockPlay, 12345, 5);
 
+            expect(tracker.game.reportedDescriptions).toContain({
+                description: 'Test play description',
+                atBatIndex: 5
+            });
+        });
+
+        it('should skip delivery when the Discord client is unavailable', async () => {
+            await gameday.processAndPushPlay(undefined, 114, mockPlay, 12345, 5);
+
+            expect(gameday.sendMessage).not.toHaveBeenCalled();
             expect(tracker.game.reportedDescriptions).toContain({
                 description: 'Test play description',
                 atBatIndex: 5

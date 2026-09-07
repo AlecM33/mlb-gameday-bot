@@ -27,15 +27,36 @@ module.exports = {
     sendDelayedMessage,
     reportPlays,
     reportAnyMissedEvents,
+    clearSavantQueueForTeam,
     savantQueue,
     get savantLoopRunning () { return savantLoopRunning; }
 };
+
+/**
+ * @param {number} teamId
+ */
+function clearSavantQueueForTeam (teamId) {
+    for (const [playId, entry] of savantQueue.entries()) {
+        if (entry.teamId === teamId) {
+            for (const label of entry.activeTimers || []) {
+                console.timeEnd(label);
+            }
+            savantQueue.delete(playId);
+        }
+    }
+    if (savantQueue.size === 0) {
+        savantLoopRunning = false;
+    }
+}
 
 /**
  * Starts the polling loop that watches subscribed teams for games to go live.
  * @param {import('discord.js').Client} bot
  */
 async function statusPoll (bot) {
+    if (!bot || !bot.channels || typeof bot.channels.fetch !== 'function') {
+        throw new Error('gameday.statusPoll requires a Discord client with channels.fetch().');
+    }
     const pollingFunction = async () => {
         LOGGER.info('Games: polling...');
         const now = globals.DATE ? new Date(globals.DATE) : new Date();
@@ -54,7 +75,7 @@ async function statusPoll (bot) {
                     re-subscribe just because the status is still "In Progress". We should check if it's a different game.
                 */
                 if (inProgressGame && inProgressGame.gamePk !== tracker.game.currentGamePk) {
-                    LOGGER.info(`Gameday: team ${teamId} has a live game.`);
+                    LOGGER.info(gamedayUtil.withGameLogContext(inProgressGame, `Gameday: team ${teamId} has a live game.`));
                     globalCache.resetGameCache(teamId);
                     const refreshedTracker = globalCache.ensureTracker(teamId);
                     refreshedTracker.currentGames = tracker.currentGames;
@@ -83,7 +104,7 @@ async function statusPoll (bot) {
  */
 function subscribe (bot, teamId, liveGame) {
     const tracker = globalCache.ensureTracker(teamId);
-    LOGGER.trace(`Gameday: subscribing for team ${teamId}...`);
+    LOGGER.trace(gamedayUtil.withGameLogContext(liveGame, `Gameday: subscribing for team ${teamId}.`));
     const ws = mlbAPIUtil.websocketSubscribe(liveGame.gamePk);
     tracker.websocket = ws;
     ws.addEventListener('message', async (e) => {
@@ -100,19 +121,19 @@ function subscribe (bot, teamId, liveGame) {
              */
             if (gameCache.lastSocketMessageTimestamp === eventJSON.timeStamp
                 && gameCache.lastSocketMessageLength === e.data.length) {
-                LOGGER.debug('DUPLICATE MESSAGE: ' + eventJSON.updateId + ' - DISREGARDING');
+                LOGGER.debug(gamedayUtil.withGameLogContext(liveGame, 'DUPLICATE MESSAGE: ' + eventJSON.updateId + ' - DISREGARDING'));
                 return;
             }
             gameCache.lastSocketMessageTimestamp = eventJSON.timeStamp;
             gameCache.lastSocketMessageLength = e.data.length;
-            LOGGER.debug('SOCKET EVENT TYPES: ' + JSON.stringify({
+            LOGGER.debug(gamedayUtil.withGameLogContext(liveGame, 'SOCKET EVENT TYPES: ' + JSON.stringify({
                 gameEvents: eventJSON.gameEvents || [],
                 changeEventType: eventJSON.changeEvent?.type || null
-            }));
+            })));
             if (eventJSON.gameEvents.includes('game_finished') && !gameCache.finished) {
                 gameCache.finished = true;
                 gameCache.startReported = false;
-                LOGGER.info('NOTIFIED OF GAME CONCLUSION: CLOSING...');
+                LOGGER.info(gamedayUtil.withGameLogContext(liveGame, 'NOTIFIED OF GAME CONCLUSION: CLOSING...'));
                 ws.close();
                 delete activeTracker.websocket;
                 const finalLiveFeed = await gamedayUtil.waitForFinalLiveFeed(
@@ -131,9 +152,9 @@ function subscribe (bot, teamId, liveGame) {
                     isOut: false
                 }, liveGame.gamePk, gameCache.lastReportedCompleteAtBatIndex, false);
             } else if (!gameCache.finished) {
-                LOGGER.trace('RECEIVED: ' + eventJSON.updateId);
+                LOGGER.trace(gamedayUtil.withGameLogContext(liveGame, 'RECEIVED: ' + eventJSON.updateId));
                 if (eventJSON.changeEvent?.type === 'full_refresh') {
-                    LOGGER.trace('FULL REFRESH FOR: ' + eventJSON.updateId);
+                    LOGGER.trace(gamedayUtil.withGameLogContext(liveGame, 'FULL REFRESH FOR: ' + eventJSON.updateId));
                 }
                 const update = eventJSON.changeEvent?.type === 'full_refresh'
                     ? await mlbAPIUtil.wsLiveFeed(eventJSON.gamePk, eventJSON.updateId)
@@ -164,12 +185,12 @@ function subscribe (bot, teamId, liveGame) {
                 }
             }
         } catch (err) {
-            LOGGER.error('There was a problem processing a gameday event!');
+            LOGGER.error(gamedayUtil.withGameLogContext(liveGame, 'There was a problem processing a gameday event!'));
             LOGGER.error(err);
         }
     });
-    ws.addEventListener('error', (e) => LOGGER.error('Gameday socket error: ' + e.message));
-    ws.addEventListener('close', (e) => LOGGER.info('Gameday socket closed: ' + JSON.stringify(e)));
+    ws.addEventListener('error', (e) => LOGGER.error(gamedayUtil.withGameLogContext(liveGame, 'Gameday socket error: ' + e.message)));
+    ws.addEventListener('close', (e) => LOGGER.info(gamedayUtil.withGameLogContext(liveGame, 'Gameday socket closed: ' + JSON.stringify(e))));
 }
 
 /**

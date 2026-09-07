@@ -81,7 +81,7 @@ BOT.on('interactionCreate', async interaction => {
     if (!command) return;
 
     try {
-        await command.execute(interaction, BOT.guilds);
+        await command.execute(interaction, BOT);
     } catch (error) {
         LOGGER.error(error);
         try {

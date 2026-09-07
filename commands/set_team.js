@@ -1,26 +1,22 @@
 const interactionHandlers = require('../modules/interaction-handlers.js');
+const commandUtil = require('../modules/command-util.js');
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const globals = require('../config/globals');
 
 const data = new SlashCommandBuilder()
     .setName('set_team')
     .setDescription('Set the MLB team that this server will follow.')
     .addStringOption(option =>
-        globals.TEAMS.reduce((builder, team) => {
-            return builder.addChoices({
-                name: team.name,
-                value: String(team.id)
-            });
-        }, option
+        option
             .setName('team')
             .setDescription('Choose the team for this server.')
-            .setRequired(true)));
+            .setRequired(true)
+            .setAutocomplete(true));
 
 module.exports = {
     data,
-    async execute (interaction) {
+    async execute (interaction, bot) {
         try {
-            await interactionHandlers.setTeamHandler(interaction);
+            await interactionHandlers.setTeamHandler(interaction, bot);
         } catch (e) {
             console.error(e);
             if (interaction.deferred && !interaction.replied) {
@@ -35,5 +31,8 @@ module.exports = {
                 });
             }
         }
+    },
+    async autocomplete (interaction) {
+        await commandUtil.teamAutocomplete(interaction);
     }
 };

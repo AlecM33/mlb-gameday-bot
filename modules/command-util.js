@@ -1130,6 +1130,30 @@ module.exports = {
     },
 
     /**
+     * @param {import('discord.js').AutocompleteInteraction} interaction
+     */
+    teamAutocomplete: async (interaction) => {
+        try {
+            const focusedValue = interaction.options.getFocused().trim().toLowerCase();
+            const matches = globals.TEAMS
+                .filter(team => {
+                    if (focusedValue.length === 0) {
+                        return true;
+                    }
+                    return team.name.toLowerCase().includes(focusedValue)
+                        || team.abbreviation.toLowerCase().includes(focusedValue);
+                })
+                .slice(0, 25)
+                .map(team => ({ name: `${team.name} (${team.abbreviation})`, value: team.name }));
+
+            await interaction.respond(matches);
+        } catch (e) {
+            LOGGER.error('Team autocomplete error:', e);
+            await interaction.respond([]);
+        }
+    },
+
+    /**
      * @param {import('discord.js').ChatInputCommandInteraction} interaction
      * @returns {Promise<import('discord.js').MessageComponentInteraction | undefined>}
      */
