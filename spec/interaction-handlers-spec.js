@@ -327,6 +327,7 @@ describe('interaction-handlers', () => {
                     }]
                 }]
             });
+            spyOn(commandUtil, 'screenInteraction').and.callFake(async interaction => interaction);
             spyOn(commandUtil, 'getHomeAwayChoice').and.resolveTo({ customId: '114' });
             spyOn(commandUtil, 'giveFinalCommandResponse').and.resolveTo();
             spyOn(commandUtil, 'constructGameDisplayString').and.returnValue('CWS @ CLE');
@@ -366,7 +367,7 @@ describe('interaction-handlers', () => {
 
             await interactionHandlers.lineupHandler(interaction);
 
-            expect(commandUtil.giveFinalCommandResponse).toHaveBeenCalledWith(interaction, {
+            expect(commandUtil.giveFinalCommandResponse).toHaveBeenCalledWith(jasmine.objectContaining({ guildId: 'test-guild' }), {
                 content: 'CWS @ CLE - No lineup card has been submitted for this game yet.',
                 ephemeral: false,
                 components: []
