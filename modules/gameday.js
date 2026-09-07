@@ -13,7 +13,7 @@ const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_
 const liveFeed = require('./livefeed');
 const gamedayUtil = require('./gameday-util');
 
-/** @type {Map<string, SavantQueueEntry & { teamId: number }>} */
+/** @type {Map<string, SavantQueueEntry & { teamId: number, playId: string }>} */
 const savantQueue = new Map();
 /** @type {Map<number, Set<any>>} */
 const xParksRetryTimeoutsByTeamId = new Map();
@@ -43,12 +43,12 @@ module.exports = {
  */
 function clearSavantQueueForTeam (teamId) {
     clearXParksTimeoutsForTeam(teamId);
-    for (const [playId, entry] of savantQueue.entries()) {
+    for (const [queueKey, entry] of savantQueue.entries()) {
         if (entry.teamId === teamId) {
             for (const label of entry.activeTimers || []) {
                 console.timeEnd(label);
             }
-            savantQueue.delete(playId);
+            savantQueue.delete(queueKey);
         }
     }
     if (savantQueue.size === 0) {
@@ -527,6 +527,7 @@ async function maybePopulateAdvancedStatcastMetrics (teamId, play, messages, gam
  * @param {import('discord.js').EmbedBuilder} embed
  */
 async function pollForSavantData (teamId, gamePk, playId, messages, hitDistance, embed) {
+    const queueKey = `${teamId}:${playId}`;
     const activeTimers = new Set();
     const startTimer = (label) => { console.time(label); activeTimers.add(label); };
     startTimer('xBA: ' + playId);
@@ -534,13 +535,13 @@ async function pollForSavantData (teamId, gamePk, playId, messages, hitDistance,
     if (hitDistance >= globals.HOME_RUN_BALLPARKS_MIN_DISTANCE) {
         startTimer('HR/Park: ' + playId);
     }
-    const entry = { teamId, gamePk, messages, hitDistance, embed, activeTimers, attempts: 0 };
+    const entry = { teamId, gamePk, playId, messages, hitDistance, embed, activeTimers, attempts: 0 };
     if (savantLoopRunning) {
         LOGGER.debug('Savant: loop already running, enqueueing play: ' + playId);
-        savantQueue.set(playId, entry);
+        savantQueue.set(queueKey, entry);
     } else {
         savantLoopRunning = true;
-        savantQueue.set(playId, entry);
+        savantQueue.set(queueKey, entry);
         await runSavantPollingLoop();
     }
 }
@@ -555,9 +556,9 @@ async function runSavantPollingLoop () {
             savantLoopRunning = false;
             return;
         }
-        const queueEntriesByGamePk = [...savantQueue.entries()].reduce((acc, [playId, entry]) => {
+        const queueEntriesByGamePk = [...savantQueue.entries()].reduce((acc, [queueKey, entry]) => {
             acc[entry.gamePk] = acc[entry.gamePk] || [];
-            acc[entry.gamePk].push([playId, entry]);
+            acc[entry.gamePk].push([queueKey, entry]);
             return acc;
         }, {});
         try {
@@ -569,16 +570,16 @@ async function runSavantPollingLoop () {
                 if (!hasFeedData) {
                     LOGGER.debug('Savant: no data in feed (possible exception when retrieving)');
                 }
-                for (const [playId, entry] of queueEntriesByGamePk[gamePk]) {
-                    const { messages, hitDistance, embed, activeTimers, teamId } = entry;
+                for (const [queueKey, entry] of queueEntriesByGamePk[gamePk]) {
+                    const { messages, hitDistance, embed, activeTimers, teamId, playId } = entry;
                     if (!entry.embed.data.description.includes('Pending...')) {
-                        savantQueue.delete(playId);
+                        savantQueue.delete(queueKey);
                         continue;
                     }
                     entry.attempts ++;
                     if (entry.attempts >= globals.SAVANT_POLLING_ATTEMPTS) {
                         gamedayUtil.notifySavantDataUnavailable(messages, embed);
-                        savantQueue.delete(playId);
+                        savantQueue.delete(queueKey);
                         continue;
                     }
                     if (hasFeedData) {

@@ -1289,7 +1289,7 @@ async function resolveDoubleHeaderSelection (interaction, nearestGames) {
                 })))
             .setStyle(ButtonStyle.Primary)
     );
-    const response = await interaction.reply({
+    const response = await interaction.editReply({
         content: 'Today is a double-header. Which game?',
         components: [new ActionRowBuilder().addComponents(buttons)]
     });

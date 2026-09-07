@@ -137,8 +137,9 @@ describe('gameday', () => {
         });
 
         it('should clear queued savant entries for a removed team and stop the loop when nothing remains', () => {
-            gameday.savantQueue.set('abc', {
+            gameday.savantQueue.set('114:abc', {
                 teamId: 114,
+                playId: 'abc',
                 gamePk: 1,
                 messages: [],
                 hitDistance: 350,
@@ -146,8 +147,9 @@ describe('gameday', () => {
                 activeTimers: new Set(),
                 attempts: 0
             });
-            gameday.savantQueue.set('xyz', {
+            gameday.savantQueue.set('121:xyz', {
                 teamId: 121,
+                playId: 'xyz',
                 gamePk: 2,
                 messages: [],
                 hitDistance: 350,
@@ -158,8 +160,8 @@ describe('gameday', () => {
 
             gameday.clearSavantQueueForTeam(114);
 
-            expect(gameday.savantQueue.has('abc')).toBeFalse();
-            expect(gameday.savantQueue.has('xyz')).toBeTrue();
+            expect(gameday.savantQueue.has('114:abc')).toBeFalse();
+            expect(gameday.savantQueue.has('121:xyz')).toBeTrue();
 
             gameday.clearSavantQueueForTeam(121);
 
@@ -168,8 +170,9 @@ describe('gameday', () => {
         });
 
         it('should keep other teams queued when clearing one team from savant processing', () => {
-            gameday.savantQueue.set('abc', {
+            gameday.savantQueue.set('114:abc', {
                 teamId: 114,
+                playId: 'abc',
                 gamePk: 1,
                 messages: [],
                 hitDistance: 350,
@@ -177,8 +180,9 @@ describe('gameday', () => {
                 activeTimers: new Set(),
                 attempts: 0
             });
-            gameday.savantQueue.set('xyz', {
+            gameday.savantQueue.set('121:xyz', {
                 teamId: 121,
+                playId: 'xyz',
                 gamePk: 2,
                 messages: [],
                 hitDistance: 350,
@@ -190,9 +194,40 @@ describe('gameday', () => {
             gameday.runSavantPollingLoop();
             gameday.clearSavantQueueForTeam(114);
 
-            expect(gameday.savantQueue.has('abc')).toBeFalse();
-            expect(gameday.savantQueue.has('xyz')).toBeTrue();
+            expect(gameday.savantQueue.has('114:abc')).toBeFalse();
+            expect(gameday.savantQueue.has('121:xyz')).toBeTrue();
             expect(gameday.savantLoopRunning).toBeFalse();
+        });
+
+        it('should keep separate queue entries for the same raw play id across different teams', async () => {
+            spyOn(mlbAPIUtil, 'savantGameFeed').and.resolveTo({ team_away: [], team_home: [] });
+            spyOn(gameday, 'processMatchingPlay').and.resolveTo();
+            gameday.savantQueue.set('114:abc', {
+                teamId: 114,
+                playId: 'abc',
+                gamePk: 1,
+                messages: [{ doneEditing: false }],
+                hitDistance: 350,
+                embed: { data: { description: 'xBA: Pending...' } },
+                activeTimers: new Set(),
+                attempts: 0
+            });
+            gameday.savantQueue.set('121:abc', {
+                teamId: 121,
+                playId: 'abc',
+                gamePk: 1,
+                messages: [{ doneEditing: false }],
+                hitDistance: 350,
+                embed: { data: { description: 'xBA: Pending...' } },
+                activeTimers: new Set(),
+                attempts: 0
+            });
+
+            await gameday.runSavantPollingLoop();
+
+            expect(mlbAPIUtil.savantGameFeed).toHaveBeenCalledTimes(1);
+            expect(gameday.savantQueue.has('114:abc')).toBeTrue();
+            expect(gameday.savantQueue.has('121:abc')).toBeTrue();
         });
 
         it('should call processMatchingPlay and stop the loop when a matching play is found and all messages are done', async () => {
@@ -206,7 +241,7 @@ describe('gameday', () => {
             ) => {
                 emb.data.description = 'xBA: .450';
             });
-            gameday.savantQueue.set('abc', { gamePk: 1, messages, hitDistance: 350, embed, activeTimers: new Set(), attempts: 0 });
+            gameday.savantQueue.set('114:abc', { teamId: 114, playId: 'abc', gamePk: 1, messages, hitDistance: 350, embed, activeTimers: new Set(), attempts: 0 });
             jasmine.clock().install();
             await gameday.runSavantPollingLoop();
             expect(mlbAPIUtil.savantGameFeed).toHaveBeenCalledTimes(1);
@@ -222,7 +257,7 @@ describe('gameday', () => {
             spyOn(gameday, 'processMatchingPlay').and.stub();
             const messages = [{ doneEditing: false }];
             const embed = { data: { description: 'xBA: Pending...' } };
-            gameday.savantQueue.set('xyz', { gamePk: 1, messages, hitDistance: 350, embed, activeTimers: new Set(), attempts: 0 });
+            gameday.savantQueue.set('114:xyz', { teamId: 114, playId: 'xyz', gamePk: 1, messages, hitDistance: 350, embed, activeTimers: new Set(), attempts: 0 });
             jasmine.clock().install();
             await gameday.runSavantPollingLoop();
             jasmine.clock().tick(globals.SAVANT_POLLING_INTERVAL);

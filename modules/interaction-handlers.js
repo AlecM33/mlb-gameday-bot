@@ -54,6 +54,16 @@ async function getGuildTrackerWithGamesOrThrow (guildId) {
 }
 
 /**
+ * @param {SlashInteraction} interaction
+ * @returns {Promise<void>}
+ */
+async function deferIfNeeded (interaction) {
+    if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply();
+    }
+}
+
+/**
  * @param {string | null} guildId
  * @param {import('discord.js').MessageComponentInteraction | import('discord.js').ChatInputCommandInteraction} toHandle
  * @returns {Promise<ScheduleGame>}
@@ -512,10 +522,8 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     linescoreHandler: async (interaction) => {
         console.info(`LINESCORE command invoked by guild: ${interaction.guildId}`);
+        await deferIfNeeded(interaction);
         const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
-        if (!tracker.game.isDoubleHeader) {
-            await interaction.deferReply();
-        }
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
             const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
@@ -547,10 +555,8 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     boxScoreHandler: async (interaction) => {
         console.info(`BOXSCORE command invoked by guild: ${interaction.guildId}`);
+        await deferIfNeeded(interaction);
         const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
-        if (!tracker.game.isDoubleHeader) {
-            await interaction.deferReply();
-        }
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
             const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
@@ -599,10 +605,8 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     lineupHandler: async (interaction) => {
         console.info(`LINEUP command invoked by guild: ${interaction.guildId}`);
+        await deferIfNeeded(interaction);
         const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
-        if (!tracker.game.isDoubleHeader) {
-            await interaction.deferReply();
-        }
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
             const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
@@ -654,10 +658,8 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     highlightsHandler: async (interaction) => {
         console.info(`HIGHLIGHTS command invoked by guild: ${interaction.guildId}`);
+        await deferIfNeeded(interaction);
         const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
-        if (!tracker.game.isDoubleHeader) {
-            await interaction.deferReply();
-        }
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
             const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
@@ -823,10 +825,8 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     scoringPlaysHandler: async (interaction) => {
         console.info(`SCORING PLAYS command invoked by guild: ${interaction.guildId}`);
+        await deferIfNeeded(interaction);
         const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
-        if (!tracker.game.isDoubleHeader) {
-            await interaction.deferReply();
-        }
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
             const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
@@ -880,10 +880,8 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     attendanceHandler: async (interaction) => {
         console.info(`ATTENDANCE command invoked by guild: ${interaction.guildId}`);
+        await deferIfNeeded(interaction);
         const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
-        if (!tracker.game.isDoubleHeader) {
-            await interaction.deferReply();
-        }
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
             const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
@@ -908,10 +906,8 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     weatherHandler: async (interaction) => {
         console.info(`WEATHER command invoked by guild: ${interaction.guildId}`);
+        await deferIfNeeded(interaction);
         const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
-        if (!tracker.game.isDoubleHeader) {
-            await interaction.deferReply();
-        }
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
             const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
@@ -937,10 +933,8 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     bullpenHandler: async (interaction) => {
         console.info(`BULLPEN command invoked by guild: ${interaction.guildId}`);
+        await deferIfNeeded(interaction);
         const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
-        if (!tracker.game.isDoubleHeader) {
-            await interaction.deferReply();
-        }
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
             const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);

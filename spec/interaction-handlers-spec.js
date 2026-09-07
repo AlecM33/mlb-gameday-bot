@@ -335,6 +335,8 @@ describe('interaction-handlers', () => {
         it('should hydrate nearest games on demand without channel subscriptions', async () => {
             const interaction = {
                 guildId: 'test-guild',
+                deferred: false,
+                replied: false,
                 deferReply: jasmine.createSpy('deferReply').and.resolveTo(),
                 followUp: jasmine.createSpy('followUp').and.resolveTo()
             };
@@ -348,12 +350,16 @@ describe('interaction-handlers', () => {
                 ephemeral: false,
                 components: []
             });
+            expect(interaction.deferReply.calls.first().invocationOrder)
+                .toBeLessThan(mlbAPIUtil.currentGames.calls.first().invocationOrder);
         });
 
         it('should gracefully handle an empty lineup response', async () => {
             mlbAPIUtil.lineup.and.resolveTo({ dates: [] });
             const interaction = {
                 guildId: 'test-guild',
+                deferred: false,
+                replied: false,
                 deferReply: jasmine.createSpy('deferReply').and.resolveTo(),
                 followUp: jasmine.createSpy('followUp').and.resolveTo()
             };
