@@ -12,10 +12,7 @@ module.exports = {
      * @returns {number[]}
      */
     getTrackedTeamIds: () => {
-        const subscribedGuildIds = new Set(globalCache.values.subscribedChannels.map(channel => channel.guild_id));
-        return [...subscribedGuildIds]
-            .map(guildId => globalCache.values.guildTeams[guildId]?.team_id)
-            .filter((teamId, index, teamIds) => typeof teamId === 'number' && teamIds.indexOf(teamId) === index);
+        return [...new Set(Object.values(globalCache.values.guildTeams).map(guildTeam => guildTeam.team_id))];
     },
 
     /**

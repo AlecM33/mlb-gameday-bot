@@ -52,11 +52,27 @@ function getGuildTrackerOrThrow (guildId) {
 
 /**
  * @param {string | null} guildId
- * @param {import('discord.js').MessageComponentInteraction | import('discord.js').ChatInputCommandInteraction} toHandle
- * @returns {ScheduleGame}
+ * @returns {Promise<GameTracker>}
  */
-function resolveTrackedGameOrThrow (guildId, toHandle) {
-    const tracker = getGuildTrackerOrThrow(guildId);
+async function getGuildTrackerWithGamesOrThrow (guildId) {
+    const teamId = getGuildTeamIdOrThrow(guildId);
+    const tracker = globalCache.ensureTracker(teamId);
+    if (!tracker.nearestGames) {
+        const now = globals.DATE ? new Date(globals.DATE) : new Date();
+        tracker.currentGames = await mlbAPIUtil.currentGames(teamId);
+        const gamedayUtil = require('./gameday-util');
+        gamedayUtil.updateTrackerGames(tracker, now);
+    }
+    return tracker;
+}
+
+/**
+ * @param {string | null} guildId
+ * @param {import('discord.js').MessageComponentInteraction | import('discord.js').ChatInputCommandInteraction} toHandle
+ * @returns {Promise<ScheduleGame>}
+ */
+async function resolveTrackedGameOrThrow (guildId, toHandle) {
+    const tracker = await getGuildTrackerWithGamesOrThrow(guildId);
     if (!tracker.nearestGames || tracker.nearestGames.length === 0) {
         throw new Error('There is no active or upcoming game available for this server\'s team.');
     }
@@ -509,13 +525,13 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     linescoreHandler: async (interaction) => {
         console.info(`LINESCORE command invoked by guild: ${interaction.guildId}`);
-        const tracker = getGuildTrackerOrThrow(interaction.guildId);
+        const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
         if (!tracker.game.isDoubleHeader) {
             await interaction.deferReply();
         }
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = resolveTrackedGameOrThrow(interaction.guildId, toHandle);
+            const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
             const statusCheck = await mlbAPIUtil.statusCheck(game.gamePk);
             if (statusCheck.gameData.status.abstractGameState === 'Preview') {
                 await commandUtil.giveFinalCommandResponse(toHandle, {
@@ -544,13 +560,13 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     boxScoreHandler: async (interaction) => {
         console.info(`BOXSCORE command invoked by guild: ${interaction.guildId}`);
-        const tracker = getGuildTrackerOrThrow(interaction.guildId);
+        const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
         if (!tracker.game.isDoubleHeader) {
             await interaction.deferReply();
         }
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = resolveTrackedGameOrThrow(interaction.guildId, toHandle);
+            const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
             const statusCheck = await mlbAPIUtil.statusCheck(game.gamePk);
             if (statusCheck.gameData.status.abstractGameState === 'Preview') {
                 await commandUtil.giveFinalCommandResponse(toHandle, {
@@ -596,22 +612,30 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     lineupHandler: async (interaction) => {
         console.info(`LINEUP command invoked by guild: ${interaction.guildId}`);
-        const tracker = getGuildTrackerOrThrow(interaction.guildId);
+        const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
         if (!tracker.game.isDoubleHeader) {
             await interaction.deferReply();
         }
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = resolveTrackedGameOrThrow(interaction.guildId, toHandle);
-            const gameLineups = (await mlbAPIUtil.lineup(game.gamePk));
+            const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
+            const gameLineups = (await mlbAPIUtil.lineup(game.gamePk, getGuildTeamIdOrThrow(interaction.guildId)));
             let updatedLineup;
             /* if a game is postponed and rescheduled, the lineups call returns two games with the same gamePk, one on the original date
                 and one on the re-scheduled date.
              */
             if (gameLineups.dates?.length > 1) {
                 updatedLineup = gameLineups.dates.find(date => date.games[0].rescheduledFrom)?.games[0];
-            } else {
+            } else if (gameLineups.dates?.length === 1) {
                 updatedLineup = gameLineups.dates[0].games[0];
+            }
+            if (!updatedLineup) {
+                await commandUtil.giveFinalCommandResponse(toHandle, {
+                    content: commandUtil.constructGameDisplayString(game) + ' - No lineup card has been submitted for this game yet.',
+                    ephemeral: false,
+                    components: []
+                });
+                return;
             }
             const lineupChoiceToHandle = await commandUtil.getHomeAwayChoice(
                 toHandle,
@@ -643,13 +667,13 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     highlightsHandler: async (interaction) => {
         console.info(`HIGHLIGHTS command invoked by guild: ${interaction.guildId}`);
-        const tracker = getGuildTrackerOrThrow(interaction.guildId);
+        const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
         if (!tracker.game.isDoubleHeader) {
             await interaction.deferReply();
         }
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = resolveTrackedGameOrThrow(interaction.guildId, toHandle);
+            const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
             const statusCheck = await mlbAPIUtil.statusCheck(game.gamePk);
             if (statusCheck.gameData.status.abstractGameState === 'Preview') {
                 await commandUtil.giveFinalCommandResponse(toHandle, {
@@ -812,13 +836,13 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     scoringPlaysHandler: async (interaction) => {
         console.info(`SCORING PLAYS command invoked by guild: ${interaction.guildId}`);
-        const tracker = getGuildTrackerOrThrow(interaction.guildId);
+        const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
         if (!tracker.game.isDoubleHeader) {
             await interaction.deferReply();
         }
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = resolveTrackedGameOrThrow(interaction.guildId, toHandle);
+            const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
             const liveFeed = await mlbAPIUtil.liveFeed(game.gamePk);
             const links = [];
             liveFeed.liveData.plays.scoringPlays.forEach((scoringPlayIndex) => {
@@ -869,13 +893,13 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     attendanceHandler: async (interaction) => {
         console.info(`ATTENDANCE command invoked by guild: ${interaction.guildId}`);
-        const tracker = getGuildTrackerOrThrow(interaction.guildId);
+        const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
         if (!tracker.game.isDoubleHeader) {
             await interaction.deferReply();
         }
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = resolveTrackedGameOrThrow(interaction.guildId, toHandle);
+            const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
             const currentLiveFeed = await mlbAPIUtil.liveFeed(game.gamePk, [
                 'gameData', 'gameInfo', 'attendance', 'venue', 'name', 'fieldInfo', 'capacity'
             ]);
@@ -897,13 +921,13 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     weatherHandler: async (interaction) => {
         console.info(`WEATHER command invoked by guild: ${interaction.guildId}`);
-        const tracker = getGuildTrackerOrThrow(interaction.guildId);
+        const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
         if (!tracker.game.isDoubleHeader) {
             await interaction.deferReply();
         }
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = resolveTrackedGameOrThrow(interaction.guildId, toHandle);
+            const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
             const currentLiveFeed = await mlbAPIUtil.liveFeed(game.gamePk, [
                 'gameData', 'gameInfo', 'weather', 'condition', 'temp', 'wind', 'venue', 'name'
             ]);
@@ -926,13 +950,13 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     bullpenHandler: async (interaction) => {
         console.info(`BULLPEN command invoked by guild: ${interaction.guildId}`);
-        const tracker = getGuildTrackerOrThrow(interaction.guildId);
+        const tracker = await getGuildTrackerWithGamesOrThrow(interaction.guildId);
         if (!tracker.game.isDoubleHeader) {
             await interaction.deferReply();
         }
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = resolveTrackedGameOrThrow(interaction.guildId, toHandle);
+            const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
 
             const content = await mlbAPIUtil.content(game.gamePk);
             const allItems = content?.highlights?.highlights?.items || [];

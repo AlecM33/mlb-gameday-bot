@@ -203,6 +203,82 @@ describe('interaction-handlers', () => {
         });
     });
 
+    describe('#lineupHandler', () => {
+        beforeEach(() => {
+            globalCache.values.guildTeams = {
+                'test-guild': { guild_id: 'test-guild', team_id: 114 }
+            };
+            globalCache.values.subscribedChannels = [];
+            globalCache.values.activeTrackersByTeamId = {};
+            spyOn(mlbAPIUtil, 'currentGames').and.resolveTo([{
+                gamePk: 12345,
+                gameDate: '2026-09-07T23:10:00Z',
+                officialDate: '2026-09-07',
+                gameType: 'R',
+                status: {
+                    codedGameState: 'P',
+                    abstractGameState: 'Preview'
+                },
+                teams: {
+                    away: { team: { id: 145, abbreviation: 'CWS', name: 'White Sox' } },
+                    home: { team: { id: 114, abbreviation: 'CLE', name: 'Guardians' } }
+                }
+            }]);
+            spyOn(mlbAPIUtil, 'lineup').and.resolveTo({
+                dates: [{
+                    games: [{
+                        teams: {
+                            away: { team: { id: 145, abbreviation: 'CWS', name: 'White Sox' } },
+                            home: { team: { id: 114, abbreviation: 'CLE', name: 'Guardians' } }
+                        },
+                        lineups: {
+                            homePlayers: null,
+                            awayPlayers: null
+                        }
+                    }]
+                }]
+            });
+            spyOn(commandUtil, 'getHomeAwayChoice').and.resolveTo({ customId: '114' });
+            spyOn(commandUtil, 'giveFinalCommandResponse').and.resolveTo();
+            spyOn(commandUtil, 'constructGameDisplayString').and.returnValue('CWS @ CLE');
+        });
+
+        it('should hydrate nearest games on demand without channel subscriptions', async () => {
+            const interaction = {
+                guildId: 'test-guild',
+                deferReply: jasmine.createSpy('deferReply').and.resolveTo(),
+                followUp: jasmine.createSpy('followUp').and.resolveTo()
+            };
+
+            await interactionHandlers.lineupHandler(interaction);
+
+            expect(mlbAPIUtil.currentGames).toHaveBeenCalledWith(114);
+            expect(mlbAPIUtil.lineup).toHaveBeenCalledWith(12345, 114);
+            expect(commandUtil.giveFinalCommandResponse).toHaveBeenCalledWith(jasmine.objectContaining({ customId: '114' }), {
+                content: 'CWS @ CLE - No lineup card has been submitted for this game yet.',
+                ephemeral: false,
+                components: []
+            });
+        });
+
+        it('should gracefully handle an empty lineup response', async () => {
+            mlbAPIUtil.lineup.and.resolveTo({ dates: [] });
+            const interaction = {
+                guildId: 'test-guild',
+                deferReply: jasmine.createSpy('deferReply').and.resolveTo(),
+                followUp: jasmine.createSpy('followUp').and.resolveTo()
+            };
+
+            await interactionHandlers.lineupHandler(interaction);
+
+            expect(commandUtil.giveFinalCommandResponse).toHaveBeenCalledWith(interaction, {
+                content: 'CWS @ CLE - No lineup card has been submitted for this game yet.',
+                ephemeral: false,
+                components: []
+            });
+        });
+    });
+
     describe('#subscribeGamedayHandler', () => {
         beforeEach(() => {
             spyOn(queries, 'addToSubscribedChannels').and.resolveTo([]);
