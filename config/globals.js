@@ -387,8 +387,6 @@ module.exports = {
     resolveTeamId () {
         const raw = process.env.TEAM_ID?.trim();
         if (!raw) {
-            console.error('FATAL: TEAM_ID environment variable is not set.');
-            process.exit(1);
             return;
         }
         const numeric = parseInt(raw);

@@ -78,7 +78,11 @@ describe('interaction-handlers', () => {
                 followUp: jasmine.createSpy('followUp').and.resolveTo(),
                 reply: jasmine.createSpy('reply').and.resolveTo()
             };
-            const bot = {};
+            const bot = {
+                channels: {
+                    fetch: jasmine.createSpy('fetch')
+                }
+            };
 
             globalCache.values.subscribedChannels = [];
 
@@ -102,7 +106,11 @@ describe('interaction-handlers', () => {
                 followUp: jasmine.createSpy('followUp').and.resolveTo(),
                 reply: jasmine.createSpy('reply').and.resolveTo()
             };
-            const bot = {};
+            const bot = {
+                channels: {
+                    fetch: jasmine.createSpy('fetch')
+                }
+            };
             globalCache.values.subscribedChannels = [
                 { guild_id: 'test-guild', channel_id: 'channel-1', scoring_plays_only: false, delay: 0, advanced_stats: true }
             ];
@@ -123,7 +131,11 @@ describe('interaction-handlers', () => {
                 followUp: jasmine.createSpy('followUp').and.resolveTo(),
                 reply: jasmine.createSpy('reply').and.resolveTo()
             };
-            const bot = {};
+            const bot = {
+                channels: {
+                    fetch: jasmine.createSpy('fetch')
+                }
+            };
             globalCache.values.subscribedChannels = [
                 { guild_id: 'test-guild', channel_id: 'channel-1', scoring_plays_only: false, delay: 0, advanced_stats: true }
             ];
@@ -146,7 +158,11 @@ describe('interaction-handlers', () => {
                 followUp: jasmine.createSpy('followUp').and.resolveTo(),
                 reply: jasmine.createSpy('reply').and.resolveTo()
             };
-            const bot = {};
+            const bot = {
+                channels: {
+                    fetch: jasmine.createSpy('fetch')
+                }
+            };
             globalCache.values.subscribedChannels = [
                 { guild_id: 'test-guild', channel_id: 'channel-1', scoring_plays_only: false, delay: 0, advanced_stats: true }
             ];
@@ -172,7 +188,11 @@ describe('interaction-handlers', () => {
                 followUp: jasmine.createSpy('followUp').and.resolveTo(),
                 reply: jasmine.createSpy('reply').and.resolveTo()
             };
-            const bot = {};
+            const bot = {
+                channels: {
+                    fetch: jasmine.createSpy('fetch')
+                }
+            };
             globalCache.values.subscribedChannels = [
                 { guild_id: 'test-guild', channel_id: 'channel-1', scoring_plays_only: false, delay: 0, advanced_stats: true },
                 { guild_id: 'other-guild', channel_id: 'channel-2', scoring_plays_only: false, delay: 0, advanced_stats: true }
@@ -196,7 +216,11 @@ describe('interaction-handlers', () => {
                 followUp: jasmine.createSpy('followUp').and.resolveTo(),
                 reply: jasmine.createSpy('reply').and.resolveTo()
             };
-            const bot = {};
+            const bot = {
+                channels: {
+                    fetch: jasmine.createSpy('fetch')
+                }
+            };
             globalCache.values.guildTeams = {};
             globalCache.values.subscribedChannels = [
                 { guild_id: 'test-guild', channel_id: 'channel-1', scoring_plays_only: false, delay: 0, advanced_stats: true }
@@ -219,7 +243,11 @@ describe('interaction-handlers', () => {
                 followUp: jasmine.createSpy('followUp').and.resolveTo(),
                 reply: jasmine.createSpy('reply').and.resolveTo()
             };
-            const bot = {};
+            const bot = {
+                channels: {
+                    fetch: jasmine.createSpy('fetch')
+                }
+            };
             globalCache.values.guildTeams = {
                 'test-guild': { guild_id: 'test-guild', team_id: 114 }
             };

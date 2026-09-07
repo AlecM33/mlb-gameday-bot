@@ -38,6 +38,37 @@ describe('command-util', () => {
         globalCache.values.playerCacheTimestamps = {};
     });
 
+    describe('globals.resolveTeamId', () => {
+        let originalTeamId;
+
+        beforeEach(() => {
+            originalTeamId = process.env.TEAM_ID;
+        });
+
+        afterEach(() => {
+            if (originalTeamId === undefined) {
+                delete process.env.TEAM_ID;
+            } else {
+                process.env.TEAM_ID = originalTeamId;
+            }
+        });
+
+        it('should allow TEAM_ID to be unset', () => {
+            delete process.env.TEAM_ID;
+
+            expect(() => globals.resolveTeamId()).not.toThrow();
+            expect(process.env.TEAM_ID).toBeUndefined();
+        });
+
+        it('should normalize a valid team name to its numeric id', () => {
+            process.env.TEAM_ID = 'Guardians';
+
+            globals.resolveTeamId();
+
+            expect(process.env.TEAM_ID).toBe('114');
+        });
+    });
+
     describe('#formatSplits', () => {
         it('should format splits for a player that has played on multiple teams in a season', async () => {
             const batterInfo = require('./data/stats-luis-arraez-two-teams');
