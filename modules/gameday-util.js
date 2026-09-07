@@ -9,6 +9,42 @@ const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_
 
 module.exports = {
     /**
+     * @returns {number[]}
+     */
+    getTrackedTeamIds: () => {
+        const subscribedGuildIds = new Set(globalCache.values.subscribedChannels.map(channel => channel.guild_id));
+        return [...subscribedGuildIds]
+            .map(guildId => globalCache.values.guildTeams[guildId]?.team_id)
+            .filter((teamId, index, teamIds) => typeof teamId === 'number' && teamIds.indexOf(teamId) === index);
+    },
+
+    /**
+     * @param {GameCache} gameCache
+     * @param {ChannelSubscription} channelSubscription
+     * @returns {boolean}
+     */
+    shouldDeliverToChannel: (gameCache, channelSubscription) => {
+        return globalCache.values.guildTeams[channelSubscription.guild_id]?.team_id === gameCache.teamId;
+    },
+
+    /**
+     * @param {GameTracker} tracker
+     * @param {Date} now
+     */
+    updateTrackerGames: (tracker, now) => {
+        if (!tracker.currentGames || tracker.currentGames.length === 0) {
+            tracker.nearestGames = [];
+            tracker.game.isDoubleHeader = false;
+            return;
+        }
+
+        tracker.currentGames.sort((a, b) => Math.abs(now - new Date(a.gameDate)) - Math.abs(now - new Date(b.gameDate)));
+        const nearestGames = tracker.currentGames.filter(game => game.officialDate === tracker.currentGames[0].officialDate);
+        tracker.nearestGames = nearestGames.filter(g => g.status.codedGameState !== globals.CODED_GAME_STATES.POSTPONED);
+        tracker.game.isDoubleHeader = tracker.nearestGames.length > 1;
+    },
+
+    /**
      * @param {string} halfInningFull
      * @returns {'TOP'|'BOT'}
      */

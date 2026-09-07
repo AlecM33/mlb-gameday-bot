@@ -444,8 +444,10 @@ module.exports = {
 
         await interaction.deferReply();
         const requestedTeam = interaction.options.getString('team');
+        const requestedTeamId = parseInt(requestedTeam);
         const matchingTeam = globals.TEAMS.find((team) =>
-            team.name.toLowerCase() === requestedTeam.toLowerCase()
+            team.id === requestedTeamId
+            || team.name.toLowerCase() === requestedTeam.toLowerCase()
             || team.abbreviation.toLowerCase() === requestedTeam.toLowerCase()
         );
 

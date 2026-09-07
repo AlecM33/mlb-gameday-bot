@@ -54,7 +54,7 @@ describe('interaction-handlers', () => {
                 guildId: 'test-guild',
                 guild: { id: 'test-guild' },
                 member: { permissions: { has: () => true } },
-                options: { getString: () => 'Guardians' },
+                options: { getString: () => '114' },
                 deferReply: jasmine.createSpy('deferReply').and.resolveTo(),
                 followUp: jasmine.createSpy('followUp').and.resolveTo(),
                 reply: jasmine.createSpy('reply').and.resolveTo()
