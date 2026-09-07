@@ -1,6 +1,7 @@
 const commandUtil = require('../modules/command-util');
 const globalCache = require('../modules/global-cache');
 const mlbAPIUtil = require('../modules/MLB-API-util');
+const queries = require('../database/queries');
 const interactionHandlers = require('../modules/interaction-handlers');
 
 const PITCHER = {
@@ -31,11 +32,97 @@ describe('interaction-handlers', () => {
         globalCache.values.emojis = [];
         globalCache.values.playersByYear[CURRENT_YEAR] = [PITCHER, BATTER, TWO_WAY];
         globalCache.values.playerCacheTimestamps[CURRENT_YEAR] = Date.now();
+        globalCache.values.guildTeams = {
+            'test-guild': { guild_id: 'test-guild', team_id: 114 }
+        };
     });
 
     afterAll(() => {
         globalCache.values.playersByYear = {};
         globalCache.values.playerCacheTimestamps = {};
+        globalCache.values.guildTeams = {};
+    });
+
+    describe('#setTeamHandler', () => {
+        beforeEach(() => {
+            spyOn(queries, 'upsertGuildTeam').and.resolveTo([{ guild_id: 'test-guild', team_id: 114 }]);
+            spyOn(queries, 'getAllGuildTeams').and.resolveTo([{ guild_id: 'test-guild', team_id: 114 }]);
+        });
+
+        it('should store the guild default team', async () => {
+            const interaction = {
+                guildId: 'test-guild',
+                guild: { id: 'test-guild' },
+                member: { permissions: { has: () => true } },
+                options: { getString: () => 'Guardians' },
+                deferReply: jasmine.createSpy('deferReply').and.resolveTo(),
+                followUp: jasmine.createSpy('followUp').and.resolveTo(),
+                reply: jasmine.createSpy('reply').and.resolveTo()
+            };
+
+            await interactionHandlers.setTeamHandler(interaction);
+
+            expect(queries.upsertGuildTeam).toHaveBeenCalledWith('test-guild', 114);
+            expect(interaction.followUp).toHaveBeenCalledWith({
+                content: 'This server\'s default team is now **Guardians** (CLE).',
+                ephemeral: false
+            });
+        });
+    });
+
+    describe('#scheduleHandler', () => {
+        it('should use the guild team when requesting the schedule', async () => {
+            const interaction = {
+                guildId: 'test-guild',
+                deferReply: jasmine.createSpy('deferReply').and.resolveTo(),
+                followUp: jasmine.createSpy('followUp').and.resolveTo()
+            };
+            spyOn(mlbAPIUtil, 'schedule').and.resolveTo({ dates: [] });
+
+            await interactionHandlers.scheduleHandler(interaction);
+
+            expect(mlbAPIUtil.schedule).toHaveBeenCalledWith(
+                jasmine.any(String),
+                jasmine.any(String),
+                114
+            );
+            expect(interaction.followUp).toHaveBeenCalledWith({
+                ephemeral: false,
+                content: 'There are no games in the next week.'
+            });
+        });
+    });
+
+    describe('#subscribeGamedayHandler', () => {
+        beforeEach(() => {
+            spyOn(queries, 'addToSubscribedChannels').and.resolveTo([]);
+            spyOn(queries, 'getAllSubscribedChannels').and.resolveTo([
+                { guild_id: 'test-guild', channel_id: 'channel-1', scoring_plays_only: false, delay: 0, advanced_stats: true }
+            ]);
+        });
+
+        it('should require the guild to have a configured team and refresh channel cache', async () => {
+            const interaction = {
+                guildId: 'test-guild',
+                guild: { id: 'test-guild' },
+                channel: { id: 'channel-1' },
+                member: { permissions: { has: () => true } },
+                options: {
+                    getBoolean: () => null,
+                    getInteger: () => null
+                },
+                deferReply: jasmine.createSpy('deferReply').and.resolveTo(),
+                followUp: jasmine.createSpy('followUp').and.resolveTo(),
+                replied: false
+            };
+
+            await interactionHandlers.subscribeGamedayHandler(interaction);
+
+            expect(queries.addToSubscribedChannels).toHaveBeenCalledWith('test-guild', 'channel-1', false, 0, true);
+            expect(globalCache.values.subscribedChannels).toEqual([
+                { guild_id: 'test-guild', channel_id: 'channel-1', scoring_plays_only: false, delay: 0, advanced_stats: true }
+            ]);
+        });
     });
 
     describe('#playerHandler', () => {

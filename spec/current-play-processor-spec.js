@@ -5,13 +5,15 @@ const liveFeed = require('../modules/livefeed');
 
 describe('current-play-processor', () => {
     beforeAll(() => {
-        globalCache.values.game.currentLiveFeed = require('./data/example-live-feeds/live-feed-2024');
+        globalCache.resetGameCache(114);
+        globalCache.ensureTracker(114).game.currentLiveFeed = require('./data/example-live-feeds/live-feed-2024');
     });
     describe('#process', () => {
         it('should correctly process a home run', async () => {
             const result = await currentPlayProcessor.process(
                 examplePlays.homeRun,
-                liveFeed.init(globalCache.values.game.currentLiveFeed),
+                liveFeed.init(globalCache.ensureTracker(114).game.currentLiveFeed),
+                globalCache.ensureTracker(114).game,
                 { name: 'angels_108', id: '1339072522619977770' },
                 { name: 'brewers_158', id: '1339072560049950760' }
             );
@@ -36,7 +38,8 @@ describe('current-play-processor', () => {
         it('should correctly process a steal', async () => {
             const result = await currentPlayProcessor.process(
                 examplePlays.steal,
-                liveFeed.init(globalCache.values.game.currentLiveFeed),
+                liveFeed.init(globalCache.ensureTracker(114).game.currentLiveFeed),
+                globalCache.ensureTracker(114).game,
                 { name: 'angels_108', id: '1339072522619977770' },
                 { name: 'brewers_158', id: '1339072560049950760' }
             );
@@ -61,7 +64,8 @@ describe('current-play-processor', () => {
         it('should not produce a reply for a blacklisted event', async () => {
             const result = await currentPlayProcessor.process(
                 examplePlays.defensiveSwitch,
-                liveFeed.init(globalCache.values.game.currentLiveFeed),
+                liveFeed.init(globalCache.ensureTracker(114).game.currentLiveFeed),
+                globalCache.ensureTracker(114).game,
                 { name: 'angels_108', id: '1339072522619977770' },
                 { name: 'brewers_158', id: '1339072560049950760' }
             );
@@ -71,7 +75,8 @@ describe('current-play-processor', () => {
         it('should correctly process a challenged play', async () => {
             const result = currentPlayProcessor.process(
                 examplePlays.resolvedChallenge,
-                liveFeed.init(globalCache.values.game.currentLiveFeed),
+                liveFeed.init(globalCache.ensureTracker(114).game.currentLiveFeed),
+                globalCache.ensureTracker(114).game,
                 { name: 'angels_108', id: '1339072522619977770' },
                 { name: 'brewers_158', id: '1339072560049950760' }
             );
@@ -94,6 +99,7 @@ describe('current-play-processor', () => {
             const result = currentPlayProcessor.process(
                 examplePlays.resolvedABSChallenge,
                 liveFeed.init(require('./data/example-live-feeds/live-feed-2026')),
+                globalCache.ensureTracker(114).game,
                 { name: 'mariners_136', id: '1339072610041856090' },
                 { name: 'guardians_114', id: '1339072602408484917' }
             );

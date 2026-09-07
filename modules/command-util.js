@@ -12,6 +12,18 @@ const ztable = require('ztable');
 const jsdom = require('jsdom');
 const levenshtein = require('./levenshtein');
 
+/**
+ * @param {string | null | undefined} guildId
+ * @returns {GameTracker}
+ */
+function getTrackerForGuild (guildId) {
+    const teamId = guildId ? globalCache.values.guildTeams[guildId]?.team_id : null;
+    if (!teamId) {
+        throw new Error('This server does not have a default team configured yet. Use `/set_team` first.');
+    }
+    return globalCache.ensureTracker(teamId);
+}
+
 module.exports = {
     /**
      * @param {(Buffer | ArrayBuffer)[]} spots
@@ -654,13 +666,14 @@ module.exports = {
      * @returns {Promise<import('discord.js').ChatInputCommandInteraction | import('discord.js').MessageComponentInteraction | undefined>}
      */
     screenInteraction: async (interaction) => {
-        if (globalCache.values.nearestGames.length === 0 || globalCache.values.nearestGames instanceof Error) {
+        const tracker = getTrackerForGuild(interaction.guildId);
+        if (!tracker.nearestGames || tracker.nearestGames.length === 0 || tracker.nearestGames instanceof Error) {
             await interaction.followUp({
                 content: "There's no game today!",
                 ephemeral: false
             });
-        } else if (globalCache.values.game.isDoubleHeader) {
-            return await resolveDoubleHeaderSelection(interaction);
+        } else if (tracker.game.isDoubleHeader) {
+            return await resolveDoubleHeaderSelection(interaction, tracker.nearestGames);
         } else {
             return interaction;
         }
@@ -1237,8 +1250,8 @@ function getPitchCollections (dom) {
  * @param {import('discord.js').ChatInputCommandInteraction} interaction
  * @returns {Promise<import('discord.js').MessageComponentInteraction | undefined>}
  */
-async function resolveDoubleHeaderSelection (interaction) {
-    const buttons = globalCache.values.nearestGames.map(game =>
+async function resolveDoubleHeaderSelection (interaction, nearestGames) {
+    const buttons = nearestGames.map(game =>
         new ButtonBuilder()
             .setCustomId(game.gamePk.toString())
             .setLabel((game.status.startTimeTBD

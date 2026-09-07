@@ -148,6 +148,10 @@ module.exports = {
         WARN: 'warn',
         TRACE: 'trace'
     },
+    GAME_STATUS_CODES: {
+        IN_PROGRESS: 'I',
+        WARMUP: 'PW'
+    },
     TEAMS: [
         {
             id: 133,
@@ -362,10 +366,6 @@ module.exports = {
     ],
     TIME_ZONE: process.env.TIME_ZONE?.trim() || Intl.DateTimeFormat().resolvedOptions().timeZone,
     LOCALE: process.env.LOCALE?.trim() || 'en-US',
-    GAME_STATUS_CODES: {
-        IN_PROGRESS: 'I',
-        WARMUP: 'PW'
-    },
     MISSED_AT_BAT_INDICATOR: 2,
     /*
      More general codes that capture all statuses in a particular category.
@@ -375,7 +375,8 @@ module.exports = {
         POSTPONED: 'D'
     },
     PG_ERROR_CODES: {
-        UNDEFINED_COLUMN: '42703'
+        UNDEFINED_COLUMN: '42703',
+        UNDEFINED_TABLE: '42P01'
     },
     /**
      * We enhanced the TEAM_ID variable to allow for a team name to be supplied instead
@@ -416,6 +417,7 @@ module.exports = {
     '`/player` - view stats on a specified player.\n' +
     '`/player_savant` - view Baseball Savant percentile rankings for a specified player.\n' +
     '`/schedule` - view the upcoming schedule for the next week of games.\n' +
+    '`/set_team` - set this server\'s default team for team-specific commands and gameday tracking.\n' +
     '`/scoring_plays` - get a curated list of scoring plays, with direct links to the play on the Gameday page.\n' +
     '`/standings` - check the standings for your team\'s division.\n' +
     '`/starters` - examine the starting pitching matchup for the upcoming game.\n' +

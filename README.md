@@ -1,3 +1,4 @@
+   - `CLIENT_ID` - your bot's client ID, AKA application ID
 # MLB Gameday Bot ⚾
 
 ### For examples of all the commands, view its github pages site here: https://alecm33.github.io/mlb-gameday-bot/
@@ -7,12 +8,12 @@
 
 This bot and its author are not affiliated with the MLB. The bot uses the MLB Stats API, which is subject to the notice posted at http://gdx.mlb.com/components/copyright.txt
 
-A Discord bot that integrates with the MLB Stats API to track your team of choice. 
-This is designed to be a low-overhead, self-hostable solution to follow one team, ideal for a Discord server dedicated to that team.
+A Discord bot that integrates with the MLB Stats API to follow MLB teams across multiple Discord servers.
+Each Discord server configures one default team, and the bot uses that team for team-specific commands and live Gameday reporting in any subscribed channels from that server.
 
-When running, the bot periodically polls for games in a 48-hour window centered on the current date. Whichever game is closest in time is considered
-the "current" game, and will be the game for which a lot of the commands returns data. If there's a doubleheader, the bot may ask you to specify which game. If a game is live, the bot subscribes to its MLB.com Gameday live feed,
-and in turn reports events to any number of subscribed Discord channels.
+When running, the bot periodically polls for games in a 48-hour window centered on the current date for each unique team currently subscribed across guilds. Whichever game is closest in time is considered
+the "current" game for that guild's configured team, and will be the game for which many commands return data. If there's a doubleheader, the bot may ask you to specify which game. If a game is live, the bot subscribes to its MLB.com Gameday live feed,
+and reports events to any subscribed Discord channels that belong to guilds configured for that team.
 
 # Table of Contents
 
@@ -31,7 +32,7 @@ and in turn reports events to any number of subscribed Discord channels.
 
 Written in JavaScript using [Discord.js](https://discord.js.org/).
 
-The bot uses a PostgreSQL database to keep track of the Discord channels that have subscribed to the real-time gameday feature, and what their preferences are for how the bot reports. The benefits of this are scalability and ease of use - moderators in a given server can subscribe/unsubscribe/change the preferences of channels at any time via slash commands right in Discord. However, if you set up your own instance and only plan to have the bot report in one or two channels in a single server, this is kind of overkill. You could definitely edit the codebase to not use the database at all, and instead just supply your channel IDs (see [this support page on how to find such IDs](https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID)) and the gameday reporting preferences for those channels directly to the code.
+The bot uses a PostgreSQL database to keep track of each guild's configured team (`guild_teams`) and the Discord channels that have subscribed to the real-time Gameday feature (`gameday_subscribe_channels`), along with each channel's reporting preferences. The benefits of this are scalability and ease of use - moderators in a given server can configure the team and subscribe/unsubscribe/change channel preferences at any time via slash commands right in Discord. However, if you set up your own instance and only plan to have the bot report in one or two channels in a single server, this is kind of overkill. You could definitely edit the codebase to not use the database at all, and instead just supply your channel IDs (see [this support page on how to find such IDs](https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID)) and the gameday reporting preferences for those channels directly to the code.
 
 I integrate with the MLB stats API for a dizzying amount of data. Documentation _used_ to be very limited, but as of 2024, Google has provided some nice documentation here: https://github.com/MajorLeagueBaseball/google-cloud-mlb-hackathon/tree/main/datasets/mlb-statsapi-docs 
 
@@ -39,7 +40,7 @@ Shout out to Todd Roberts and his project for getting me acquainted with some of
 
 # Using my copy of the bot in your servers
 
-My instance of the bot for the Cleveland Guardians is private. The bot is only designed to follow one team at a time. If you are interested in running this bot in your own server, feel free to reach out to me and I'd be happy to help get you started. Read below for an initial guide.
+My instance of the bot for the Cleveland Guardians is private. If you are interested in running this bot in your own server, feel free to reach out to me and I'd be happy to help get you started. Read below for an initial guide.
 
 # Running your own copy of the bot
 
@@ -56,10 +57,9 @@ Requires a machine with the [Docker](https://docs.docker.com/) Engine running.
     - `DB_NAME` - the name for the postgres database
     - `DB_PORT` - the port for the postgres database
     - `DISCORD_TOKEN` - your discord bot's auth token **(sensitive)**
-    - `TEAM_ID` - the team you want the bot to follow. Accepts either a numeric team ID or a team name (e.g. `Padres`, `White Sox`). Team names/IDs match those of the "teams" resource in the MLB Stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1. They are also stored statically in `config/globals.js` under `TEAMS`. Applicable commands will be configured for that team.
+    - `TEAM_ID` - optional default team fallback. Accepts either a numeric team ID or a team name (e.g. `Padres`, `White Sox`). Team names/IDs match those of the "teams" resource in the MLB Stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1. They are also stored statically in `config/globals.js` under `TEAMS`. This is used when a guild has not yet run `/set_team`.
     - `LOG_LEVEL` - your chosen log level (`info`, `error`, `warn`, `debug`, or `trace`)
     - `DISCORD_CLIENT_ID` - the client ID of your Discord application
-    - `REQUIRE_SSL` - whether the PostgreSQL connection requires SSL. Set to `true` for remote or managed database instances (e.g. Aiven, RDS, Cloud SQL); `false` for a local or Docker-networked database (the default).
     - `DB_SSL_CA` - the full PEM certificate content for SSL verification (e.g. the CA cert downloaded from your managed DB provider). Required when `REQUIRE_SSL=true`; ignored otherwise.
     - `TIME_ZONE` - your chosen time zone. Defaults to the system timezone. Time zone names correspond to the Zone and Link names of the [IANA Time Zone Database](https://www.iana.org/time-zones), such as `"UTC"`, `"Asia/Shanghai"`, `"Asia/Kolkata"`, and `"America/New_York"`. Additionally, time zones can be given as UTC offsets in the format `"±hh:mm"`, `"±hhmm"`, or `"±hh"`, for example `"+01:00"`, `"-2359"`, or `"+23"`.
     - `LOCALE` - the [BCP 47 locale tag](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl#locales_argument) used when formatting dates and times (e.g. `"en-US"`, `"en-GB"`, `"ja-JP"`). Defaults to `en-US`.
@@ -67,7 +67,16 @@ Requires a machine with the [Docker](https://docs.docker.com/) Engine running.
     - `HC_PING_INTERVAL_MS` *(optional)* - how often to ping the healthcheck URL, in milliseconds. Defaults to `600000` (10 minutes). Should match the schedule configured in your healthchecks.io check.
 
 
-2. Run `docker-compose up`
+2. Apply the database schema:
+   ```
+   psql -U <your_user> -d <your_db> -f database/schema.sql
+   ```
+
+3. Register slash commands and start the stack:
+   ```
+   node deploy-commands.js
+   docker-compose up
+   ```
 
 ### Without Docker (More involved)
 
@@ -84,7 +93,7 @@ Requires [Node.js](https://nodejs.org/) and a running [PostgreSQL](https://www.p
    - `CLIENT_ID` - your bot's client ID, AKA application ID
    - `TOKEN` - your bot's authentication token **(sensitive)**
    - `DATABASE_STRING` - a PostgreSQL connection string **(sensitive)**, e.g. `postgresql://user:password@host:5432/dbname`
-   - `TEAM_ID` - the team you want to follow. Accepts either a numeric team ID or a team name (e.g. `Padres`, `White Sox`). Team IDs match those of the "teams" resource in the MLB Stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1. They are also stored statically in `config/globals.js` under `TEAMS`.
+   - `TEAM_ID` - optional default team fallback. Accepts either a numeric team ID or a team name (e.g. `Padres`, `White Sox`). Team IDs match those of the "teams" resource in the MLB Stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1. They are also stored statically in `config/globals.js` under `TEAMS`. This is used when a guild has not yet run `/set_team`.
    - `LOG_LEVEL` - your chosen log level (`info`, `error`, `warn`, `debug`, or `trace`)
    - `REQUIRE_SSL` - whether the PostgreSQL connection requires SSL. Set to `true` for remote or managed database instances (e.g. Aiven, RDS, Cloud SQL); `false` for a local database.
    - `DB_SSL_CA` - the full PEM certificate content for SSL verification. Required when `REQUIRE_SSL=true`; ignored otherwise.
@@ -97,6 +106,26 @@ Requires [Node.js](https://nodejs.org/) and a running [PostgreSQL](https://www.p
    ```
    node deploy-commands.js && node main.js
    ```
+
+### Initial setup in Discord
+
+After the bot is running in a guild:
+
+1. Run `/set_team` once to set that server's default MLB team.
+2. Run `/subscribe_gameday` in each channel that should receive live updates for that server's team.
+3. Use the rest of the team-specific commands normally; they will resolve against the guild's configured team.
+
+There are no channel-level team overrides. A guild can have many subscribed channels, but they all follow the same configured team.
+
+### Upgrade note
+
+This redesign is a breaking change from the older single-team model:
+
+1. The database schema now includes `guild_teams`.
+2. Slash commands should be re-deployed so `/set_team` is available.
+3. Existing installs should run `/set_team` in each guild to make command behavior explicit.
+
+`TEAM_ID` still works as a fallback default, but it is no longer the primary way team-specific behavior is resolved.
 
 ### Optional - add emojis!
 

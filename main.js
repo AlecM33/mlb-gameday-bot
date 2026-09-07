@@ -11,7 +11,6 @@ const globals = require('./config/globals');
 const LOGGER = require('./modules/logger')(process.env.LOG_LEVEL?.trim() || LOG_LEVEL.INFO);
 
 globals.resolveTeamId();
-
 const BOT = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -41,9 +40,12 @@ BOT.once('ready', async () => {
         globalCache.values.emojis = [];
     }
     try {
+        globalCache.values.guildTeams = Object.fromEntries(
+            (await queries.getAllGuildTeams()).map(setting => [setting.guild_id, setting])
+        );
         globalCache.values.subscribedChannels = await queries.getAllSubscribedChannels();
     } catch (e) {
-        if (e.code === PG_ERROR_CODES.UNDEFINED_COLUMN) {
+        if (e.code === PG_ERROR_CODES.UNDEFINED_COLUMN || e.code === PG_ERROR_CODES.UNDEFINED_TABLE) {
             LOGGER.error('DB schema is out of date. Please run "node database/migrate.js" to safely update (make sure the environment variables for the database are set).');
         } else {
             LOGGER.error('Failed to load subscribed channels:', e);

@@ -3,9 +3,13 @@ const liveFeed = require('../modules/livefeed');
 const mockResponses = require('./data/mock-responses');
 const mlbAPIUtil = require('../modules/MLB-API-util');
 const globals = require('../config/globals');
+const globalCache = require('../modules/global-cache');
 
 describe('gameday-util', () => {
-    beforeAll(() => {});
+    beforeAll(() => {
+        globalCache.resetGameCache(114);
+        globalCache.ensureTracker(114).game.teamId = 114;
+    });
 
     describe('#didGameEnd', () => {
         it('should say the game ended when the top of the 9th ended with the home team leading', () => {
@@ -13,7 +17,7 @@ describe('gameday-util', () => {
                 inning: () => { return 9; },
                 halfInning: () => { return 'top'; }
             });
-            expect(gamedayUtil.didGameEnd(3, 2)).toBeTrue();
+            expect(gamedayUtil.didGameEnd(globalCache.ensureTracker(114).game, 3, 2)).toBeTrue();
         });
 
         it('should say the game ended when the bottom of the 9th ended with the away team leading', () => {
@@ -21,7 +25,7 @@ describe('gameday-util', () => {
                 inning: () => { return 9; },
                 halfInning: () => { return 'bottom'; }
             });
-            expect(gamedayUtil.didGameEnd(2, 3)).toBeTrue();
+            expect(gamedayUtil.didGameEnd(globalCache.ensureTracker(114).game, 2, 3)).toBeTrue();
         });
 
         it('should say the game is still going if the game is tied', () => {
@@ -29,7 +33,7 @@ describe('gameday-util', () => {
                 inning: () => { return 9; },
                 halfInning: () => { return 'bottom'; }
             });
-            expect(gamedayUtil.didGameEnd(3, 3)).toBeFalse();
+            expect(gamedayUtil.didGameEnd(globalCache.ensureTracker(114).game, 3, 3)).toBeFalse();
         });
 
         it('should say the game is still going the top of the 9th has ended with the away team leading', () => {
@@ -37,7 +41,7 @@ describe('gameday-util', () => {
                 inning: () => { return 9; },
                 halfInning: () => { return 'top'; }
             });
-            expect(gamedayUtil.didGameEnd(3, 10)).toBeFalse();
+            expect(gamedayUtil.didGameEnd(globalCache.ensureTracker(114).game, 3, 10)).toBeFalse();
         });
 
         it('should say the game ended when the top of an extra inning ended with the home team leading', () => {
@@ -45,7 +49,7 @@ describe('gameday-util', () => {
                 inning: () => { return 15; },
                 halfInning: () => { return 'top'; }
             });
-            expect(gamedayUtil.didGameEnd(3, 2)).toBeTrue();
+            expect(gamedayUtil.didGameEnd(globalCache.ensureTracker(114).game, 3, 2)).toBeTrue();
         });
     });
 
@@ -71,7 +75,7 @@ describe('gameday-util', () => {
                 }
             });
 
-            expect(gamedayUtil.getPitchesStrikesForPitchersInHalfInning({ currentPitcherId: 663574 }))
+            expect(gamedayUtil.getPitchesStrikesForPitchersInHalfInning(globalCache.ensureTracker(114).game, { currentPitcherId: 663574 }))
                 .toContain('Tony Santillan (2 P - 1 S), Andrew Abbott (104 P - 74 S)');
         });
 
@@ -94,7 +98,7 @@ describe('gameday-util', () => {
                 }
             });
 
-            expect(gamedayUtil.getPitchesStrikesForPitchersInHalfInning({ currentPitcherId: 671096 }))
+            expect(gamedayUtil.getPitchesStrikesForPitchersInHalfInning(globalCache.ensureTracker(114).game, { currentPitcherId: 671096 }))
                 .toEqual('\n\n**Pitcher(s)**: Andrew Abbott (104 P - 74 S)\n');
         });
     });
@@ -108,18 +112,20 @@ describe('gameday-util', () => {
         it('should list all the parks where its a home run if its gone in LESS than the minimum.', async () => {
             spyOn(mlbAPIUtil, 'xParks').and.returnValue(Promise.resolve(mockResponses.xParksOnePark));
             spyOn(liveFeed, 'init').and.returnValue({
-                homeTeamId: () => { return 1; }
+                homeTeamId: () => { return 1; },
+                awayTeamVenue: () => ({ id: 1, name: 'Yankee Stadium' })
             });
-            const reply = await gamedayUtil.getXParks('77777', 'abc', 1);
+            const reply = await gamedayUtil.getXParks(globalCache.ensureTracker(114).game, '77777', 'abc', 1);
             expect(reply).toEqual(' - Yankee Stadium (NYY)');
         });
 
         it('should list all the parks where it\'s NOT gone if its gone in MORE than the maximum', async () => {
             spyOn(mlbAPIUtil, 'xParks').and.returnValue(Promise.resolve(mockResponses.xParksAllButOne));
             spyOn(liveFeed, 'init').and.returnValue({
-                homeTeamId: () => { return 1; }
+                homeTeamId: () => { return 1; },
+                awayTeamVenue: () => ({ id: 1, name: 'Yankee Stadium' })
             });
-            const reply = await gamedayUtil.getXParks('77777', 'abc', 29);
+            const reply = await gamedayUtil.getXParks(globalCache.ensureTracker(114).game, '77777', 'abc', 29);
             expect(reply).toEqual(' - Fenway Park (BOS)');
         });
 
@@ -138,7 +144,7 @@ describe('gameday-util', () => {
                     };
                 }
             });
-            const reply = await gamedayUtil.getXParks('77777', 'abc', 26);
+            const reply = await gamedayUtil.getXParks(globalCache.ensureTracker(114).game, '77777', 'abc', 26);
             expect(reply).toEqual(', including Progressive Field');
         });
 
@@ -157,7 +163,7 @@ describe('gameday-util', () => {
                     };
                 }
             });
-            const reply = await gamedayUtil.getXParks('77777', 'abc', 26);
+            const reply = await gamedayUtil.getXParks(globalCache.ensureTracker(114).game, '77777', 'abc', 26);
             expect(reply).toEqual(', but not Chase Field');
         });
 
@@ -176,8 +182,8 @@ describe('gameday-util', () => {
                     };
                 }
             });
-            expect((await gamedayUtil.getXParks('77777', 'abc', 30))).toEqual('');
-            expect((await gamedayUtil.getXParks('77777', 'abc', 0))).toEqual('');
+            expect((await gamedayUtil.getXParks(globalCache.ensureTracker(114).game, '77777', 'abc', 30))).toEqual('');
+            expect((await gamedayUtil.getXParks(globalCache.ensureTracker(114).game, '77777', 'abc', 0))).toEqual('');
         });
     });
 });

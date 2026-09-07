@@ -21,7 +21,6 @@ services:
       TEAM_ID: ${TEAM_ID}
       LOG_LEVEL: ${LOG_LEVEL}
       CLIENT_ID: ${DISCORD_CLIENT_ID}
-      DB_HOST: db
       DB_USER: ${DB_USER:-user}
       DB_PASSWORD: ${DB_PASSWORD:-password}
       DB_NAME: ${DB_NAME:-dbname}

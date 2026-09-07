@@ -1,5 +1,4 @@
 // @ts-check
-const globalCache = require('./global-cache');
 const globals = require('../config/globals');
 const commandUtil = require('./command-util');
 const { CHALLENGE_TYPES } = require('../config/globals');
@@ -9,17 +8,18 @@ module.exports = {
      * Two shapes accepted: complete at-bats (have `result`) and sub-events (have `details`).
      * @param {Play | PlayEvent} currentPlayJSON
      * @param {LiveFeedWrapper} feed
+     * @param {GameCache} gameCache
      * @param {DiscordEmoji | null} homeTeamEmoji
      * @param {DiscordEmoji | null} awayTeamEmoji
      * @returns {ProcessedPlay}
      */
-    process: (currentPlayJSON, feed, homeTeamEmoji, awayTeamEmoji) => {
+    process: (currentPlayJSON, feed, gameCache, homeTeamEmoji, awayTeamEmoji) => {
         let reply = '';
         const halfInning = currentPlayJSON.about?.halfInning || feed.halfInning();
         const inning = currentPlayJSON.about?.inning || feed.inning();
-        if (!globalCache.values.game.startReported
+        if (!gameCache.startReported
             && currentPlayJSON.playEvents?.find(event => event?.details?.description === 'Status Change - In Progress')) {
-            globalCache.values.game.startReported = true;
+            gameCache.startReported = true;
             reply += 'A game is starting!' + getWeatherString(feed);
         }
         let lastEvent;
@@ -32,7 +32,7 @@ module.exports = {
             }
             if (globals.PITCH_BY_PITCH_WHITELIST.includes((currentPlayJSON.result?.eventType || currentPlayJSON.details?.eventType))
                 && !currentPlayJSON.about?.hasReview) {
-                reply += ` [Pitch by pitch](https://www.mlb.com/gameday/${globalCache.values.game.currentGamePk}/play/${currentPlayJSON.atBatIndex})`;
+                reply += ` [Pitch by pitch](https://www.mlb.com/gameday/${gameCache.currentGamePk}/play/${currentPlayJSON.atBatIndex})`;
             }
             if (!currentPlayJSON.reviewDetails?.inProgress) {
                 if (currentPlayJSON.about?.isScoringPlay || currentPlayJSON.details?.isScoringPlay) {
