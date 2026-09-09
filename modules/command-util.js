@@ -27,6 +27,82 @@ function getTrackerForGuild (guildId) {
 
 module.exports = {
     /**
+     * @param {GuildTeam[]} guildSettingsRows
+     * @returns {Record<string, GuildTeam>}
+     */
+    mapGuildTeams: (guildSettingsRows) => {
+        return guildSettingsRows.reduce((acc, row) => {
+            acc[row.guild_id] = row;
+            return acc;
+        }, {});
+    },
+
+    /**
+     * @param {string | null | undefined} guildId
+     * @returns {number}
+     */
+    getGuildTeamIdOrThrow: (guildId) => {
+        const effectiveTeamId = gamedayUtil.getEffectiveTeamIdForGuild(guildId);
+        if (effectiveTeamId) {
+            return effectiveTeamId;
+        }
+        throw new Error('This server does not have a default team configured yet. Use `/set_team` first.');
+    },
+
+    /**
+     * @param {string | null | undefined} guildId
+     * @returns {Promise<GameTracker>}
+     */
+    getGuildTrackerWithGamesOrThrow: async (guildId) => {
+        const teamId = module.exports.getGuildTeamIdOrThrow(guildId);
+        const tracker = globalCache.ensureTracker(teamId);
+        if (!tracker.nearestGames) {
+            const now = globals.DATE ? new Date(globals.DATE) : new Date();
+            tracker.currentGames = await mlbAPIUtil.currentGames(teamId);
+            gamedayUtil.updateTrackerGames(tracker, now);
+        }
+        return tracker;
+    },
+
+    /**
+     * @param {import('discord.js').MessageComponentInteraction | import('discord.js').ChatInputCommandInteraction} interaction
+     * @returns {Promise<void>}
+     */
+    deferIfNeeded: async (interaction) => {
+        if (!interaction.deferred && !interaction.replied) {
+            await interaction.deferReply();
+        }
+    },
+
+    /**
+     * @param {string | null | undefined} guildId
+     * @param {import('discord.js').MessageComponentInteraction | import('discord.js').ChatInputCommandInteraction} toHandle
+     * @returns {Promise<ScheduleGame>}
+     */
+    resolveTrackedGameOrThrow: async (guildId, toHandle) => {
+        const tracker = await module.exports.getGuildTrackerWithGamesOrThrow(guildId);
+        if (!tracker.nearestGames || tracker.nearestGames.length === 0) {
+            throw new Error('There is no active or upcoming game available for this server\'s team.');
+        }
+        return tracker.game.isDoubleHeader
+            ? tracker.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId))
+            : tracker.nearestGames[0];
+    },
+
+    /**
+     * @param {string | null | undefined} guildId
+     * @param {number} excludedTeamId
+     * @returns {boolean}
+     */
+    isTeamTrackedByOtherSubscribedGuilds: (guildId, excludedTeamId) => {
+        return globalCache.values.subscribedChannels.some(channel => {
+            if (channel.guild_id === guildId) {
+                return false;
+            }
+            return gamedayUtil.getEffectiveTeamIdForGuild(channel.guild_id) === excludedTeamId;
+        });
+    },
+    /**
      * @param {(Buffer | ArrayBuffer)[]} spots
      * @param {{ direction?: string, offset?: number, margin?: number, color?: string }} [options]
      * @returns {Promise<Buffer>}
@@ -1139,7 +1215,7 @@ module.exports = {
             const matches = globals.TEAMS
                 .filter(team => {
                     if (focusedValue.length === 0) {
-                        return true;
+                        return false;
                     }
                     return team.name.toLowerCase().includes(focusedValue)
                         || team.abbreviation.toLowerCase().includes(focusedValue);

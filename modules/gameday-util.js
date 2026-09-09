@@ -438,5 +438,29 @@ module.exports = {
         }
         LOGGER.warn(`Timed out waiting for final live feed for gamePk ${gamePk}.`);
         return latestLiveFeed || null;
+    },
+
+    /**
+     * @param {number} teamId
+     * @param {any} timeoutHandle
+     */
+    registerXParksTimeout: (teamId, timeoutHandle) => {
+        if (!xParksRetryTimeoutsByTeamId.has(teamId)) {
+            xParksRetryTimeoutsByTeamId.set(teamId, new Set());
+        }
+        xParksRetryTimeoutsByTeamId.get(teamId).add(timeoutHandle);
+    },
+
+    /**
+     * @param {number} teamId
+     * @param {any} timeoutHandle
+     */
+    unregisterXParksTimeout: (teamId, timeoutHandle) => {
+        const teamTimeouts = xParksRetryTimeoutsByTeamId.get(teamId);
+        if (!teamTimeouts) return;
+        teamTimeouts.delete(timeoutHandle);
+        if (teamTimeouts.size === 0) {
+            xParksRetryTimeoutsByTeamId.delete(teamId);
+        }
     }
 };

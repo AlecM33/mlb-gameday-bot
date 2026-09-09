@@ -13,11 +13,6 @@ const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_
 const liveFeed = require('./livefeed');
 const gamedayUtil = require('./gameday-util');
 
-/** @type {Map<string, SavantQueueEntry & { teamId: number, playId: string }>} */
-const savantQueue = new Map();
-/** @type {Map<number, Set<any>>} */
-const xParksRetryTimeoutsByTeamId = new Map();
-let savantLoopRunning = false;
 let statusPollTimeout = null;
 let statusPollLoopStarted = false;
 
@@ -33,82 +28,15 @@ module.exports = {
     sendDelayedMessage,
     reportPlays,
     reportAnyMissedEvents,
-    clearSavantQueueForTeam,
-    savantQueue,
-    get savantLoopRunning () { return savantLoopRunning; }
+    get savantQueue () { return globalCache.values.savantQueue; },
+    get savantLoopRunning () { return globalCache.values.savantLoopRunning; }
 };
-
-/**
- * @param {number} teamId
- */
-function clearSavantQueueForTeam (teamId) {
-    clearXParksTimeoutsForTeam(teamId);
-    for (const [queueKey, entry] of savantQueue.entries()) {
-        if (entry.teamId === teamId) {
-            for (const label of entry.activeTimers || []) {
-                console.timeEnd(label);
-            }
-            savantQueue.delete(queueKey);
-        }
-    }
-    if (savantQueue.size === 0) {
-        savantLoopRunning = false;
-    }
-}
-
-/**
- * @param {number} teamId
- * @returns {boolean}
- */
-function hasSavantWorkForTeam (teamId) {
-    return [...savantQueue.values()].some(entry => entry.teamId === teamId)
-        || (xParksRetryTimeoutsByTeamId.get(teamId)?.size || 0) > 0;
-}
-
-/**
- * @param {number} teamId
- * @param {any} timeoutHandle
- */
-function registerXParksTimeout (teamId, timeoutHandle) {
-    if (!xParksRetryTimeoutsByTeamId.has(teamId)) {
-        xParksRetryTimeoutsByTeamId.set(teamId, new Set());
-    }
-    xParksRetryTimeoutsByTeamId.get(teamId).add(timeoutHandle);
-}
-
-/**
- * @param {number} teamId
- * @param {any} timeoutHandle
- */
-function unregisterXParksTimeout (teamId, timeoutHandle) {
-    const teamTimeouts = xParksRetryTimeoutsByTeamId.get(teamId);
-    if (!teamTimeouts) return;
-    teamTimeouts.delete(timeoutHandle);
-    if (teamTimeouts.size === 0) {
-        xParksRetryTimeoutsByTeamId.delete(teamId);
-    }
-}
-
-/**
- * @param {number} teamId
- */
-function clearXParksTimeoutsForTeam (teamId) {
-    const teamTimeouts = xParksRetryTimeoutsByTeamId.get(teamId);
-    if (!teamTimeouts) return;
-    for (const timeoutHandle of teamTimeouts) {
-        clearTimeout(timeoutHandle);
-    }
-    xParksRetryTimeoutsByTeamId.delete(teamId);
-}
 
 /**
  * Starts the polling loop that watches subscribed teams for games to go live.
  * @param {import('discord.js').Client} bot
  */
 async function statusPoll (bot) {
-    if (!bot || !bot.channels || typeof bot.channels.fetch !== 'function') {
-        throw new Error('gameday.statusPoll requires a Discord client with channels.fetch().');
-    }
     if (statusPollLoopStarted) {
         return;
     }
@@ -124,9 +52,6 @@ async function statusPoll (bot) {
  * @param {import('discord.js').Client} bot
  */
 async function refreshStatus (bot) {
-    if (!bot || !bot.channels || typeof bot.channels.fetch !== 'function') {
-        throw new Error('gameday.refreshStatus requires a Discord client with channels.fetch().');
-    }
     LOGGER.info('Games: polling...');
     const now = globals.DATE ? new Date(globals.DATE) : new Date();
     try {
@@ -134,9 +59,8 @@ async function refreshStatus (bot) {
         const liveReportingTeamIds = new Set(gamedayUtil.getLiveReportingTeamIds());
         for (const [teamIdStr, tracker] of Object.entries(globalCache.values.activeTrackersByTeamId)) {
             const activeTeamId = parseInt(teamIdStr);
-            if (!liveReportingTeamIds.has(activeTeamId) && (tracker.websocket || hasSavantWorkForTeam(activeTeamId))) {
+            if (!liveReportingTeamIds.has(activeTeamId) && tracker.websocket) {
                 LOGGER.info(`Gameday: team ${activeTeamId} no longer has subscribed channels. Clearing live tracker.`);
-                module.exports.clearSavantQueueForTeam(activeTeamId);
                 globalCache.resetGameCache(activeTeamId);
             }
         }
@@ -262,6 +186,7 @@ function subscribe (bot, teamId, liveGame) {
                         try {
                             diffPatch.hydrate(gameCache.currentLiveFeed, patch);
                         } catch (err) {
+                            LOGGER.debug('Fully refreshing live feed and skipping further patches due to caught exception.');
                             /*
                                 Catching something here means our game object could now be incorrect, so we fully
                                 reset the live feed. As a result of that, we should no longer be trying to apply
@@ -527,6 +452,7 @@ async function maybePopulateAdvancedStatcastMetrics (teamId, play, messages, gam
  * @param {import('discord.js').EmbedBuilder} embed
  */
 async function pollForSavantData (teamId, gamePk, playId, messages, hitDistance, embed) {
+    const savantQueue = globalCache.values.savantQueue;
     const queueKey = `${teamId}:${playId}`;
     const activeTimers = new Set();
     const startTimer = (label) => { console.time(label); activeTimers.add(label); };
@@ -536,11 +462,11 @@ async function pollForSavantData (teamId, gamePk, playId, messages, hitDistance,
         startTimer('HR/Park: ' + playId);
     }
     const entry = { teamId, gamePk, playId, messages, hitDistance, embed, activeTimers, attempts: 0 };
-    if (savantLoopRunning) {
+    if (globalCache.values.savantLoopRunning) {
         LOGGER.debug('Savant: loop already running, enqueueing play: ' + playId);
         savantQueue.set(queueKey, entry);
     } else {
-        savantLoopRunning = true;
+        globalCache.values.savantLoopRunning = true;
         savantQueue.set(queueKey, entry);
         await runSavantPollingLoop();
     }
@@ -550,10 +476,11 @@ async function pollForSavantData (teamId, gamePk, playId, messages, hitDistance,
  * Polls Baseball Savant until queued plays have enough Statcast data to edit sent messages.
  */
 async function runSavantPollingLoop () {
+    const savantQueue = globalCache.values.savantQueue;
     const pollingFunction = async () => {
         if (savantQueue.size === 0) {
             LOGGER.debug('Savant: queue empty, stopping loop.');
-            savantLoopRunning = false;
+            globalCache.values.savantLoopRunning = false;
             return;
         }
         const queueEntriesByGamePk = [...savantQueue.entries()].reduce((acc, [queueKey, entry]) => {
@@ -598,7 +525,7 @@ async function runSavantPollingLoop () {
         }
         if (savantQueue.size === 0) {
             LOGGER.debug('Savant: queue empty after processing, stopping loop.');
-            savantLoopRunning = false;
+            globalCache.values.savantLoopRunning = false;
         } else {
             setTimeout(async () => { await pollingFunction(); }, globals.SAVANT_POLLING_INTERVAL);
         }

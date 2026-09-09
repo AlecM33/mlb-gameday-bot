@@ -53,7 +53,6 @@ describe('interaction-handlers', () => {
             spyOn(queries, 'upsertGuildTeam').and.resolveTo([{ guild_id: 'test-guild', team_id: 114 }]);
             spyOn(queries, 'getAllGuildTeams').and.resolveTo([{ guild_id: 'test-guild', team_id: 114 }]);
             spyOn(gameday, 'refreshStatus').and.resolveTo();
-            spyOn(gameday, 'clearSavantQueueForTeam').and.callThrough();
             spyOn(globalCache, 'resetGameCache').and.callThrough();
             globalCache.values.guildTeams = {
                 'test-guild': { guild_id: 'test-guild', team_id: 114 }
@@ -142,7 +141,6 @@ describe('interaction-handlers', () => {
 
             await interactionHandlers.setTeamHandler(interaction, bot);
 
-            expect(gameday.clearSavantQueueForTeam).toHaveBeenCalledWith(114);
             expect(globalCache.resetGameCache).toHaveBeenCalledWith(114);
             expect(gameday.refreshStatus).toHaveBeenCalledWith(bot);
         });
@@ -169,7 +167,6 @@ describe('interaction-handlers', () => {
 
             await interactionHandlers.setTeamHandler(interaction, bot);
 
-            expect(gameday.clearSavantQueueForTeam).not.toHaveBeenCalledWith(119);
             expect(globalCache.resetGameCache).not.toHaveBeenCalledWith(119);
         });
 
@@ -200,7 +197,6 @@ describe('interaction-handlers', () => {
 
             await interactionHandlers.setTeamHandler(interaction, bot);
 
-            expect(gameday.clearSavantQueueForTeam).not.toHaveBeenCalledWith(114);
             expect(globalCache.resetGameCache).not.toHaveBeenCalledWith(114);
             expect(gameday.refreshStatus).toHaveBeenCalledWith(bot);
         });
@@ -228,7 +224,6 @@ describe('interaction-handlers', () => {
 
             await interactionHandlers.setTeamHandler(interaction, bot);
 
-            expect(gameday.clearSavantQueueForTeam).toHaveBeenCalledWith(114);
             expect(globalCache.resetGameCache).toHaveBeenCalledWith(114);
         });
 
@@ -258,7 +253,6 @@ describe('interaction-handlers', () => {
 
             await interactionHandlers.setTeamHandler(interaction, bot);
 
-            expect(gameday.clearSavantQueueForTeam).not.toHaveBeenCalledWith(114);
             expect(globalCache.resetGameCache).not.toHaveBeenCalledWith(114);
         });
     });

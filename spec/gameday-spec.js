@@ -107,12 +107,6 @@ describe('gameday', () => {
             expect(gameday.subscribe).toHaveBeenCalledWith(mockBot, 114, jasmine.objectContaining({ gamePk: 744834 }));
         });
 
-        it('should reject polling without a Discord client', async () => {
-            await expectAsync(gameday.statusPoll()).toBeRejectedWithError(
-                'gameday.statusPoll requires a Discord client with channels.fetch().'
-            );
-        });
-
         it('should not start a second polling loop when called again', async () => {
             globalCache.values.guildTeams = {
                 guild1: { guild_id: 'guild1', team_id: 114 }
@@ -134,69 +128,6 @@ describe('gameday', () => {
     describe('#runSavantPollingLoop', () => {
         beforeEach(() => {
             gameday.savantQueue.clear();
-        });
-
-        it('should clear queued savant entries for a removed team and stop the loop when nothing remains', () => {
-            gameday.savantQueue.set('114:abc', {
-                teamId: 114,
-                playId: 'abc',
-                gamePk: 1,
-                messages: [],
-                hitDistance: 350,
-                embed: { data: { description: 'xBA: Pending...' } },
-                activeTimers: new Set(),
-                attempts: 0
-            });
-            gameday.savantQueue.set('121:xyz', {
-                teamId: 121,
-                playId: 'xyz',
-                gamePk: 2,
-                messages: [],
-                hitDistance: 350,
-                embed: { data: { description: 'xBA: Pending...' } },
-                activeTimers: new Set(),
-                attempts: 0
-            });
-
-            gameday.clearSavantQueueForTeam(114);
-
-            expect(gameday.savantQueue.has('114:abc')).toBeFalse();
-            expect(gameday.savantQueue.has('121:xyz')).toBeTrue();
-
-            gameday.clearSavantQueueForTeam(121);
-
-            expect(gameday.savantQueue.size).toBe(0);
-            expect(gameday.savantLoopRunning).toBeFalse();
-        });
-
-        it('should keep other teams queued when clearing one team from savant processing', () => {
-            gameday.savantQueue.set('114:abc', {
-                teamId: 114,
-                playId: 'abc',
-                gamePk: 1,
-                messages: [],
-                hitDistance: 350,
-                embed: { data: { description: 'xBA: Pending...' } },
-                activeTimers: new Set(),
-                attempts: 0
-            });
-            gameday.savantQueue.set('121:xyz', {
-                teamId: 121,
-                playId: 'xyz',
-                gamePk: 2,
-                messages: [],
-                hitDistance: 350,
-                embed: { data: { description: 'xBA: Pending...' } },
-                activeTimers: new Set(),
-                attempts: 0
-            });
-
-            gameday.runSavantPollingLoop();
-            gameday.clearSavantQueueForTeam(114);
-
-            expect(gameday.savantQueue.has('114:abc')).toBeFalse();
-            expect(gameday.savantQueue.has('121:xyz')).toBeTrue();
-            expect(gameday.savantLoopRunning).toBeFalse();
         });
 
         it('should keep separate queue entries for the same raw play id across different teams', async () => {

@@ -13,86 +13,6 @@ const currentPlayProcessor = require('./current-play-processor');
 const gamedayUtil = require('./gameday-util');
 
 /** @typedef {import('discord.js').ChatInputCommandInteraction} SlashInteraction */
-
-/**
- * @param {GuildTeam[]} guildSettingsRows
- * @returns {Record<string, GuildTeam>}
- */
-function mapGuildTeams (guildSettingsRows) {
-    return guildSettingsRows.reduce((acc, row) => {
-        acc[row.guild_id] = row;
-        return acc;
-    }, {});
-}
-
-/**
- * @param {string | null} guildId
- * @returns {number}
- */
-function getGuildTeamIdOrThrow (guildId) {
-    const effectiveTeamId = gamedayUtil.getEffectiveTeamIdForGuild(guildId);
-    if (effectiveTeamId) {
-        return effectiveTeamId;
-    }
-
-    throw new Error('This server does not have a default team configured yet. Use `/set_team` first.');
-}
-
-/**
- * @param {string | null} guildId
- * @returns {Promise<GameTracker>}
- */
-async function getGuildTrackerWithGamesOrThrow (guildId) {
-    const teamId = getGuildTeamIdOrThrow(guildId);
-    const tracker = globalCache.ensureTracker(teamId);
-    if (!tracker.nearestGames) {
-        const now = globals.DATE ? new Date(globals.DATE) : new Date();
-        tracker.currentGames = await mlbAPIUtil.currentGames(teamId);
-        gamedayUtil.updateTrackerGames(tracker, now);
-    }
-    return tracker;
-}
-
-/**
- * @param {SlashInteraction} interaction
- * @returns {Promise<void>}
- */
-async function deferIfNeeded (interaction) {
-    if (!interaction.deferred && !interaction.replied) {
-        await interaction.deferReply();
-    }
-}
-
-/**
- * @param {string | null} guildId
- * @param {import('discord.js').MessageComponentInteraction | import('discord.js').ChatInputCommandInteraction} toHandle
- * @returns {Promise<ScheduleGame>}
- */
-async function resolveTrackedGameOrThrow (guildId, toHandle) {
-    const tracker = await getGuildTrackerWithGamesOrThrow(guildId);
-    if (!tracker.nearestGames || tracker.nearestGames.length === 0) {
-        throw new Error('There is no active or upcoming game available for this server\'s team.');
-    }
-
-    return tracker.game.isDoubleHeader
-        ? tracker.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId))
-        : tracker.nearestGames[0];
-}
-
-/**
- * @param {string} guildId
- * @param {number} excludedTeamId
- * @returns {boolean}
- */
-function guildHasSubscribedChannelsTrackingAnotherTeam (guildId, excludedTeamId) {
-    return globalCache.values.subscribedChannels.some(channel => {
-        if (channel.guild_id === guildId) {
-            return false;
-        }
-        return gamedayUtil.getEffectiveTeamIdForGuild(channel.guild_id) === excludedTeamId;
-    });
-}
-
 module.exports = {
 
     /** @param {SlashInteraction} interaction */
@@ -105,7 +25,7 @@ module.exports = {
     startersHandler: async (interaction) => {
         console.info(`STARTERS command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
-        const teamId = getGuildTeamIdOrThrow(interaction.guildId);
+        const teamId = commandUtil.getGuildTeamIdOrThrow(interaction.guildId);
         // as opposed to other commands, this one will look for the nearest game that is not finished (AKA in "Live" or "Preview" status).
         const currentGames = await mlbAPIUtil.currentGames(teamId);
         const game = currentGames.find(game => game.status.abstractGameState !== 'Final');
@@ -169,7 +89,7 @@ module.exports = {
     scheduleHandler: async (interaction) => {
         console.info(`SCHEDULE command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
-        const teamId = getGuildTeamIdOrThrow(interaction.guildId);
+        const teamId = commandUtil.getGuildTeamIdOrThrow(interaction.guildId);
         const startDate = globals.DATE ? new Date(globals.DATE) : new Date();
         const oneWeek = new Date(startDate);
         oneWeek.setDate(oneWeek.getDate() + 7);
@@ -238,7 +158,7 @@ module.exports = {
             leagueId = DIVISION_MAP[chosenDivisionId].leagueId;
             divisionName = DIVISION_MAP[chosenDivisionId].name;
         } else {
-            const team = await mlbAPIUtil.team(getGuildTeamIdOrThrow(interaction.guildId));
+            const team = await mlbAPIUtil.team(commandUtil.getGuildTeamIdOrThrow(interaction.guildId));
             divisionId = team.teams[0].division.id;
             leagueId = team.teams[0].league.id;
             divisionName = team.teams[0].division.name;
@@ -255,7 +175,7 @@ module.exports = {
     wildcardHandler: async (interaction) => {
         await interaction.deferReply();
         console.info(`WILDCARD command invoked by guild: ${interaction.guildId}`);
-        const team = await mlbAPIUtil.team(getGuildTeamIdOrThrow(interaction.guildId));
+        const team = await mlbAPIUtil.team(commandUtil.getGuildTeamIdOrThrow(interaction.guildId));
         const leagueId = team.teams[0].league.id;
         const leagueName = team.teams[0].league.name;
         const leagueStandings = await mlbAPIUtil.wildcard();
@@ -290,7 +210,7 @@ module.exports = {
             return;
         }
         await interaction.deferReply();
-        getGuildTeamIdOrThrow(interaction.guildId);
+        commandUtil.getGuildTeamIdOrThrow(interaction.guildId);
         const scoringPlaysOnly = interaction.options.getBoolean('scoring_plays_only');
         const reportingDelay = interaction.options.getInteger('reporting_delay');
         const advancedStats = interaction.options.getBoolean('advanced_stats');
@@ -498,14 +418,12 @@ module.exports = {
         }
 
         await queries.upsertGuildTeam(interaction.guild.id, matchingTeam.id);
-        globalCache.values.guildTeams = mapGuildTeams(await queries.getAllGuildTeams());
+        globalCache.values.guildTeams = commandUtil.mapGuildTeams(await queries.getAllGuildTeams());
         const hasSubscribedChannels = globalCache.values.subscribedChannels
             .some(channel => channel.guild_id === interaction.guild.id);
         if (previousTeamId && previousTeamId !== matchingTeam.id
             && hasSubscribedChannels
-            && !guildHasSubscribedChannelsTrackingAnotherTeam(interaction.guild.id, previousTeamId)) {
-            const gameday = require('./gameday');
-            gameday.clearSavantQueueForTeam(previousTeamId);
+            && !commandUtil.isTeamTrackedByOtherSubscribedGuilds(interaction.guild.id, previousTeamId)) {
             globalCache.resetGameCache(previousTeamId);
         }
         if (bot && hasSubscribedChannels) {
@@ -522,10 +440,10 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     linescoreHandler: async (interaction) => {
         console.info(`LINESCORE command invoked by guild: ${interaction.guildId}`);
-        await deferIfNeeded(interaction);
+        await commandUtil.deferIfNeeded(interaction);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
+            const game = await commandUtil.resolveTrackedGameOrThrow(interaction.guildId, toHandle);
             const statusCheck = await mlbAPIUtil.statusCheck(game.gamePk);
             if (statusCheck.gameData.status.abstractGameState === 'Preview') {
                 await commandUtil.giveFinalCommandResponse(toHandle, {
@@ -554,10 +472,10 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     boxScoreHandler: async (interaction) => {
         console.info(`BOXSCORE command invoked by guild: ${interaction.guildId}`);
-        await deferIfNeeded(interaction);
+        await commandUtil.deferIfNeeded(interaction);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
+            const game = await commandUtil.resolveTrackedGameOrThrow(interaction.guildId, toHandle);
             const statusCheck = await mlbAPIUtil.statusCheck(game.gamePk);
             if (statusCheck.gameData.status.abstractGameState === 'Preview') {
                 await commandUtil.giveFinalCommandResponse(toHandle, {
@@ -603,11 +521,11 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     lineupHandler: async (interaction) => {
         console.info(`LINEUP command invoked by guild: ${interaction.guildId}`);
-        await deferIfNeeded(interaction);
+        await commandUtil.deferIfNeeded(interaction);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
-            const gameLineups = (await mlbAPIUtil.lineup(game.gamePk, getGuildTeamIdOrThrow(interaction.guildId)));
+            const game = await commandUtil.resolveTrackedGameOrThrow(interaction.guildId, toHandle);
+            const gameLineups = (await mlbAPIUtil.lineup(game.gamePk, commandUtil.getGuildTeamIdOrThrow(interaction.guildId)));
             let updatedLineup;
             /* if a game is postponed and rescheduled, the lineups call returns two games with the same gamePk, one on the original date
                 and one on the re-scheduled date.
@@ -655,10 +573,10 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     highlightsHandler: async (interaction) => {
         console.info(`HIGHLIGHTS command invoked by guild: ${interaction.guildId}`);
-        await deferIfNeeded(interaction);
+        await commandUtil.deferIfNeeded(interaction);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
+            const game = await commandUtil.resolveTrackedGameOrThrow(interaction.guildId, toHandle);
             const statusCheck = await mlbAPIUtil.statusCheck(game.gamePk);
             if (statusCheck.gameData.status.abstractGameState === 'Preview') {
                 await commandUtil.giveFinalCommandResponse(toHandle, {
@@ -821,10 +739,10 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     scoringPlaysHandler: async (interaction) => {
         console.info(`SCORING PLAYS command invoked by guild: ${interaction.guildId}`);
-        await deferIfNeeded(interaction);
+        await commandUtil.deferIfNeeded(interaction);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
+            const game = await commandUtil.resolveTrackedGameOrThrow(interaction.guildId, toHandle);
             const liveFeed = await mlbAPIUtil.liveFeed(game.gamePk);
             const links = [];
             liveFeed.liveData.plays.scoringPlays.forEach((scoringPlayIndex) => {
@@ -875,10 +793,10 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     attendanceHandler: async (interaction) => {
         console.info(`ATTENDANCE command invoked by guild: ${interaction.guildId}`);
-        await deferIfNeeded(interaction);
+        await commandUtil.deferIfNeeded(interaction);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
+            const game = await commandUtil.resolveTrackedGameOrThrow(interaction.guildId, toHandle);
             const currentLiveFeed = await mlbAPIUtil.liveFeed(game.gamePk, [
                 'gameData', 'gameInfo', 'attendance', 'venue', 'name', 'fieldInfo', 'capacity'
             ]);
@@ -900,10 +818,10 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     weatherHandler: async (interaction) => {
         console.info(`WEATHER command invoked by guild: ${interaction.guildId}`);
-        await deferIfNeeded(interaction);
+        await commandUtil.deferIfNeeded(interaction);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
+            const game = await commandUtil.resolveTrackedGameOrThrow(interaction.guildId, toHandle);
             const currentLiveFeed = await mlbAPIUtil.liveFeed(game.gamePk, [
                 'gameData', 'gameInfo', 'weather', 'condition', 'temp', 'wind', 'venue', 'name'
             ]);
@@ -926,10 +844,10 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     bullpenHandler: async (interaction) => {
         console.info(`BULLPEN command invoked by guild: ${interaction.guildId}`);
-        await deferIfNeeded(interaction);
+        await commandUtil.deferIfNeeded(interaction);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = await resolveTrackedGameOrThrow(interaction.guildId, toHandle);
+            const game = await commandUtil.resolveTrackedGameOrThrow(interaction.guildId, toHandle);
 
             const content = await mlbAPIUtil.content(game.gamePk);
             const allItems = content?.highlights?.highlights?.items || [];

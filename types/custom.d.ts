@@ -48,6 +48,9 @@ interface GlobalCacheValues {
     playersByYear: Record<number, Person[]>;
     playerCacheTimestamps: Record<number, number>;
     activeTrackersByTeamId: Record<number, GameTracker>;
+    savantQueue: Map<string, SavantQueueEntry & { teamId: number, playId: string }>;
+    xParksRetryTimeoutsByTeamId: Map<number, Set<any>>;
+    savantLoopRunning: boolean;
 }
 
 /** Typed accessor wrapper returned by `livefeed.init(rawFeed)`. */

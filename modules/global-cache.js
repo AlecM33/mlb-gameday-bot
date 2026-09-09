@@ -26,7 +26,10 @@ const values = {
     emojis: null,
     playersByYear: {},
     playerCacheTimestamps: {},
-    activeTrackersByTeamId: {}
+    activeTrackersByTeamId: {},
+    savantQueue: new Map(),
+    xParksRetryTimeoutsByTeamId: new Map(),
+    savantLoopRunning: false
 };
 
 /**
