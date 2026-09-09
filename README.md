@@ -11,7 +11,7 @@ A Discord bot that integrates with the MLB API to allow servers to follow the te
 selects a team to follow, and the bot configures commands automatically for that team. A server can then subscribe channels
 to live Gameday reporting, and the bot will automatically detect and report live games for the team.
 
-When running, the bot periodically polls for games in a 48-hour window centered on the current date for each unique team currently subscribed across servers. Whichever game is closest in time is considered
+When running, the bot periodically polls for games in a 48-hour window centered on the current date, for each unique team currently subscribed across servers. Whichever game is closest in time is considered
 the "current" game for that team, and will be the game for which many commands return data. If a game is live, the bot subscribes to its MLB.com Gameday live feed,
 and reports events to any subscribed Discord channels from servers that are following that team.
 
@@ -40,11 +40,11 @@ Shout out to Todd Roberts and his project for getting me acquainted with some of
 
 # Using my copy of the bot in your servers
 
-My instance of the bot is private. If you are interested in running this bot in your own server, feel free to reach out to me and I'd be happy to help get you started. Read below for an initial guide.
+My instance of the bot is private. If you are interested in running your own instance of the bot, start with the below guide, and feel free to reach out with any questions.
 
 # Running your own copy of the bot
 
-This will assume you are somewhat familiar with Node.js and developing Discord bots.
+This will assume you are somewhat familiar with either Docker or Node.js, as well as with developing Discord bots.
 
 ### Using Docker (Simplest)
 
@@ -57,9 +57,10 @@ Requires a machine with the [Docker](https://docs.docker.com/) Engine running.
     - `DB_NAME` - the name for the postgres database
     - `DB_PORT` - the port for the postgres database
     - `DISCORD_TOKEN` - your discord bot's auth token **(sensitive)**
-    - `TEAM_ID` - optional default team fallback. Accepts either a numeric team ID or a team name (e.g. `Padres`, `White Sox`). Team names/IDs match those of the "teams" resource in the MLB Stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1. They are also stored statically in `config/globals.js` under `TEAMS`. This is used when a server has not yet run `/set_team`.
+    - `TEAM_ID` - optional default team fallback, used when a server has not yet run `/set_team`. Accepts either a numeric team ID or a team name (e.g. `Padres`, `White Sox`). Team names/IDs match those of the "teams" resource in the MLB Stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1. They are also stored statically in `config/globals.js` under `TEAMS`.
     - `LOG_LEVEL` - your chosen log level (`info`, `error`, `warn`, `debug`, or `trace`)
     - `DISCORD_CLIENT_ID` - the client ID of your Discord application
+    - `REQUIRE_SSL` - whether the PostgreSQL connection requires SSL. Set to `true` for remote or managed database instances (e.g. Aiven, RDS, Cloud SQL); `false` for a local database.
     - `DB_SSL_CA` - the full PEM certificate content for SSL verification (e.g. the CA cert downloaded from your managed DB provider). Required when `REQUIRE_SSL=true`; ignored otherwise.
     - `TIME_ZONE` - your chosen time zone. Defaults to the system timezone. Time zone names correspond to the Zone and Link names of the [IANA Time Zone Database](https://www.iana.org/time-zones), such as `"UTC"`, `"Asia/Shanghai"`, `"Asia/Kolkata"`, and `"America/New_York"`. Additionally, time zones can be given as UTC offsets in the format `"±hh:mm"`, `"±hhmm"`, or `"±hh"`, for example `"+01:00"`, `"-2359"`, or `"+23"`.
     - `LOCALE` - the [BCP 47 locale tag](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl#locales_argument) used when formatting dates and times (e.g. `"en-US"`, `"en-GB"`, `"ja-JP"`). Defaults to `en-US`.
@@ -72,7 +73,7 @@ Requires a machine with the [Docker](https://docs.docker.com/) Engine running.
    docker-compose up
    ```
 
-The bot container runs database migrations and registers slash commands automatically before starting.
+The bot container runs database migrations (to assist clients upgrading from older versions of the bot) and registers slash commands automatically before starting.
 
 ### Without Docker (More involved)
 
@@ -89,7 +90,7 @@ Requires [Node.js](https://nodejs.org/) and a running [PostgreSQL](https://www.p
    - `CLIENT_ID` - your bot's client ID, AKA application ID
    - `TOKEN` - your bot's authentication token **(sensitive)**
    - `DATABASE_STRING` - a PostgreSQL connection string **(sensitive)**, e.g. `postgresql://user:password@host:5432/dbname`
-   - `TEAM_ID` - optional default team fallback. Accepts either a numeric team ID or a team name (e.g. `Padres`, `White Sox`). Team IDs match those of the "teams" resource in the MLB Stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1. They are also stored statically in `config/globals.js` under `TEAMS`. This is used when a guild has not yet run `/set_team`.
+   - `TEAM_ID` - optional default team fallback, used when a server has not yet run `set_team`. Accepts either a numeric team ID or a team name (e.g. `Padres`, `White Sox`). Team IDs match those of the "teams" resource in the MLB Stats API: https://statsapi.mlb.com/api/v1/teams?sportId=1. They are also stored statically in `config/globals.js` under `TEAMS`.
    - `LOG_LEVEL` - your chosen log level (`info`, `error`, `warn`, `debug`, or `trace`)
    - `REQUIRE_SSL` - whether the PostgreSQL connection requires SSL. Set to `true` for remote or managed database instances (e.g. Aiven, RDS, Cloud SQL); `false` for a local database.
    - `DB_SSL_CA` - the full PEM certificate content for SSL verification. Required when `REQUIRE_SSL=true`; ignored otherwise.
@@ -105,13 +106,13 @@ Requires [Node.js](https://nodejs.org/) and a running [PostgreSQL](https://www.p
 
 ### Initial setup in Discord
 
-After the bot is running in a guild:
+After the bot is running and has been added to a server:
 
-1. Run `/set_team` once to set that server's default MLB team.
-2. Run `/subscribe_gameday` in each channel that should receive live updates for that server's team.
+1. Run `/set_team` once to set that server's team.
+2. Run `/subscribe_gameday` in each channel that should receive live updates for that team's games.
 3. Use the rest of the team-specific commands normally; they will resolve against the guild's configured team.
 
-There are no channel-level team overrides. A guild can have many subscribed channels, but they all follow the same configured team.
+There are no channel-level team overrides. A server can have multiple subscribed channels, but they all follow the same configured team. That team can, however, be changed at any time.
 
 ### Optional - add emojis!
 
