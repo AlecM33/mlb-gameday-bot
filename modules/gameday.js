@@ -13,8 +13,6 @@ const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_
 const liveFeed = require('./livefeed');
 const gamedayUtil = require('./gameday-util');
 
-let statusPollTimeout = null;
-let statusPollLoopStarted = false;
 
 module.exports = {
     statusPoll,
@@ -37,13 +35,13 @@ module.exports = {
  * @param {import('discord.js').Client} bot
  */
 async function statusPoll (bot) {
-    if (statusPollLoopStarted) {
+    if (globalCache.values.statusPollLoopStarted) {
         return;
     }
-    statusPollLoopStarted = true;
+    globalCache.values.statusPollLoopStarted = true;
     const pollingFunction = async () => {
         await module.exports.refreshStatus(bot);
-        statusPollTimeout = setTimeout(pollingFunction, globals.SLOW_POLL_INTERVAL);
+        globalCache.values.statusPollTimeout = setTimeout(pollingFunction, globals.SLOW_POLL_INTERVAL);
     };
     await pollingFunction();
 }
@@ -99,11 +97,11 @@ async function refreshStatus (bot) {
 }
 
 function stopStatusPoll () {
-    if (statusPollTimeout) {
-        clearTimeout(statusPollTimeout);
+    if (globalCache.values.statusPollTimeout) {
+        clearTimeout(globalCache.values.statusPollTimeout);
     }
-    statusPollTimeout = null;
-    statusPollLoopStarted = false;
+    globalCache.values.statusPollTimeout = null;
+    globalCache.values.statusPollLoopStarted = false;
 }
 
 /**

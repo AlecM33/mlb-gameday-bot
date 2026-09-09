@@ -51,6 +51,8 @@ interface GlobalCacheValues {
     savantQueue: Map<string, SavantQueueEntry & { teamId: number, playId: string }>;
     xParksRetryTimeoutsByTeamId: Map<number, Set<any>>;
     savantLoopRunning: boolean;
+    statusPollTimeout: ReturnType<typeof setTimeout> | null;
+    statusPollLoopStarted: boolean;
 }
 
 /** Typed accessor wrapper returned by `livefeed.init(rawFeed)`. */

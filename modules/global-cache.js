@@ -29,7 +29,9 @@ const values = {
     activeTrackersByTeamId: {},
     savantQueue: new Map(),
     xParksRetryTimeoutsByTeamId: new Map(),
-    savantLoopRunning: false
+    savantLoopRunning: false,
+    statusPollTimeout: null,
+    statusPollLoopStarted: false
 };
 
 /**
