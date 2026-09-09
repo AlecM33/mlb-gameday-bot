@@ -445,10 +445,10 @@ module.exports = {
      * @param {any} timeoutHandle
      */
     registerXParksTimeout: (teamId, timeoutHandle) => {
-        if (!xParksRetryTimeoutsByTeamId.has(teamId)) {
-            xParksRetryTimeoutsByTeamId.set(teamId, new Set());
+        if (!globalCache.values.xParksRetryTimeoutsByTeamId.has(teamId)) {
+            globalCache.values.xParksRetryTimeoutsByTeamId.set(teamId, new Set());
         }
-        xParksRetryTimeoutsByTeamId.get(teamId).add(timeoutHandle);
+        globalCache.values.xParksRetryTimeoutsByTeamId.get(teamId).add(timeoutHandle);
     },
 
     /**
@@ -456,11 +456,11 @@ module.exports = {
      * @param {any} timeoutHandle
      */
     unregisterXParksTimeout: (teamId, timeoutHandle) => {
-        const teamTimeouts = xParksRetryTimeoutsByTeamId.get(teamId);
+        const teamTimeouts = globalCache.values.xParksRetryTimeoutsByTeamId.get(teamId);
         if (!teamTimeouts) return;
         teamTimeouts.delete(timeoutHandle);
         if (teamTimeouts.size === 0) {
-            xParksRetryTimeoutsByTeamId.delete(teamId);
+            globalCache.values.xParksRetryTimeoutsByTeamId.delete(teamId);
         }
     }
 };

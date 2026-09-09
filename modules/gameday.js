@@ -13,7 +13,6 @@ const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_
 const liveFeed = require('./livefeed');
 const gamedayUtil = require('./gameday-util');
 
-
 module.exports = {
     statusPoll,
     refreshStatus,
@@ -567,10 +566,10 @@ async function pollForXParksAndEdit (teamId, gamePk, playId, numberOfParks, base
         attempts ++;
         currentInterval = currentInterval + globals.SAVANT_XPARKS_POLLING_BACKOFF_INCREASE;
         const timeoutHandle = setTimeout(async () => {
-            unregisterXParksTimeout(teamId, timeoutHandle);
+            gamedayUtil.unregisterXParksTimeout(teamId, timeoutHandle);
             await pollingFunction();
         }, currentInterval);
-        registerXParksTimeout(teamId, timeoutHandle);
+        gamedayUtil.registerXParksTimeout(teamId, timeoutHandle);
     };
     await pollingFunction();
 }
