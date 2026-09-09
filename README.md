@@ -7,12 +7,13 @@
 
 This bot and its author are not affiliated with the MLB. The bot uses the MLB Stats API, which is subject to the notice posted at http://gdx.mlb.com/components/copyright.txt
 
-A Discord bot that integrates with the MLB Stats API to allow servers to follow the team of their choice.
-Each Discord server selects a single team to follow, and the bot uses that team for team-specific commands and live Gameday reporting in any subscribed channels from that server.
+A Discord bot that integrates with the MLB API to allow servers to follow the team of their choice. Each Discord server 
+selects a team to follow, and the bot configures commands automatically for that team. A server can then subscribe channels
+to live Gameday reporting, and the bot will automatically detect and report live games for the team.
 
-When running, the bot periodically polls for games in a 48-hour window centered on the current date for each unique team currently subscribed across guilds. Whichever game is closest in time is considered
-the "current" game for that guild's configured team, and will be the game for which many commands return data. If there's a doubleheader, the bot may ask you to specify which game. If a game is live, the bot subscribes to its MLB.com Gameday live feed,
-and reports events to any subscribed Discord channels that belong to guilds configured for that team.
+When running, the bot periodically polls for games in a 48-hour window centered on the current date for each unique team currently subscribed across servers. Whichever game is closest in time is considered
+the "current" game for that team, and will be the game for which many commands return data. If a game is live, the bot subscribes to its MLB.com Gameday live feed,
+and reports events to any subscribed Discord channels from servers that are following that team.
 
 # Table of Contents
 
@@ -31,7 +32,7 @@ and reports events to any subscribed Discord channels that belong to guilds conf
 
 Written in JavaScript using [Discord.js](https://discord.js.org/).
 
-The bot uses a PostgreSQL database to keep track of each guild's configured team (`guild_teams`) and the Discord channels that have subscribed to the real-time Gameday feature (`gameday_subscribe_channels`), along with each channel's reporting preferences. The benefits of this are scalability and ease of use - moderators in a given server can configure the team and subscribe/unsubscribe/change channel preferences at any time via slash commands right in Discord.
+The bot uses a PostgreSQL database to keep track of each guild's configured team (`guild_teams`) and the Discord channels that have subscribed to the real-time Gameday feature (`gameday_subscribe_channels`), along with each channel's reporting preferences. The benefits of this are scalability and ease of use - moderators in a given server can configure the team and subscribe/unsubscribe channels at any time via slash commands right in Discord.
 
 I integrate with the MLB stats API for a dizzying amount of data. Documentation _used_ to be very limited, but as of 2024, Google has provided some nice documentation here: https://github.com/MajorLeagueBaseball/google-cloud-mlb-hackathon/tree/main/datasets/mlb-statsapi-docs 
 
@@ -125,32 +126,6 @@ that's necessary to start seeing them show up - they will be fetched when the bo
 
 ![emojis dev portal](images/screenshots/emojis_dev_portal.png)
 
-If the bot starts up successfully, the start-up logs look something like the following (subject to your log level):
-```
-LOG    Mon, 17 Mar 2025 21:13:15 GMT :  Ready!
-LOG    Mon, 17 Mar 2025 21:13:15 GMT :  bot successfully logged in
-LOG    Mon, 17 Mar 2025 21:13:15 GMT :  Subscribed channels: []
-LOG    Mon, 17 Mar 2025 21:13:15 GMT :  Games: polling...
-DEBUG  Mon, 17 Mar 2025 21:13:15 GMT :  https://statsapi.mlb.com/api/v1/schedule?hydrate=team,lineups&sportId=1&startDate=2025-03-16&endDate=2025-03-18&teamId=114
-LOG    Mon, 17 Mar 2025 21:13:15 GMT :  Fetched application emojis.
-TRACE  Mon, 17 Mar 2025 21:13:15 GMT :  Current game PKs: [
-  {
-    "key": 779092,
-    "date": "2025-03-16",
-    "status": "F"
-  },
-  {
-    "key": 778815,
-    "date": "2025-03-17",
-    "status": "P"
-  },
-  {
-    "key": 778921,
-    "date": "2025-03-18",
-    "status": "S"
-  }
-]
-```
 ### File Structure
 
 ```
@@ -162,11 +137,7 @@ mlb-gameday-bot/
 ├── commands/                  # One file per slash command
 │   ├── attendance.js
 │   ├── box_score.js
-│   ├── highlights.js
-│   ├── schedule.js
-│   ├── standings.js
-│   ├── subscribe_gameday.js   # Adds a channel to the gameday reporting subscription list
-│   ├── unsubscribe_gameday.js
+│   ├── bullpen.js
 │   └── ...
 ├── modules/
 │   ├── gameday.js             # The heart of live game reporting, listening for and broadcasting updates.

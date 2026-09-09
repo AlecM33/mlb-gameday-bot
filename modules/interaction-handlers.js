@@ -432,7 +432,7 @@ module.exports = {
         }
 
         await interaction.followUp({
-            content: `This server's default team is now **${matchingTeam.name}** (${matchingTeam.abbreviation}).`,
+            content: `This server is now following the **${matchingTeam.name}** (${matchingTeam.abbreviation})!`,
             ephemeral: false
         });
     },
