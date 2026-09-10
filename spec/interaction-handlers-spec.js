@@ -90,7 +90,7 @@ describe('interaction-handlers', () => {
             expect(queries.upsertGuildTeam).toHaveBeenCalledWith('test-guild', 114);
             expect(gameday.refreshStatus).not.toHaveBeenCalled();
             expect(interaction.followUp).toHaveBeenCalledWith({
-                content: 'This server\'s default team is now **Guardians** (CLE).',
+                content: 'This server is now following the **Guardians** (CLE)!',
                 ephemeral: false
             });
         });
