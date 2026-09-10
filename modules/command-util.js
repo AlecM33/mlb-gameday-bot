@@ -11,8 +11,97 @@ const chroma = require('chroma-js');
 const ztable = require('ztable');
 const jsdom = require('jsdom');
 const levenshtein = require('./levenshtein');
+const gamedayUtil = require('./gameday-util');
+
+/**
+ * @param {string | null | undefined} guildId
+ * @returns {GameTracker}
+ */
+function getTrackerForGuild (guildId) {
+    const teamId = gamedayUtil.getEffectiveTeamIdForGuild(guildId);
+    if (!teamId) {
+        throw new Error('This server does not have a default team configured yet. Use `/set_team` first.');
+    }
+    return globalCache.ensureTracker(teamId);
+}
 
 module.exports = {
+    /**
+     * @param {GuildTeam[]} guildSettingsRows
+     * @returns {Record<string, GuildTeam>}
+     */
+    mapGuildTeams: (guildSettingsRows) => {
+        return guildSettingsRows.reduce((acc, row) => {
+            acc[row.guild_id] = row;
+            return acc;
+        }, {});
+    },
+
+    /**
+     * @param {string | null | undefined} guildId
+     * @returns {number}
+     */
+    getGuildTeamIdOrThrow: (guildId) => {
+        const effectiveTeamId = gamedayUtil.getEffectiveTeamIdForGuild(guildId);
+        if (effectiveTeamId) {
+            return effectiveTeamId;
+        }
+        throw new Error('This server does not have a default team configured yet. Use `/set_team` first.');
+    },
+
+    /**
+     * @param {string | null | undefined} guildId
+     * @returns {Promise<GameTracker>}
+     */
+    getGuildTrackerWithGamesOrThrow: async (guildId) => {
+        const teamId = module.exports.getGuildTeamIdOrThrow(guildId);
+        const tracker = globalCache.ensureTracker(teamId);
+        if (!tracker.nearestGames) {
+            const now = globals.DATE ? new Date(globals.DATE) : new Date();
+            tracker.currentGames = await mlbAPIUtil.currentGames(teamId);
+            gamedayUtil.updateTrackerGames(tracker, now);
+        }
+        return tracker;
+    },
+
+    /**
+     * @param {import('discord.js').MessageComponentInteraction | import('discord.js').ChatInputCommandInteraction} interaction
+     * @returns {Promise<void>}
+     */
+    deferIfNeeded: async (interaction) => {
+        if (!interaction.deferred && !interaction.replied) {
+            await interaction.deferReply();
+        }
+    },
+
+    /**
+     * @param {string | null | undefined} guildId
+     * @param {import('discord.js').MessageComponentInteraction | import('discord.js').ChatInputCommandInteraction} toHandle
+     * @returns {Promise<ScheduleGame>}
+     */
+    resolveTrackedGameOrThrow: async (guildId, toHandle) => {
+        const tracker = await module.exports.getGuildTrackerWithGamesOrThrow(guildId);
+        if (!tracker.nearestGames || tracker.nearestGames.length === 0) {
+            throw new Error('There is no active or upcoming game available for this server\'s team.');
+        }
+        return tracker.game.isDoubleHeader
+            ? tracker.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId))
+            : tracker.nearestGames[0];
+    },
+
+    /**
+     * @param {string | null | undefined} guildId
+     * @param {number} excludedTeamId
+     * @returns {boolean}
+     */
+    isTeamTrackedByOtherSubscribedGuilds: (guildId, excludedTeamId) => {
+        return globalCache.values.subscribedChannels.some(channel => {
+            if (channel.guild_id === guildId) {
+                return false;
+            }
+            return gamedayUtil.getEffectiveTeamIdForGuild(channel.guild_id) === excludedTeamId;
+        });
+    },
     /**
      * @param {(Buffer | ArrayBuffer)[]} spots
      * @param {{ direction?: string, offset?: number, margin?: number, color?: string }} [options]
@@ -654,13 +743,14 @@ module.exports = {
      * @returns {Promise<import('discord.js').ChatInputCommandInteraction | import('discord.js').MessageComponentInteraction | undefined>}
      */
     screenInteraction: async (interaction) => {
-        if (globalCache.values.nearestGames.length === 0 || globalCache.values.nearestGames instanceof Error) {
+        const tracker = getTrackerForGuild(interaction.guildId);
+        if (!tracker.nearestGames || tracker.nearestGames.length === 0 || tracker.nearestGames instanceof Error) {
             await interaction.followUp({
                 content: "There's no game today!",
                 ephemeral: false
             });
-        } else if (globalCache.values.game.isDoubleHeader) {
-            return await resolveDoubleHeaderSelection(interaction);
+        } else if (tracker.game.isDoubleHeader) {
+            return await resolveDoubleHeaderSelection(interaction, tracker.nearestGames);
         } else {
             return interaction;
         }
@@ -687,9 +777,11 @@ module.exports = {
      * @param {object} options
      */
     giveFinalCommandResponse: async (toHandle, options) => {
-        await toHandle.update
-            ? toHandle.update(options)
-            : toHandle.followUp(options);
+        if (typeof toHandle.update === 'function') {
+            await toHandle.update(options);
+        } else {
+            await toHandle.followUp(options);
+        }
     },
 
     /**
@@ -1117,6 +1209,30 @@ module.exports = {
     },
 
     /**
+     * @param {import('discord.js').AutocompleteInteraction} interaction
+     */
+    teamAutocomplete: async (interaction) => {
+        try {
+            const focusedValue = interaction.options.getFocused().trim().toLowerCase();
+            const matches = globals.TEAMS
+                .filter(team => {
+                    if (focusedValue.length === 0) {
+                        return false;
+                    }
+                    return team.name.toLowerCase().includes(focusedValue)
+                        || team.abbreviation.toLowerCase().includes(focusedValue);
+                })
+                .slice(0, 25)
+                .map(team => ({ name: `${team.name} (${team.abbreviation})`, value: team.name }));
+
+            await interaction.respond(matches);
+        } catch (e) {
+            LOGGER.error('Team autocomplete error:', e);
+            await interaction.respond([]);
+        }
+    },
+
+    /**
      * @param {import('discord.js').ChatInputCommandInteraction} interaction
      * @returns {Promise<import('discord.js').MessageComponentInteraction | undefined>}
      */
@@ -1237,8 +1353,8 @@ function getPitchCollections (dom) {
  * @param {import('discord.js').ChatInputCommandInteraction} interaction
  * @returns {Promise<import('discord.js').MessageComponentInteraction | undefined>}
  */
-async function resolveDoubleHeaderSelection (interaction) {
-    const buttons = globalCache.values.nearestGames.map(game =>
+async function resolveDoubleHeaderSelection (interaction, nearestGames) {
+    const buttons = nearestGames.map(game =>
         new ButtonBuilder()
             .setCustomId(game.gamePk.toString())
             .setLabel((game.status.startTimeTBD
@@ -1251,7 +1367,7 @@ async function resolveDoubleHeaderSelection (interaction) {
                 })))
             .setStyle(ButtonStyle.Primary)
     );
-    const response = await interaction.reply({
+    const response = await interaction.editReply({
         content: 'Today is a double-header. Which game?',
         components: [new ActionRowBuilder().addComponents(buttons)]
     });

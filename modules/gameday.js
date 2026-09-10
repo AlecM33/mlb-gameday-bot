@@ -1,10 +1,9 @@
 // @ts-check
 /**
- * Subscribes to MLB's WebSocket gameday feed and reports live plays to Discord channels. Note: MLB's live game API
+ * Subscribes to MLB WebSocket gameday feeds and reports live plays to Discord channels. Note: MLB's live game API
  * is not perfect. Once in a while we may miss an event or receive and report data that is off in some way. We've done our
  * best to mitigate this. By-and-large we are consistent, stable, and accurate, but it's not foolproof.
  */
-
 const mlbAPIUtil = require('./MLB-API-util');
 const globalCache = require('./global-cache');
 const diffPatch = require('./diff-patch');
@@ -14,12 +13,10 @@ const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_
 const liveFeed = require('./livefeed');
 const gamedayUtil = require('./gameday-util');
 
-/** @type {Map<string, SavantQueueEntry>} */
-const savantQueue = new Map();
-let savantLoopRunning = false;
-
 module.exports = {
     statusPoll,
+    refreshStatus,
+    stopStatusPoll,
     subscribe,
     processAndPushPlay,
     runSavantPollingLoop,
@@ -28,62 +25,102 @@ module.exports = {
     sendDelayedMessage,
     reportPlays,
     reportAnyMissedEvents,
-    savantQueue,
-    get savantLoopRunning () { return savantLoopRunning; }
+    get savantQueue () { return globalCache.values.savantQueue; },
+    get savantLoopRunning () { return globalCache.values.savantLoopRunning; }
 };
 
 /**
- * Starts the polling loop that watches for a game to go live, then hands off to subscribe().
+ * Starts the polling loop that watches subscribed teams for games to go live.
  * @param {import('discord.js').Client} bot
  */
 async function statusPoll (bot) {
+    if (globalCache.values.statusPollLoopStarted) {
+        return;
+    }
+    globalCache.values.statusPollLoopStarted = true;
     const pollingFunction = async () => {
-        LOGGER.info('Games: polling...');
-        const now = globals.DATE ? new Date(globals.DATE) : new Date();
-        try {
-            const currentGames = await mlbAPIUtil.currentGames();
-            LOGGER.trace('Current game PKs: ' + JSON.stringify(currentGames
-                .map(game => { return { key: game.gamePk, date: game.officialDate, status: game.status.statusCode }; }), null, 2));
-            currentGames.sort((a, b) => Math.abs(now - new Date(a.gameDate)) - Math.abs(now - new Date(b.gameDate)));
-            globalCache.values.currentGames = currentGames;
-            const nearestGames = currentGames.filter(game => game.officialDate === currentGames[0].officialDate); // could be more than one game for double-headers.
-            globalCache.values.nearestGames = nearestGames.filter(g => g.status.codedGameState !== globals.CODED_GAME_STATES.POSTPONED);
-            globalCache.values.game.isDoubleHeader = nearestGames.length > 1;
-            const inProgressGame = nearestGames.find(nearestGame => nearestGame.status.statusCode === globals.GAME_STATUS_CODES.IN_PROGRESS
-                || nearestGame.status.statusCode === globals.GAME_STATUS_CODES.WARMUP);
-            /*
-                the "game_finished" socket event is received before a game's status changes to "Final", typically. So we shouldn't try to
-                re-subscribe just because the status is still "In Progress". We should check if it's a different game.
-             */
-            if (inProgressGame && inProgressGame.gamePk !== globalCache.values.game.currentGamePk) {
-                LOGGER.info('Gameday: polling stopped: a game is live.');
-                globalCache.resetGameCache();
-                globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(inProgressGame.gamePk);
-                globalCache.values.game.currentGamePk = inProgressGame.gamePk;
-                gamedayUtil.getConstrastingEmbedColors();
-                gamedayUtil.getTeamEmojis();
-                module.exports.subscribe(bot, inProgressGame);
-            } else {
-                setTimeout(pollingFunction, globals.SLOW_POLL_INTERVAL);
-            }
-        } catch (e) {
-            LOGGER.error(e);
-            setTimeout(pollingFunction, globals.SLOW_POLL_INTERVAL);
-        }
+        await module.exports.refreshStatus(bot);
+        globalCache.values.statusPollTimeout = setTimeout(pollingFunction, globals.SLOW_POLL_INTERVAL);
     };
     await pollingFunction();
 }
 
 /**
- * Subscribes to the MLB gameday WebSocket for the given game and begins processing events.
  * @param {import('discord.js').Client} bot
+ */
+async function refreshStatus (bot) {
+    LOGGER.info('Games: polling...');
+    const now = globals.DATE ? new Date(globals.DATE) : new Date();
+    try {
+        const trackedTeamIds = gamedayUtil.getTrackedTeamIds();
+        const liveReportingTeamIds = new Set(gamedayUtil.getLiveReportingTeamIds());
+        for (const [teamIdStr, tracker] of Object.entries(globalCache.values.activeTrackersByTeamId)) {
+            const activeTeamId = parseInt(teamIdStr);
+            if (!liveReportingTeamIds.has(activeTeamId) && tracker.websocket) {
+                LOGGER.info(`Gameday: team ${activeTeamId} no longer has subscribed channels. Clearing live tracker.`);
+                globalCache.resetGameCache(activeTeamId);
+            }
+        }
+        for (const teamId of trackedTeamIds) {
+            const tracker = globalCache.ensureTracker(teamId);
+            tracker.currentGames = await mlbAPIUtil.currentGames(teamId);
+            LOGGER.trace('Current game PKs for team ' + teamId + ': ' + JSON.stringify(tracker.currentGames
+                .map(game => { return { key: game.gamePk, date: game.officialDate, status: game.status.statusCode }; }), null, 2));
+            gamedayUtil.updateTrackerGames(tracker, now);
+            if (!liveReportingTeamIds.has(teamId)) {
+                continue;
+            }
+            const inProgressGame = tracker.nearestGames.find(nearestGame => nearestGame.status.statusCode === globals.GAME_STATUS_CODES.IN_PROGRESS
+                || nearestGame.status.statusCode === globals.GAME_STATUS_CODES.WARMUP);
+            /*
+                the "game_finished" socket event is received before a game's status changes to "Final", typically. So we shouldn't try to
+                re-subscribe just because the status is still "In Progress". We should check if it's a different game.
+            */
+            if (inProgressGame && inProgressGame.gamePk !== tracker.game.currentGamePk) {
+                LOGGER.info(gamedayUtil.withGameLogContext(inProgressGame, `Gameday: team ${teamId} has a live game.`));
+                globalCache.resetGameCache(teamId);
+                const refreshedTracker = globalCache.ensureTracker(teamId);
+                refreshedTracker.currentGames = tracker.currentGames;
+                refreshedTracker.nearestGames = tracker.nearestGames;
+                refreshedTracker.game.isDoubleHeader = tracker.game.isDoubleHeader;
+                refreshedTracker.game.currentLiveFeed = await mlbAPIUtil.liveFeed(inProgressGame.gamePk);
+                refreshedTracker.game.currentGamePk = inProgressGame.gamePk;
+                gamedayUtil.getConstrastingEmbedColors(refreshedTracker.game);
+                gamedayUtil.getTeamEmojis(refreshedTracker.game);
+                module.exports.subscribe(bot, teamId, inProgressGame);
+            }
+        }
+    } catch (e) {
+        LOGGER.error(e);
+    }
+}
+
+function stopStatusPoll () {
+    if (globalCache.values.statusPollTimeout) {
+        clearTimeout(globalCache.values.statusPollTimeout);
+    }
+    globalCache.values.statusPollTimeout = null;
+    globalCache.values.statusPollLoopStarted = false;
+}
+
+/**
+ * @param {import('discord.js').Client} bot
+ * @param {number} teamId
  * @param {ScheduleGame} liveGame
  */
-function subscribe (bot, liveGame) {
-    LOGGER.trace('Gameday: subscribing...');
+function subscribe (bot, teamId, liveGame) {
+    const tracker = globalCache.ensureTracker(teamId);
+    LOGGER.trace(gamedayUtil.withGameLogContext(liveGame, `Gameday: subscribing for team ${teamId}.`));
     const ws = mlbAPIUtil.websocketSubscribe(liveGame.gamePk);
+    tracker.websocket = ws;
     ws.addEventListener('message', async (e) => {
         try {
+            const activeTracker = globalCache.ensureTracker(teamId);
+            if (activeTracker.websocket !== ws) {
+                LOGGER.debug(gamedayUtil.withGameLogContext(liveGame, `Stale websocket message ignored for team ${teamId}.`));
+                return;
+            }
+            const gameCache = activeTracker.game;
             /** @type {GamedaySocketEvent} */
             const eventJSON = JSON.parse(e.data);
             /*
@@ -92,139 +129,154 @@ function subscribe (bot, liveGame) {
                 and disregarding one of them up front. Otherwise the heavily asynchronous code that follows can end up
                 reporting both events incidentally.
              */
-            if (globalCache.values.game.lastSocketMessageTimestamp === eventJSON.timeStamp
-                && globalCache.values.game.lastSocketMessageLength === e.data.length) {
-                LOGGER.debug('DUPLICATE MESSAGE: ' + eventJSON.updateId + ' - DISREGARDING');
+            if (gameCache.lastSocketMessageTimestamp === eventJSON.timeStamp
+                && gameCache.lastSocketMessageLength === e.data.length) {
+                LOGGER.debug(gamedayUtil.withGameLogContext(liveGame, 'DUPLICATE MESSAGE: ' + eventJSON.updateId + ' - DISREGARDING'));
                 return;
             }
-            globalCache.values.game.lastSocketMessageTimestamp = eventJSON.timeStamp;
-            globalCache.values.game.lastSocketMessageLength = e.data.length;
-            LOGGER.debug('SOCKET EVENT TYPES: ' + JSON.stringify({
+            gameCache.lastSocketMessageTimestamp = eventJSON.timeStamp;
+            gameCache.lastSocketMessageLength = e.data.length;
+            LOGGER.debug(gamedayUtil.withGameLogContext(liveGame, 'SOCKET EVENT TYPES: ' + JSON.stringify({
                 gameEvents: eventJSON.gameEvents || [],
                 changeEventType: eventJSON.changeEvent?.type || null
-            }));
-            if (eventJSON.gameEvents.includes('game_finished') && !globalCache.values.game.finished) {
-                globalCache.values.game.finished = true;
-                globalCache.values.game.startReported = false;
-                LOGGER.info('NOTIFIED OF GAME CONCLUSION: CLOSING...');
+            })));
+            if (eventJSON.gameEvents.includes('game_finished') && !gameCache.finished) {
+                gameCache.finished = true;
+                gameCache.startReported = false;
+                LOGGER.info(gamedayUtil.withGameLogContext(liveGame, 'NOTIFIED OF GAME CONCLUSION: CLOSING...'));
                 ws.close();
+                delete activeTracker.websocket;
                 const finalLiveFeed = await gamedayUtil.waitForFinalLiveFeed(
+                    gameCache,
                     liveGame.gamePk,
-                    async () => await module.exports.reportPlays(bot, liveGame.gamePk)
+                    async () => await module.exports.reportPlays(bot, teamId, liveGame.gamePk)
                 );
-                await module.exports.processAndPushPlay(bot, {
+                await module.exports.processAndPushPlay(bot, teamId, {
                     reply: gamedayUtil.buildFinalMessage(
-                        liveFeed.init(finalLiveFeed || globalCache.values.game.currentLiveFeed),
+                        liveFeed.init(finalLiveFeed || gameCache.currentLiveFeed),
                         liveGame.gamePk,
-                        globalCache.values.game.awayTeamEmoji,
-                        globalCache.values.game.homeTeamEmoji
+                        gameCache.awayTeamEmoji,
+                        gameCache.homeTeamEmoji
                     ),
                     isScoringPlay: true,
                     isOut: false
-                }, liveGame.gamePk, globalCache.values.game.lastReportedCompleteAtBatIndex, false);
-                await module.exports.statusPoll(bot);
-            } else if (!globalCache.values.game.finished) {
-                LOGGER.trace('RECEIVED: ' + eventJSON.updateId);
+                }, liveGame.gamePk, gameCache.lastReportedCompleteAtBatIndex, false);
+            } else if (!gameCache.finished) {
+                LOGGER.trace(gamedayUtil.withGameLogContext(liveGame, 'RECEIVED: ' + eventJSON.updateId));
                 if (eventJSON.changeEvent?.type === 'full_refresh') {
-                    LOGGER.trace('FULL REFRESH FOR: ' + eventJSON.updateId);
+                    LOGGER.trace(gamedayUtil.withGameLogContext(liveGame, 'FULL REFRESH FOR: ' + eventJSON.updateId));
                 }
                 const update = eventJSON.changeEvent?.type === 'full_refresh'
                     ? await mlbAPIUtil.wsLiveFeed(eventJSON.gamePk, eventJSON.updateId)
                     : await mlbAPIUtil.websocketQueryUpdateId(
                         eventJSON.gamePk,
                         eventJSON.updateId,
-                        globalCache.values.game.currentLiveFeed.metaData.timeStamp
+                        gameCache.currentLiveFeed.metaData.timeStamp
                     );
+                const refreshedTracker = globalCache.ensureTracker(teamId);
+                if (refreshedTracker.websocket !== ws || refreshedTracker.game !== gameCache) {
+                    LOGGER.debug(gamedayUtil.withGameLogContext(liveGame, `Discarding stale update ${eventJSON.updateId} for team ${teamId}.`));
+                    return;
+                }
                 if (Array.isArray(update)) {
                     for (const patch of update) {
                         try {
-                            diffPatch.hydrate(patch);
-                        } catch (e) {
+                            diffPatch.hydrate(gameCache.currentLiveFeed, patch);
+                        } catch (err) {
+                            LOGGER.debug('Fully refreshing live feed and skipping further patches due to caught exception.');
                             /*
                                 Catching something here means our game object could now be incorrect, so we fully
                                 reset the live feed. As a result of that, we should no longer be trying to apply
                                 the rest of the "patches" from this batch of updates, so we break out of the loop.
-                             */
-                            globalCache.values.game.currentLiveFeed = await mlbAPIUtil.liveFeed(liveGame.gamePk);
-                            await reportPlays(bot, liveGame.gamePk);
+                            */
+                            gameCache.currentLiveFeed = await mlbAPIUtil.liveFeed(liveGame.gamePk);
+                            await reportPlays(bot, teamId, liveGame.gamePk);
                             break;
                         }
-                        await reportPlays(bot, liveGame.gamePk);
+                        await reportPlays(bot, teamId, liveGame.gamePk);
                     }
                 } else {
-                    globalCache.values.game.currentLiveFeed = update;
-                    await reportPlays(bot, liveGame.gamePk);
+                    gameCache.currentLiveFeed = update;
+                    await reportPlays(bot, teamId, liveGame.gamePk);
                 }
             }
-        } catch (e) {
-            LOGGER.error('There was a problem processing a gameday event!');
-            LOGGER.error(e);
+        } catch (err) {
+            LOGGER.error(gamedayUtil.withGameLogContext(liveGame, 'There was a problem processing a gameday event!'));
+            LOGGER.error(err);
         }
     });
-    ws.addEventListener('error', (e) => LOGGER.error('Gameday socket error: ' + e.message));
-    ws.addEventListener('close', (e) => LOGGER.info('Gameday socket closed: ' + JSON.stringify(e)));
+    ws.addEventListener('error', (e) => LOGGER.error(gamedayUtil.withGameLogContext(liveGame, 'Gameday socket error: ' + e.message)));
+    ws.addEventListener('close', (e) => LOGGER.info(gamedayUtil.withGameLogContext(liveGame, 'Gameday socket closed: ' + JSON.stringify(e))));
 }
 
 /**
- * Processes all at-bats and events since the last reported index and pushes them to Discord.
  * @param {import('discord.js').Client} bot
+ * @param {number} teamId
  * @param {number} gamePk
  */
-async function reportPlays (bot, gamePk) {
-    const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
+async function reportPlays (bot, teamId, gamePk) {
+    const tracker = globalCache.ensureTracker(teamId);
+    const gameCache = tracker.game;
+    const feed = liveFeed.init(gameCache.currentLiveFeed);
     const currentPlay = feed.currentPlay();
     const atBatIndex = currentPlay.atBatIndex;
-    const lastReportedCompleteAtBatIndex = globalCache.values.game.lastReportedCompleteAtBatIndex;
+    const lastReportedCompleteAtBatIndex = gameCache.lastReportedCompleteAtBatIndex;
     if (atBatIndex > 0) {
         const lastAtBat = feed.allPlays()
             .find((play) => play.about.atBatIndex === atBatIndex - 1);
         if (lastAtBat && lastAtBat.about.hasReview) { // a play that's been challenged. We should report updates on it.
-            await module.exports.processAndPushPlay(bot, currentPlayProcessor.process(
+            await module.exports.processAndPushPlay(bot, teamId, currentPlayProcessor.process(
                 lastAtBat,
                 feed,
-                globalCache.values.game.homeTeamEmoji,
-                globalCache.values.game.awayTeamEmoji
+                gameCache,
+                gameCache.homeTeamEmoji,
+                gameCache.awayTeamEmoji
             ), gamePk, atBatIndex - 1);
             /* the below block detects and handles if we missed the result of an at-bat due to the data moving too fast.
              Sometimes it progresses to the next at bat quite quickly. */
         } else if (lastAtBat && (atBatIndex - lastReportedCompleteAtBatIndex === globals.MISSED_AT_BAT_INDICATOR)) {
             LOGGER.debug(`Missed at-bat index: ${atBatIndex - 1}`);
-            await module.exports.reportAnyMissedEvents(lastAtBat, bot, gamePk, atBatIndex - 1);
-            await module.exports.processAndPushPlay(bot, currentPlayProcessor.process(
+            await module.exports.reportAnyMissedEvents(lastAtBat, bot, teamId, gamePk, atBatIndex - 1);
+            await module.exports.processAndPushPlay(bot, teamId, currentPlayProcessor.process(
                 lastAtBat,
                 feed,
-                globalCache.values.game.homeTeamEmoji,
-                globalCache.values.game.awayTeamEmoji
+                gameCache,
+                gameCache.homeTeamEmoji,
+                gameCache.awayTeamEmoji
             ), gamePk, atBatIndex - 1);
         }
     }
-    await module.exports.reportAnyMissedEvents(currentPlay, bot, gamePk, atBatIndex);
-    await module.exports.processAndPushPlay(bot, currentPlayProcessor.process(
+    await module.exports.reportAnyMissedEvents(currentPlay, bot, teamId, gamePk, atBatIndex);
+    await module.exports.processAndPushPlay(bot, teamId, currentPlayProcessor.process(
         currentPlay,
         feed,
-        globalCache.values.game.homeTeamEmoji,
-        globalCache.values.game.awayTeamEmoji
+        gameCache,
+        gameCache.homeTeamEmoji,
+        gameCache.awayTeamEmoji
     ), gamePk, atBatIndex);
 }
 
 /**
- * Reports any notable play-events within an at-bat that haven't been reported yet.
  * @param {Play} atBat
  * @param {import('discord.js').Client} bot
+ * @param {number} teamId
  * @param {number} gamePk
  * @param {number} atBatIndex
  */
-async function reportAnyMissedEvents (atBat, bot, gamePk, atBatIndex) {
-    const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
+async function reportAnyMissedEvents (atBat, bot, teamId, gamePk, atBatIndex) {
+    const tracker = globalCache.ensureTracker(teamId);
+    const gameCache = tracker.game;
+    const feed = liveFeed.init(gameCache.currentLiveFeed);
     const missedEventsToReport = atBat.playEvents?.filter(event => globals.EVENT_WHITELIST.includes(event?.details?.eventType)
-        && !gamedayUtil.alreadyReported(event?.details?.description, atBatIndex)
+        && !gamedayUtil.alreadyReported(gameCache, event?.details?.description, atBatIndex)
     ) || [];
     for (const missedEvent of missedEventsToReport) {
-        await module.exports.processAndPushPlay(bot, currentPlayProcessor.process(
+        await module.exports.processAndPushPlay(bot, teamId, currentPlayProcessor.process(
             missedEvent,
             feed,
-            globalCache.values.game.homeTeamEmoji,
-            globalCache.values.game.awayTeamEmoji
+            gameCache,
+            gameCache.homeTeamEmoji,
+            gameCache.awayTeamEmoji
         ), gamePk, atBatIndex);
     }
 }
@@ -232,40 +284,45 @@ async function reportAnyMissedEvents (atBat, bot, gamePk, atBatIndex) {
 /**
  * Sends a processed play to all subscribed Discord channels, respecting per-channel delay settings.
  * @param {import('discord.js').Client} bot
+ * @param {number} teamId
  * @param {ProcessedPlay} play
  * @param {number} gamePk
  * @param {number} atBatIndex
  * @param {boolean} [includeTitle]
  */
-async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle = true) {
+async function processAndPushPlay (bot, teamId, play, gamePk, atBatIndex, includeTitle = true) {
+    const tracker = globalCache.ensureTracker(teamId);
+    const gameCache = tracker.game;
     if (play.reply
         && play.reply.length > 0
-        && !gamedayUtil.alreadyReported(play.description, atBatIndex)
+        && !gamedayUtil.alreadyReported(gameCache, play.description, atBatIndex)
     ) {
-        globalCache.values.game.reportedDescriptions.push({ description: play.description, atBatIndex });
-        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
+        gameCache.reportedDescriptions.push({ description: play.description, atBatIndex });
+        const feed = liveFeed.init(gameCache.currentLiveFeed);
         if (play.isComplete) {
-            globalCache.values.game.lastReportedCompleteAtBatIndex = atBatIndex;
+            gameCache.lastReportedCompleteAtBatIndex = atBatIndex;
         }
         const embedWithStats = gamedayUtil.constructPlayEmbed(
+            gameCache,
             play,
             feed,
             includeTitle,
-            globalCache.values.game.homeTeamColor,
-            globalCache.values.game.awayTeamColor,
-            globalCache.values.game.homeTeamEmoji,
-            globalCache.values.game.awayTeamEmoji
+            gameCache.homeTeamColor,
+            gameCache.awayTeamColor,
+            gameCache.homeTeamEmoji,
+            gameCache.awayTeamEmoji
         );
         // For channels that opt out of advanced stats, strip "Pending..." placeholders from a separate embed copy.
         const embedBasic = play.metricsAvailable
             ? gamedayUtil.constructPlayEmbed(
+                gameCache,
                 play,
                 feed,
                 includeTitle,
-                globalCache.values.game.homeTeamColor,
-                globalCache.values.game.awayTeamColor,
-                globalCache.values.game.homeTeamEmoji,
-                globalCache.values.game.awayTeamEmoji
+                gameCache.homeTeamColor,
+                gameCache.awayTeamColor,
+                gameCache.homeTeamEmoji,
+                gameCache.awayTeamEmoji
             )
             : embedWithStats;
         if (play.metricsAvailable) {
@@ -278,9 +335,10 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle =
         }
         /** @type {MessageEntry[]} */
         const advancedStatsMessages = [];
-        /** @type {MessageEntry[]} */
-        const allMessages = [];
         for (const channelSubscription of globalCache.values.subscribedChannels) {
+            if (!gamedayUtil.shouldDeliverToChannel(gameCache, channelSubscription)) {
+                continue;
+            }
             let returnedChannel;
             try {
                 returnedChannel = await bot.channels.fetch(channelSubscription.channel_id);
@@ -299,22 +357,20 @@ async function processAndPushPlay (bot, play, gamePk, atBatIndex, includeTitle =
                 } else {
                     LOGGER.debug('Waiting ' + channelSubscription.delay + ' seconds for channel: ' + channelSubscription.channel_id);
                     message.delayed = true;
-                    sendDelayedMessage(play, gamePk, channelSubscription, returnedChannel, embed, message);
+                    sendDelayedMessage(play, gamePk, channelSubscription, returnedChannel, embed, message, teamId);
                 }
-                allMessages.push(message);
                 if (channelSubscription.advanced_stats) {
                     advancedStatsMessages.push(message);
                 }
             }
         }
         if (advancedStatsMessages.length > 0) {
-            await maybePopulateAdvancedStatcastMetrics(play, advancedStatsMessages, gamePk, embedWithStats);
+            await maybePopulateAdvancedStatcastMetrics(teamId, play, advancedStatsMessages, gamePk, embedWithStats);
         }
     }
 }
 
 /**
- * Sends the embed to a channel immediately and tracks the Discord message for later edits.
  * @param {import('discord.js').TextBasedChannel} returnedChannel
  * @param {import('discord.js').EmbedBuilder} embed
  * @param {MessageEntry} message
@@ -332,16 +388,21 @@ async function sendMessage (returnedChannel, embed, message) {
 }
 
 /**
- * Schedules an embed send for a channel with a configured delay.
  * @param {ProcessedPlay} play
  * @param {number} gamePk
  * @param {ChannelSubscription} channelSubscription
  * @param {import('discord.js').TextBasedChannel} returnedChannel
  * @param {import('discord.js').EmbedBuilder} embed
  * @param {MessageEntry} message
+ * @param {number} expectedTeamId
  */
-function sendDelayedMessage (play, gamePk, channelSubscription, returnedChannel, embed, message) {
+function sendDelayedMessage (play, gamePk, channelSubscription, returnedChannel, embed, message, expectedTeamId) {
     setTimeout(async () => {
+        if (gamedayUtil.getEffectiveTeamIdForGuild(channelSubscription.guild_id) !== expectedTeamId) {
+            LOGGER.debug('Skipping delayed send: guild switched teams during delay window.');
+            message.doneEditing = true;
+            return;
+        }
         LOGGER.debug('Sending!');
         try {
             message.discordMessage = await returnedChannel.send({
@@ -354,18 +415,17 @@ function sendDelayedMessage (play, gamePk, channelSubscription, returnedChannel,
 }
 
 /**
- * Decides whether to poll for Savant metrics, and kicks off polling if applicable.
+ * @param {number} teamId
  * @param {ProcessedPlay} play
  * @param {MessageEntry[]} messages
  * @param {number} gamePk
  * @param {import('discord.js').EmbedBuilder} embed
  */
-async function maybePopulateAdvancedStatcastMetrics (play, messages, gamePk, embed) {
+async function maybePopulateAdvancedStatcastMetrics (teamId, play, messages, gamePk, embed) {
     if (play.isInPlay && play.metricsAvailable) {
         if (play.playId) {
             try {
-                // xBA and HR/Park for balls in play is available on a delay via baseballsavant.
-                await pollForSavantData(gamePk, play.playId, messages, play.hitDistance, embed);
+                await pollForSavantData(teamId, gamePk, play.playId, messages, play.hitDistance, embed);
             } catch (e) {
                 LOGGER.error('There was a problem polling for savant data!');
                 LOGGER.error(e);
@@ -381,14 +441,16 @@ async function maybePopulateAdvancedStatcastMetrics (play, messages, gamePk, emb
 }
 
 /**
- * Enqueues a play and starts the shared polling loop if not already running.
+ * @param {number} teamId
  * @param {number} gamePk
  * @param {string} playId
  * @param {MessageEntry[]} messages
  * @param {number | undefined} hitDistance
  * @param {import('discord.js').EmbedBuilder} embed
  */
-async function pollForSavantData (gamePk, playId, messages, hitDistance, embed) {
+async function pollForSavantData (teamId, gamePk, playId, messages, hitDistance, embed) {
+    const savantQueue = globalCache.values.savantQueue;
+    const queueKey = `${teamId}:${playId}`;
     const activeTimers = new Set();
     const startTimer = (label) => { console.time(label); activeTimers.add(label); };
     startTimer('xBA: ' + playId);
@@ -396,53 +458,62 @@ async function pollForSavantData (gamePk, playId, messages, hitDistance, embed) 
     if (hitDistance >= globals.HOME_RUN_BALLPARKS_MIN_DISTANCE) {
         startTimer('HR/Park: ' + playId);
     }
-    const entry = { gamePk, messages, hitDistance, embed, activeTimers, attempts: 0 };
-    if (savantLoopRunning) {
+    const entry = { teamId, gamePk, playId, messages, hitDistance, embed, activeTimers, attempts: 0 };
+    if (globalCache.values.savantLoopRunning) {
         LOGGER.debug('Savant: loop already running, enqueueing play: ' + playId);
-        savantQueue.set(playId, entry);
+        savantQueue.set(queueKey, entry);
     } else {
-        savantLoopRunning = true;
-        savantQueue.set(playId, entry);
+        globalCache.values.savantLoopRunning = true;
+        savantQueue.set(queueKey, entry);
         await runSavantPollingLoop();
     }
 }
 
+/**
+ * Polls Baseball Savant until queued plays have enough Statcast data to edit sent messages.
+ */
 async function runSavantPollingLoop () {
+    const savantQueue = globalCache.values.savantQueue;
     const pollingFunction = async () => {
         if (savantQueue.size === 0) {
             LOGGER.debug('Savant: queue empty, stopping loop.');
-            savantLoopRunning = false;
+            globalCache.values.savantLoopRunning = false;
             return;
         }
-        const gamePk = savantQueue.values().next().value.gamePk;
-        LOGGER.trace('Savant: polling game feed for gamePk ' + gamePk + ' (' + savantQueue.size + ' play(s) queued)...');
+        const queueEntriesByGamePk = [...savantQueue.entries()].reduce((acc, [queueKey, entry]) => {
+            acc[entry.gamePk] = acc[entry.gamePk] || [];
+            acc[entry.gamePk].push([queueKey, entry]);
+            return acc;
+        }, {});
         try {
-            const gameFeed = await mlbAPIUtil.savantGameFeed(gamePk);
-            const hasFeedData = gameFeed?.team_away || gameFeed?.team_home;
-            if (!hasFeedData) {
-                LOGGER.debug('Savant: no data in feed (possible exception when retrieving)');
-            }
-            for (const [playId, entry] of savantQueue) {
-                const { messages, hitDistance, embed, activeTimers } = entry;
-                if (!entry.embed.data.description.includes('Pending...')) {
-                    LOGGER.debug('Savant: embed has no pending metrics for: ' + playId + '. Removing from queue.');
-                    savantQueue.delete(playId);
-                    continue;
+            for (const gamePkKey of Object.keys(queueEntriesByGamePk)) {
+                const gamePk = parseInt(gamePkKey);
+                LOGGER.trace('Savant: polling game feed for gamePk ' + gamePk + '...');
+                const gameFeed = await mlbAPIUtil.savantGameFeed(gamePk);
+                const hasFeedData = gameFeed?.team_away || gameFeed?.team_home;
+                if (!hasFeedData) {
+                    LOGGER.debug('Savant: no data in feed (possible exception when retrieving)');
                 }
-                entry.attempts ++;
-                if (entry.attempts >= globals.SAVANT_POLLING_ATTEMPTS) {
-                    LOGGER.debug('Savant: max attempts reached for: ' + playId + '. Removing from queue.');
-                    gamedayUtil.notifySavantDataUnavailable(messages, embed);
-                    savantQueue.delete(playId);
-                    continue;
-                }
-                if (hasFeedData) {
-                    const matchingPlay = gameFeed?.team_away?.find(play => play?.play_id === playId)
-                        || gameFeed?.team_home?.find(play => play?.play_id === playId);
-                    if (matchingPlay && (matchingPlay.xba
-                        || matchingPlay.contextMetrics?.homeRunBallparks !== undefined
-                        || matchingPlay.batSpeed !== undefined)) {
-                        await module.exports.processMatchingPlay(matchingPlay, messages, playId, hitDistance, embed, activeTimers);
+                for (const [queueKey, entry] of queueEntriesByGamePk[gamePk]) {
+                    const { messages, hitDistance, embed, activeTimers, teamId, playId } = entry;
+                    if (!entry.embed.data.description.includes('Pending...')) {
+                        savantQueue.delete(queueKey);
+                        continue;
+                    }
+                    entry.attempts ++;
+                    if (entry.attempts >= globals.SAVANT_POLLING_ATTEMPTS) {
+                        gamedayUtil.notifySavantDataUnavailable(messages, embed);
+                        savantQueue.delete(queueKey);
+                        continue;
+                    }
+                    if (hasFeedData) {
+                        const matchingPlay = gameFeed?.team_away?.find(play => play?.play_id === playId)
+                            || gameFeed?.team_home?.find(play => play?.play_id === playId);
+                        if (matchingPlay && (matchingPlay.xba
+                            || matchingPlay.contextMetrics?.homeRunBallparks !== undefined
+                            || matchingPlay.batSpeed !== undefined)) {
+                            await module.exports.processMatchingPlay(teamId, matchingPlay, messages, playId, hitDistance, embed, activeTimers);
+                        }
                     }
                 }
             }
@@ -451,7 +522,7 @@ async function runSavantPollingLoop () {
         }
         if (savantQueue.size === 0) {
             LOGGER.debug('Savant: queue empty after processing, stopping loop.');
-            savantLoopRunning = false;
+            globalCache.values.savantLoopRunning = false;
         } else {
             setTimeout(async () => { await pollingFunction(); }, globals.SAVANT_POLLING_INTERVAL);
         }
@@ -460,6 +531,7 @@ async function runSavantPollingLoop () {
 }
 
 /**
+ * @param {number} teamId
  * @param {number} gamePk
  * @param {string} playId
  * @param {number} numberOfParks
@@ -467,7 +539,7 @@ async function runSavantPollingLoop () {
  * @param {MessageEntry[]} messages
  * @param {import('discord.js').EmbedBuilder} embed
  */
-async function pollForXParksAndEdit (gamePk, playId, numberOfParks, baseHRParkDescription, messages, embed) {
+async function pollForXParksAndEdit (teamId, gamePk, playId, numberOfParks, baseHRParkDescription, messages, embed) {
     let attempts = 1;
     let currentInterval = globals.SAVANT_XPARKS_POLLING_INTERVAL;
     const pollingFunction = async () => {
@@ -481,7 +553,8 @@ async function pollForXParksAndEdit (gamePk, playId, numberOfParks, baseHRParkDe
             return;
         }
         LOGGER.trace('XParks: polling for ' + playId + '...');
-        const xParksText = await gamedayUtil.getXParks(gamePk, playId, numberOfParks);
+        const tracker = globalCache.ensureTracker(teamId);
+        const xParksText = await gamedayUtil.getXParks(tracker.game, gamePk, playId, numberOfParks);
         if (xParksText !== null) {
             const pendingPlaceholder = baseHRParkDescription + globals.XPARKS_PENDING_PLACEHOLDER_SUFFIX;
             if (embed.data.description.includes(pendingPlaceholder)) {
@@ -492,22 +565,28 @@ async function pollForXParksAndEdit (gamePk, playId, numberOfParks, baseHRParkDe
         }
         attempts ++;
         currentInterval = currentInterval + globals.SAVANT_XPARKS_POLLING_BACKOFF_INCREASE;
-        setTimeout(async () => { await pollingFunction(); }, currentInterval);
+        const timeoutHandle = setTimeout(async () => {
+            gamedayUtil.unregisterXParksTimeout(teamId, timeoutHandle);
+            await pollingFunction();
+        }, currentInterval);
+        gamedayUtil.registerXParksTimeout(teamId, timeoutHandle);
     };
     await pollingFunction();
 }
 
 /**
- * @param {SavantPlayMetrics} matchingPlay
+ * @param {number} teamId
+ * @param {SavantPlay} matchingPlay
  * @param {MessageEntry[]} messages
  * @param {string} playId
  * @param {number | undefined} hitDistance
  * @param {import('discord.js').EmbedBuilder} embed
  * @param {Set<string>} [activeTimers]
  */
-async function processMatchingPlay (matchingPlay, messages, playId, hitDistance, embed, activeTimers = new Set()) {
+async function processMatchingPlay (teamId, matchingPlay, messages, playId, hitDistance, embed, activeTimers = new Set()) {
     const endTimer = (label) => { if (activeTimers.has(label)) { console.timeEnd(label); activeTimers.delete(label); } };
-    const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
+    const tracker = globalCache.ensureTracker(teamId);
+    const feed = liveFeed.init(tracker.game.currentLiveFeed);
     const xParksExpected = hitDistance && hitDistance >= globals.HOME_RUN_BALLPARKS_MIN_DISTANCE;
 
     if (matchingPlay.xba && embed.data.description.includes('xBA: Pending...')) {
@@ -532,11 +611,11 @@ async function processMatchingPlay (matchingPlay, messages, playId, hitDistance,
         const numberOfParks = matchingPlay.contextMetrics.homeRunBallparks;
         const baseHRParkDescription = 'HR/Park: ' + numberOfParks + '/30' +
             (numberOfParks === 30 ? '\u203C\uFE0F' : '');
-        const xParksText = await gamedayUtil.getXParks(feed.gamePk(), playId, numberOfParks);
+        const xParksText = await gamedayUtil.getXParks(tracker.game, feed.gamePk(), playId, numberOfParks);
         embed.data.description = embed.data.description.replaceAll('HR/Park: Pending...', baseHRParkDescription + (xParksText ?? globals.XPARKS_PENDING_PLACEHOLDER_SUFFIX));
         if (xParksText === null) {
             LOGGER.debug('XParks data not ready yet for: ' + playId + '. Polling...');
-            pendingXParksArgs = [feed.gamePk(), playId, numberOfParks, baseHRParkDescription];
+            pendingXParksArgs = [teamId, feed.gamePk(), playId, numberOfParks, baseHRParkDescription];
         }
     }
 

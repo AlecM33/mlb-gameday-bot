@@ -3,13 +3,20 @@
 interface DiscordEmoji { name: string; id: string }
 
 interface ChannelSubscription {
+    guild_id: string;
     channel_id: string;
     scoring_plays_only: boolean;
     delay: number; // seconds
     advanced_stats: boolean;
 }
 
+interface GuildTeam {
+    guild_id: string;
+    team_id: number;
+}
+
 interface GameCache {
+    teamId: number | null;
     currentLiveFeed: LiveFeedResponse | null;
     currentGamePk: number | null;
     isDoubleHeader: boolean | null;
@@ -26,14 +33,26 @@ interface GameCache {
     lastSocketMessageLength: number | null;
 }
 
-interface GlobalCacheValues {
-    nearestGames: ScheduleGame[] | null;
+interface GameTracker {
+    teamId: number;
     currentGames: ScheduleGame[] | null;
+    nearestGames: ScheduleGame[] | null;
+    game: GameCache;
+    websocket?: ReconnectingWebSocket;
+}
+
+interface GlobalCacheValues {
     subscribedChannels: ChannelSubscription[];
+    guildTeams: Record<string, GuildTeam>;
     emojis: DiscordEmoji[] | null;
     playersByYear: Record<number, Person[]>;
     playerCacheTimestamps: Record<number, number>;
-    game: GameCache;
+    activeTrackersByTeamId: Record<number, GameTracker>;
+    savantQueue: Map<string, SavantQueueEntry & { teamId: number, playId: string }>;
+    xParksRetryTimeoutsByTeamId: Map<number, Set<any>>;
+    savantLoopRunning: boolean;
+    statusPollTimeout: ReturnType<typeof setTimeout> | null;
+    statusPollLoopStarted: boolean;
 }
 
 /** Typed accessor wrapper returned by `livefeed.init(rawFeed)`. */
@@ -206,4 +225,3 @@ interface GameDisplayable {
     };
     datetime?: { dateTime?: string };
 }
-

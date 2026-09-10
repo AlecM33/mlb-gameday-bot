@@ -19,6 +19,7 @@ module.exports = (url, {
     let intentionallyClosed = false;
     let heartbeatTimer = null;
     let connectTimeout = null;
+    let reconnectTimer = null;
 
     /**
      * @returns {void}
@@ -68,7 +69,7 @@ module.exports = (url, {
             listeners.close.forEach(fn => fn({}));
             if (!intentionallyClosed) {
                 LOGGER.info(`WebSocket closed. Reconnecting in ${reconnectDelay}ms.`);
-                setTimeout(connect, reconnectDelay);
+                reconnectTimer = setTimeout(connect, reconnectDelay);
             }
         });
     };
@@ -96,6 +97,7 @@ module.exports = (url, {
             intentionallyClosed = true;
             clearTimeout(connectTimeout);
             clearInterval(heartbeatTimer);
+            clearTimeout(reconnectTimer);
             socket?.close();
         }
     };

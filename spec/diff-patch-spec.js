@@ -5,16 +5,19 @@ const path = require('path');
 
 describe('diff-patch', () => {
     let diff;
+    let tracker;
 
     beforeAll(() => {
-        globalCache.values.game.currentLiveFeed = JSON.parse(fs.readFileSync(path.join(__dirname, './data/live-feed-no-move.json')));
+        globalCache.resetGameCache(114);
+        tracker = globalCache.ensureTracker(114);
+        tracker.game.currentLiveFeed = JSON.parse(fs.readFileSync(path.join(__dirname, './data/live-feed-no-move.json')));
         diff = JSON.parse(fs.readFileSync(path.join(__dirname, './data/diff-patch-no-move.json')));
     });
 
     describe('#hydrate', () => {
         it('should correctly patch the game feed object with all the different operations', () => {
-            diffPatch.hydrate(diff[0]);
-            const newFeed = globalCache.values.game.currentLiveFeed;
+            diffPatch.hydrate(tracker.game.currentLiveFeed, diff[0]);
+            const newFeed = tracker.game.currentLiveFeed;
             expect(newFeed.metaData.timeStamp).toEqual('20240612_041302'); // 'replace' op
             expect(newFeed.metaData.gameEvents[0]).toEqual('ball');
             expect(newFeed.metaData.logicalEvents[0]).toEqual('countChange'); // 'add' op
@@ -92,14 +95,14 @@ describe('diff-patch', () => {
                 }
             );
 
-            globalCache.values.game.currentLiveFeed = JSON.parse(fs.readFileSync(path.join(__dirname, './data/live-feed-with-move.json')));
+            tracker.game.currentLiveFeed = JSON.parse(fs.readFileSync(path.join(__dirname, './data/live-feed-with-move.json')));
             diff = JSON.parse(fs.readFileSync(path.join(__dirname, './data/diff-patch-with-move.json')));
 
-            const benchGuy = globalCache.values.game.currentLiveFeed.liveData.boxscore.teams.away.bench[0];
-            diffPatch.hydrate(diff[0]);
-            expect(globalCache.values.game.currentLiveFeed.liveData.boxscore.teams.away.batters[15]) // 'move' op. The player on the bench was moved into the batting order.
+            const benchGuy = tracker.game.currentLiveFeed.liveData.boxscore.teams.away.bench[0];
+            diffPatch.hydrate(tracker.game.currentLiveFeed, diff[0]);
+            expect(tracker.game.currentLiveFeed.liveData.boxscore.teams.away.batters[15]) // 'move' op. The player on the bench was moved into the batting order.
                 .toEqual(benchGuy);
-            expect(globalCache.values.game.currentLiveFeed.liveData.boxscore.teams.away.bench.includes(benchGuy)) // thus the player has been removed from the bench player array.
+            expect(tracker.game.currentLiveFeed.liveData.boxscore.teams.away.bench.includes(benchGuy)) // thus the player has been removed from the bench player array.
                 .toBeFalse();
         });
     });

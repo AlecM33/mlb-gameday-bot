@@ -1,7 +1,8 @@
 // @ts-check
 
 /** @returns {GameCache} */
-const gameDefaults = () => ({
+const gameDefaults = (teamId = null) => ({
+    teamId,
     currentLiveFeed: null,
     currentGamePk: null,
     isDoubleHeader: null,
@@ -20,17 +21,45 @@ const gameDefaults = () => ({
 
 /** @type {GlobalCacheValues} */
 const values = {
-    nearestGames: null,
-    currentGames: null,
     subscribedChannels: [],
+    guildTeams: {},
     emojis: null,
     playersByYear: {},
     playerCacheTimestamps: {},
-    game: gameDefaults()
+    activeTrackersByTeamId: {},
+    savantQueue: new Map(),
+    xParksRetryTimeoutsByTeamId: new Map(),
+    savantLoopRunning: false,
+    statusPollTimeout: null,
+    statusPollLoopStarted: false
 };
 
-function resetGameCache () {
-    Object.assign(values.game, gameDefaults());
+/**
+ * @param {number} teamId
+ * @returns {GameTracker}
+ */
+function ensureTracker (teamId) {
+    if (!values.activeTrackersByTeamId[teamId]) {
+        values.activeTrackersByTeamId[teamId] = {
+            teamId,
+            currentGames: null,
+            nearestGames: null,
+            game: gameDefaults(teamId)
+        };
+    }
+    return values.activeTrackersByTeamId[teamId];
 }
 
-module.exports = { values, resetGameCache };
+/**
+ * @param {number} teamId
+ */
+function resetGameCache (teamId) {
+    const tracker = ensureTracker(teamId);
+    if (tracker.websocket) {
+        tracker.websocket.close();
+        delete tracker.websocket;
+    }
+    tracker.game = gameDefaults(teamId);
+}
+
+module.exports = { values, ensureTracker, resetGameCache, gameDefaults };

@@ -110,6 +110,17 @@ describe('reconnecting-websocket', () => {
         expect(MockWebSocket.instances.length).toBe(1);
     });
 
+    it('should cancel a pending reconnect when close() is called after a server-side close', () => {
+        const ws = createReconnectingWebSocket(URL, BASE);
+        MockWebSocket.instances[0].simulateOpen();
+        MockWebSocket.instances[0].simulateClose();
+
+        ws.close();
+        jasmine.clock().tick(3000);
+
+        expect(MockWebSocket.instances.length).toBe(1);
+    });
+
     it('should terminate and retry on connection timeout', () => {
         createReconnectingWebSocket(URL, BASE);
         expect(MockWebSocket.instances.length).toBe(1);

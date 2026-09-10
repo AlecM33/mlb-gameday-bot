@@ -1,13 +1,47 @@
 // @ts-check
+/// <reference path="../types/custom.d.ts" />
 const pool = require('./db');
-
 module.exports = {
+    /**
+     * @returns {Promise<GuildTeam[]>}
+     */
+    getAllGuildTeams: () => {
+        return query({
+            text: 'SELECT guild_id, team_id FROM guild_teams;',
+            values: []
+        });
+    },
+
+    /**
+     * @param {string} guildId
+     * @returns {Promise<GuildTeam[]>}
+     */
+    getGuildTeam: (guildId) => {
+        return query({
+            text: 'SELECT guild_id, team_id FROM guild_teams WHERE guild_id = $1;',
+            values: [guildId]
+        });
+    },
+
+    /**
+     * @param {string} guildId
+     * @param {number} teamId
+     * @returns {Promise<GuildTeam[]>}
+     */
+    upsertGuildTeam: (guildId, teamId) => {
+        return query({
+            text: 'INSERT INTO guild_teams (guild_id, team_id) VALUES ($1, $2) ' +
+                'ON CONFLICT (guild_id) DO UPDATE SET team_id = EXCLUDED.team_id RETURNING guild_id, team_id;',
+            values: [guildId, teamId]
+        });
+    },
+
     /**
      * @returns {Promise<ChannelSubscription[]>}
      */
     getAllSubscribedChannels: () => {
         return query({
-            text: 'SELECT channel_id, scoring_plays_only, delay, advanced_stats FROM gameday_subscribe_channels;',
+            text: 'SELECT guild_id, channel_id, scoring_plays_only, delay, advanced_stats FROM gameday_subscribe_channels;',
             values: []
         });
     },

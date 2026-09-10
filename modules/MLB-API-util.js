@@ -30,7 +30,7 @@ module.exports = {
      * Returns games within a 48-hour window centred on now (or globals.DATE).
      * @returns {Promise<ScheduleGame[]>}
      */
-    currentGames: async () => {
+    currentGames: async (teamId = parseInt(process.env.TEAM_ID)) => {
         const twentyFourHoursFromNow = globals.DATE ? new Date(globals.DATE) : new Date();
         const twentyFourHoursInThePast = globals.DATE ? new Date(globals.DATE) : new Date();
         twentyFourHoursFromNow.setHours(twentyFourHoursFromNow.getHours() + 24);
@@ -38,7 +38,6 @@ module.exports = {
         // get games within a 48-hour window centered on now. The game(s) that have a start time closest to now will be treated as the "current" game(s).
         const startDate = twentyFourHoursInThePast.toISOString().split('T')[0];
         const endDate = twentyFourHoursFromNow.toISOString().split('T')[0];
-        const teamId = parseInt(process.env.TEAM_ID);
         const data = await fetchJson(`https://statsapi.mlb.com/api/v1/schedule?hydrate=team,lineups&sportId=1&startDate=${startDate}&endDate=${endDate}&teamId=${teamId}`);
         const games = [];
         data.dates?.forEach((date) => date.games?.forEach(game => games.push(game)));

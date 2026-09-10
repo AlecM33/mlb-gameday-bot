@@ -9,6 +9,31 @@ const examplePlays = require('./data/example-plays');
 const currentPlayProcessor = require('../modules/current-play-processor');
 
 describe('gameday', () => {
+    const mockBot = {
+        channels: {
+            fetch: jasmine.createSpy('fetch')
+        }
+    };
+    let originalTeamId;
+
+    beforeEach(() => {
+        originalTeamId = process.env.TEAM_ID;
+        delete process.env.TEAM_ID;
+        gameday.stopStatusPoll();
+        globalCache.values.guildTeams = {};
+        globalCache.values.subscribedChannels = [];
+        globalCache.values.activeTrackersByTeamId = {};
+        mockBot.channels.fetch.calls.reset();
+    });
+
+    afterEach(() => {
+        if (originalTeamId === undefined) {
+            delete process.env.TEAM_ID;
+        } else {
+            process.env.TEAM_ID = originalTeamId;
+        }
+    });
+
     describe('#statusPoll', () => {
         beforeEach(() => {
             spyOn(gamedayUtil, 'getConstrastingEmbedColors').and.stub();
@@ -18,26 +43,34 @@ describe('gameday', () => {
             });
         });
         it('should stop polling and subscribe if a game is live', async () => {
-            spyOn(mlbAPIUtil, 'currentGames').and.callFake(() => {
-                return new Promise(resolve => resolve(mockResponses.currentGames));
-            });
+            globalCache.values.guildTeams = {
+                guild1: { guild_id: 'guild1', team_id: 114 }
+            };
+            globalCache.values.subscribedChannels = [
+                { guild_id: 'guild1', channel_id: 'channel-1', scoring_plays_only: false, delay: 0, advanced_stats: true }
+            ];
+            spyOn(mlbAPIUtil, 'currentGames').and.callFake(() => Promise.resolve(mockResponses.currentGames));
             spyOn(gameday, 'subscribe').and.stub();
-            spyOn(globalCache, 'resetGameCache').and.stub();
-            await gameday.statusPoll();
-            expect(gameday.subscribe).toHaveBeenCalled();
+            spyOn(globalCache, 'resetGameCache').and.callThrough();
+            await gameday.statusPoll(mockBot);
+            expect(gameday.subscribe).toHaveBeenCalledWith(mockBot, 114, jasmine.objectContaining({ gamePk: 744834 }));
             expect(mlbAPIUtil.liveFeed).toHaveBeenCalled();
-            expect(globalCache.resetGameCache).toHaveBeenCalled();
+            expect(globalCache.resetGameCache).toHaveBeenCalledWith(114);
             expect(gamedayUtil.getConstrastingEmbedColors).toHaveBeenCalled();
         });
 
         it('should continue polling if no game is live', async () => {
-            spyOn(mlbAPIUtil, 'currentGames').and.callFake(() => {
-                return new Promise(resolve => resolve(mockResponses.currentGamesNoneInProgress));
-            });
+            globalCache.values.guildTeams = {
+                guild1: { guild_id: 'guild1', team_id: 114 }
+            };
+            globalCache.values.subscribedChannels = [
+                { guild_id: 'guild1', channel_id: 'channel-1', scoring_plays_only: false, delay: 0, advanced_stats: true }
+            ];
+            spyOn(mlbAPIUtil, 'currentGames').and.callFake(() => Promise.resolve(mockResponses.currentGamesNoneInProgress));
             spyOn(gameday, 'subscribe').and.stub();
             spyOn(globalCache, 'resetGameCache').and.stub();
             jasmine.clock().install();
-            await gameday.statusPoll();
+            await gameday.statusPoll(mockBot);
             jasmine.clock().tick(globals.SLOW_POLL_INTERVAL);
             expect(mlbAPIUtil.currentGames).toHaveBeenCalledTimes(2);
             expect(gameday.subscribe).not.toHaveBeenCalled();
@@ -46,11 +79,86 @@ describe('gameday', () => {
             expect(gamedayUtil.getConstrastingEmbedColors).not.toHaveBeenCalled();
             jasmine.clock().uninstall();
         });
+
+        it('should subscribe once per unique team across guilds', async () => {
+            globalCache.values.guildTeams = {
+                guild1: { guild_id: 'guild1', team_id: 114 },
+                guild2: { guild_id: 'guild2', team_id: 121 },
+                guild3: { guild_id: 'guild3', team_id: 114 }
+            };
+            globalCache.values.subscribedChannels = [
+                { guild_id: 'guild1', channel_id: 'channel-1', scoring_plays_only: false, delay: 0, advanced_stats: true },
+                { guild_id: 'guild2', channel_id: 'channel-2', scoring_plays_only: false, delay: 0, advanced_stats: true },
+                { guild_id: 'guild3', channel_id: 'channel-3', scoring_plays_only: false, delay: 0, advanced_stats: true }
+            ];
+            spyOn(mlbAPIUtil, 'currentGames').and.callFake((teamId) => {
+                if (teamId === 114) {
+                    return Promise.resolve(mockResponses.currentGames);
+                }
+                return Promise.resolve(mockResponses.currentGames.filter(game => game.gamePk === 745479));
+            });
+            spyOn(gameday, 'subscribe').and.stub();
+            spyOn(globalCache, 'resetGameCache').and.callThrough();
+
+            await gameday.statusPoll(mockBot);
+
+            expect(mlbAPIUtil.currentGames).toHaveBeenCalledTimes(2);
+            expect(gameday.subscribe).toHaveBeenCalledTimes(1);
+            expect(gameday.subscribe).toHaveBeenCalledWith(mockBot, 114, jasmine.objectContaining({ gamePk: 744834 }));
+        });
+
+        it('should not start a second polling loop when called again', async () => {
+            globalCache.values.guildTeams = {
+                guild1: { guild_id: 'guild1', team_id: 114 }
+            };
+            globalCache.values.subscribedChannels = [
+                { guild_id: 'guild1', channel_id: 'channel-1', scoring_plays_only: false, delay: 0, advanced_stats: true }
+            ];
+            spyOn(mlbAPIUtil, 'currentGames').and.resolveTo(mockResponses.currentGamesNoneInProgress);
+            jasmine.clock().install();
+
+            await gameday.statusPoll(mockBot);
+            await gameday.statusPoll(mockBot);
+
+            expect(mlbAPIUtil.currentGames).toHaveBeenCalledTimes(1);
+            jasmine.clock().uninstall();
+        });
     });
 
     describe('#runSavantPollingLoop', () => {
         beforeEach(() => {
             gameday.savantQueue.clear();
+        });
+
+        it('should keep separate queue entries for the same raw play id across different teams', async () => {
+            spyOn(mlbAPIUtil, 'savantGameFeed').and.resolveTo({ team_away: [], team_home: [] });
+            spyOn(gameday, 'processMatchingPlay').and.resolveTo();
+            gameday.savantQueue.set('114:abc', {
+                teamId: 114,
+                playId: 'abc',
+                gamePk: 1,
+                messages: [{ doneEditing: false }],
+                hitDistance: 350,
+                embed: { data: { description: 'xBA: Pending...' } },
+                activeTimers: new Set(),
+                attempts: 0
+            });
+            gameday.savantQueue.set('121:abc', {
+                teamId: 121,
+                playId: 'abc',
+                gamePk: 1,
+                messages: [{ doneEditing: false }],
+                hitDistance: 350,
+                embed: { data: { description: 'xBA: Pending...' } },
+                activeTimers: new Set(),
+                attempts: 0
+            });
+
+            await gameday.runSavantPollingLoop();
+
+            expect(mlbAPIUtil.savantGameFeed).toHaveBeenCalledTimes(1);
+            expect(gameday.savantQueue.has('114:abc')).toBeTrue();
+            expect(gameday.savantQueue.has('121:abc')).toBeTrue();
         });
 
         it('should call processMatchingPlay and stop the loop when a matching play is found and all messages are done', async () => {
@@ -64,7 +172,7 @@ describe('gameday', () => {
             ) => {
                 emb.data.description = 'xBA: .450';
             });
-            gameday.savantQueue.set('abc', { gamePk: 1, messages, hitDistance: 350, embed, activeTimers: new Set(), attempts: 0 });
+            gameday.savantQueue.set('114:abc', { teamId: 114, playId: 'abc', gamePk: 1, messages, hitDistance: 350, embed, activeTimers: new Set(), attempts: 0 });
             jasmine.clock().install();
             await gameday.runSavantPollingLoop();
             expect(mlbAPIUtil.savantGameFeed).toHaveBeenCalledTimes(1);
@@ -80,7 +188,7 @@ describe('gameday', () => {
             spyOn(gameday, 'processMatchingPlay').and.stub();
             const messages = [{ doneEditing: false }];
             const embed = { data: { description: 'xBA: Pending...' } };
-            gameday.savantQueue.set('xyz', { gamePk: 1, messages, hitDistance: 350, embed, activeTimers: new Set(), attempts: 0 });
+            gameday.savantQueue.set('114:xyz', { teamId: 114, playId: 'xyz', gamePk: 1, messages, hitDistance: 350, embed, activeTimers: new Set(), attempts: 0 });
             jasmine.clock().install();
             await gameday.runSavantPollingLoop();
             jasmine.clock().tick(globals.SAVANT_POLLING_INTERVAL);
@@ -98,7 +206,12 @@ describe('gameday', () => {
     });
 
     describe('#processMatchingPlay', () => {
+        const teamId = 114;
         beforeEach(() => {
+            globalCache.resetGameCache(teamId);
+            globalCache.ensureTracker(teamId).game.currentLiveFeed = {
+                gamePk: 77777
+            };
             spyOn(liveFeed, 'init').and.returnValue({
                 gamePk: () => { return 77777; }
             });
@@ -127,6 +240,7 @@ describe('gameday', () => {
             spyOn(messages[0].discordMessage, 'edit').and.callThrough();
             spyOn(messages[1].discordMessage, 'edit').and.callThrough();
             await gameday.processMatchingPlay(
+                teamId,
                 {
                     play_id: 'abc',
                     xba: '.320',
@@ -166,6 +280,7 @@ describe('gameday', () => {
             spyOn(messages[0].discordMessage, 'edit').and.callThrough();
             spyOn(messages[1].discordMessage, 'edit').and.callThrough();
             await gameday.processMatchingPlay(
+                teamId,
                 {
                     play_id: 'abc',
                     xba: '.320'
@@ -187,13 +302,17 @@ describe('gameday', () => {
         let mockFeed;
         let mockCurrentPlay;
         let mockAllPlays;
+        let tracker;
+        const teamId = 114;
 
         beforeEach(() => {
             mockBot = {};
-            globalCache.values.game.homeTeamEmoji = { name: 'angels_108', id: '1339072522619977770' };
-            globalCache.values.game.awayTeamEmoji = { name: 'brewers_158', id: '1339072560049950760' };
-            globalCache.values.game.reportedDescriptions = [];
-            globalCache.values.game.lastReportedCompleteAtBatIndex = null;
+            globalCache.resetGameCache(teamId);
+            tracker = globalCache.ensureTracker(teamId);
+            tracker.game.homeTeamEmoji = { name: 'angels_108', id: '1339072522619977770' };
+            tracker.game.awayTeamEmoji = { name: 'brewers_158', id: '1339072560049950760' };
+            tracker.game.reportedDescriptions = [];
+            tracker.game.lastReportedCompleteAtBatIndex = null;
             globalCache.values.subscribedChannels = [];
 
             mockCurrentPlay = {
@@ -248,16 +367,17 @@ describe('gameday', () => {
         it('should report the current play when atBatIndex is 0', async () => {
             mockCurrentPlay.atBatIndex = 0;
             mockCurrentPlay.about.atBatIndex = 0;
-            globalCache.values.game.currentLiveFeed = {};
+            tracker.game.currentLiveFeed = {};
 
-            await gameday.reportPlays(mockBot, 12345);
+            await gameday.reportPlays(mockBot, teamId, 12345);
 
             expect(gameday.processAndPushPlay).toHaveBeenCalledTimes(1);
             expect(currentPlayProcessor.process).toHaveBeenCalledWith(
                 mockCurrentPlay,
                 mockFeed,
-                globalCache.values.game.homeTeamEmoji,
-                globalCache.values.game.awayTeamEmoji
+                tracker.game,
+                tracker.game.homeTeamEmoji,
+                tracker.game.awayTeamEmoji
             );
         });
 
@@ -265,33 +385,33 @@ describe('gameday', () => {
             mockCurrentPlay.atBatIndex = 5;
             mockCurrentPlay.about.atBatIndex = 5;
             mockAllPlays[4].about.hasReview = true;
-            globalCache.values.game.currentLiveFeed = {};
-            globalCache.values.game.lastReportedCompleteAtBatIndex = 3;
+            tracker.game.currentLiveFeed = {};
+            tracker.game.lastReportedCompleteAtBatIndex = 3;
 
-            await gameday.reportPlays(mockBot, 12345);
+            await gameday.reportPlays(mockBot, teamId, 12345);
 
             expect(gameday.processAndPushPlay).toHaveBeenCalledTimes(2);
             expect(currentPlayProcessor.process).toHaveBeenCalledWith(
                 mockAllPlays[4],
                 mockFeed,
-                globalCache.values.game.homeTeamEmoji,
-                globalCache.values.game.awayTeamEmoji
+                tracker.game,
+                tracker.game.homeTeamEmoji,
+                tracker.game.awayTeamEmoji
             );
-            // Should be called with atBatIndex - 1 for the reviewed play
-            expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, jasmine.any(Object), 12345, 4);
+            expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, teamId, jasmine.any(Object), 12345, 4);
         });
 
         it('should detect and report a missed at-bat', async () => {
             mockCurrentPlay.atBatIndex = 5;
             mockCurrentPlay.about.atBatIndex = 5;
-            globalCache.values.game.currentLiveFeed = {};
-            globalCache.values.game.lastReportedCompleteAtBatIndex = 3;
+            tracker.game.currentLiveFeed = {};
+            tracker.game.lastReportedCompleteAtBatIndex = 3;
 
-            await gameday.reportPlays(mockBot, 12345);
+            await gameday.reportPlays(mockBot, teamId, 12345);
 
             expect(gameday.processAndPushPlay).toHaveBeenCalledTimes(2);
-            expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, jasmine.any(Object), 12345, 4);
-            expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, jasmine.any(Object), 12345, 5);
+            expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, teamId, jasmine.any(Object), 12345, 4);
+            expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, teamId, jasmine.any(Object), 12345, 5);
         });
 
         it('should report missed events within the current at-bat', async () => {
@@ -305,17 +425,18 @@ describe('gameday', () => {
             mockCurrentPlay.atBatIndex = 5;
             mockCurrentPlay.about.atBatIndex = 5;
             mockCurrentPlay.playEvents = [missedEvent];
-            globalCache.values.game.currentLiveFeed = {};
-            globalCache.values.game.lastReportedCompleteAtBatIndex = 4;
+            tracker.game.currentLiveFeed = {};
+            tracker.game.lastReportedCompleteAtBatIndex = 4;
 
-            await gameday.reportPlays(mockBot, 12345);
+            await gameday.reportPlays(mockBot, teamId, 12345);
 
             expect(gameday.processAndPushPlay).toHaveBeenCalledTimes(2);
             expect(currentPlayProcessor.process).toHaveBeenCalledWith(
                 missedEvent,
                 mockFeed,
-                globalCache.values.game.homeTeamEmoji,
-                globalCache.values.game.awayTeamEmoji
+                tracker.game,
+                tracker.game.homeTeamEmoji,
+                tracker.game.awayTeamEmoji
             );
         });
 
@@ -330,10 +451,10 @@ describe('gameday', () => {
             mockCurrentPlay.atBatIndex = 5;
             mockCurrentPlay.about.atBatIndex = 5;
             mockAllPlays[4].playEvents = [missedEventInPreviousAtBat];
-            globalCache.values.game.currentLiveFeed = {};
-            globalCache.values.game.lastReportedCompleteAtBatIndex = 3;
+            tracker.game.currentLiveFeed = {};
+            tracker.game.lastReportedCompleteAtBatIndex = 3;
 
-            await gameday.reportPlays(mockBot, 12345);
+            await gameday.reportPlays(mockBot, teamId, 12345);
 
             expect(gameday.processAndPushPlay).toHaveBeenCalledTimes(3);
         });
@@ -349,10 +470,10 @@ describe('gameday', () => {
             mockCurrentPlay.atBatIndex = 5;
             mockCurrentPlay.about.atBatIndex = 5;
             mockCurrentPlay.playEvents = [nonWhitelistedEvent];
-            globalCache.values.game.currentLiveFeed = {};
-            globalCache.values.game.lastReportedCompleteAtBatIndex = 4;
+            tracker.game.currentLiveFeed = {};
+            tracker.game.lastReportedCompleteAtBatIndex = 4;
 
-            await gameday.reportPlays(mockBot, 12345);
+            await gameday.reportPlays(mockBot, teamId, 12345);
 
             expect(gameday.processAndPushPlay).toHaveBeenCalledTimes(1);
         });
@@ -368,13 +489,13 @@ describe('gameday', () => {
             mockCurrentPlay.atBatIndex = 5;
             mockCurrentPlay.about.atBatIndex = 5;
             mockCurrentPlay.playEvents = [alreadyReportedEvent];
-            globalCache.values.game.currentLiveFeed = {};
-            globalCache.values.game.lastReportedCompleteAtBatIndex = 4;
-            globalCache.values.game.reportedDescriptions = [
+            tracker.game.currentLiveFeed = {};
+            tracker.game.lastReportedCompleteAtBatIndex = 4;
+            tracker.game.reportedDescriptions = [
                 { description: 'Runner steals 2nd', atBatIndex: 5 }
             ];
 
-            await gameday.reportPlays(mockBot, 12345);
+            await gameday.reportPlays(mockBot, teamId, 12345);
 
             expect(gameday.processAndPushPlay).toHaveBeenCalledTimes(1);
         });
@@ -396,10 +517,10 @@ describe('gameday', () => {
             mockCurrentPlay.atBatIndex = 5;
             mockCurrentPlay.about.atBatIndex = 5;
             mockCurrentPlay.playEvents = [missedEvent1, missedEvent2];
-            globalCache.values.game.currentLiveFeed = {};
-            globalCache.values.game.lastReportedCompleteAtBatIndex = 4;
+            tracker.game.currentLiveFeed = {};
+            tracker.game.lastReportedCompleteAtBatIndex = 4;
 
-            await gameday.reportPlays(mockBot, 12345);
+            await gameday.reportPlays(mockBot, teamId, 12345);
 
             expect(gameday.processAndPushPlay).toHaveBeenCalledTimes(3);
         });
@@ -408,15 +529,13 @@ describe('gameday', () => {
             mockCurrentPlay.atBatIndex = 5;
             mockCurrentPlay.about.atBatIndex = 5;
             mockAllPlays[4].about.hasReview = true;
-            globalCache.values.game.currentLiveFeed = {};
-            globalCache.values.game.lastReportedCompleteAtBatIndex = 2; // Would normally trigger missed at-bat
+            tracker.game.currentLiveFeed = {};
+            tracker.game.lastReportedCompleteAtBatIndex = 2;
 
-            await gameday.reportPlays(mockBot, 12345);
+            await gameday.reportPlays(mockBot, teamId, 12345);
 
-            // Should report the reviewed play, not treat it as missed
             expect(gameday.processAndPushPlay).toHaveBeenCalledTimes(2);
-            // First call should be for the reviewed play (atBatIndex 4)
-            expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, jasmine.any(Object), 12345, 4);
+            expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, teamId, jasmine.any(Object), 12345, 4);
         });
     });
 
@@ -424,10 +543,14 @@ describe('gameday', () => {
         let mockBot;
         let mockLiveGame;
         let mockWebSocket;
+        let tracker;
+        const teamId = 114;
 
         beforeEach(() => {
             mockBot = {};
             mockLiveGame = { gamePk: 12345 };
+            globalCache.resetGameCache(teamId);
+            tracker = globalCache.ensureTracker(teamId);
             spyOn(gamedayUtil, 'getConstrastingEmbedColors').and.stub();
             spyOn(gamedayUtil, 'getTeamEmojis').and.stub();
             mockWebSocket = {
@@ -435,16 +558,16 @@ describe('gameday', () => {
                 close: jasmine.createSpy('close')
             };
 
-            globalCache.values.game.homeTeamEmoji = { name: 'angels_108', id: '1339072522619977770' };
-            globalCache.values.game.awayTeamEmoji = { name: 'brewers_158', id: '1339072560049950760' };
-            globalCache.values.game.reportedDescriptions = [];
-            globalCache.values.game.lastReportedCompleteAtBatIndex = null;
-            globalCache.values.game.finished = false;
-            globalCache.values.game.startReported = false;
-            globalCache.values.game.lastSocketMessageTimestamp = null;
-            globalCache.values.game.lastSocketMessageLength = null;
+            tracker.game.homeTeamEmoji = { name: 'angels_108', id: '1339072522619977770' };
+            tracker.game.awayTeamEmoji = { name: 'brewers_158', id: '1339072560049950760' };
+            tracker.game.reportedDescriptions = [];
+            tracker.game.lastReportedCompleteAtBatIndex = null;
+            tracker.game.finished = false;
+            tracker.game.startReported = false;
+            tracker.game.lastSocketMessageTimestamp = null;
+            tracker.game.lastSocketMessageLength = null;
             globalCache.values.subscribedChannels = [];
-            globalCache.values.game.currentLiveFeed = {
+            tracker.game.currentLiveFeed = {
                 metaData: {
                     timeStamp: '2024-01-01T11:00:00Z'
                 },
@@ -469,9 +592,9 @@ describe('gameday', () => {
                 metaData: { timeStamp: '2024-01-01T12:00:00Z' }
             }));
             spyOn(mlbAPIUtil, 'liveFeed').and.callFake(() => Promise.resolve({
-                ...globalCache.values.game.currentLiveFeed,
+                ...tracker.game.currentLiveFeed,
                 gameData: {
-                    ...globalCache.values.game.currentLiveFeed.gameData,
+                    ...tracker.game.currentLiveFeed.gameData,
                     status: {
                         abstractGameState: 'Final'
                     }
@@ -489,11 +612,10 @@ describe('gameday', () => {
             });
             spyOn(gameday, 'processAndPushPlay').and.stub();
             spyOn(gameday, 'reportPlays').and.resolveTo();
-            spyOn(gameday, 'statusPoll').and.resolveTo();
         });
 
         it('should create a WebSocket connection', () => {
-            gameday.subscribe(mockBot, mockLiveGame);
+            gameday.subscribe(mockBot, teamId, mockLiveGame);
 
             expect(mlbAPIUtil.websocketSubscribe).toHaveBeenCalledWith(12345);
             expect(mockWebSocket.addEventListener).toHaveBeenCalledWith('message', jasmine.any(Function));
@@ -502,7 +624,7 @@ describe('gameday', () => {
         });
 
         it('should handle game_finished event and set game.finished to true', async () => {
-            gameday.subscribe(mockBot, mockLiveGame);
+            gameday.subscribe(mockBot, teamId, mockLiveGame);
 
             const messageHandler = mockWebSocket.addEventListener.calls.all()
                 .find(call => call.args[0] === 'message').args[1];
@@ -517,11 +639,10 @@ describe('gameday', () => {
 
             await messageHandler(mockEvent);
 
-            expect(globalCache.values.game.finished).toBe(true);
-            expect(globalCache.values.game.startReported).toBe(false);
+            expect(tracker.game.finished).toBe(true);
+            expect(tracker.game.startReported).toBe(false);
             expect(mockWebSocket.close).toHaveBeenCalled();
-            expect(gameday.processAndPushPlay).toHaveBeenCalled();
-            expect(gameday.statusPoll).toHaveBeenCalledWith(mockBot);
+            expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, teamId, jasmine.any(Object), 12345, null, false);
         });
 
         it('should wait for the live feed to reach Final before building the final message', async () => {
@@ -595,7 +716,7 @@ describe('gameday', () => {
                 }
             };
 
-            globalCache.values.game.currentLiveFeed = staleLiveFeed;
+            tracker.game.currentLiveFeed = staleLiveFeed;
             mlbAPIUtil.liveFeed.and.returnValues(
                 Promise.resolve(updatedLiveFeed),
                 Promise.resolve(finalLiveFeed)
@@ -615,7 +736,7 @@ describe('gameday', () => {
                 return /** @type {any} */ (0);
             });
 
-            gameday.subscribe(mockBot, mockLiveGame);
+            gameday.subscribe(mockBot, teamId, mockLiveGame);
 
             const messageHandler = mockWebSocket.addEventListener.calls.all()
                 .find(call => call.args[0] === 'message').args[1];
@@ -630,13 +751,13 @@ describe('gameday', () => {
 
             expect(mlbAPIUtil.liveFeed).toHaveBeenCalledTimes(2);
             expect(gameday.reportPlays).toHaveBeenCalledTimes(2);
-            expect(gameday.reportPlays).toHaveBeenCalledWith(mockBot, 12345);
+            expect(gameday.reportPlays).toHaveBeenCalledWith(mockBot, teamId, 12345);
             expect(global.setTimeout).toHaveBeenCalledWith(jasmine.any(Function), globals.FINAL_STATUS_POLL_INTERVAL_MS);
             expect(gameday.reportPlays.calls.mostRecent().invocationOrder)
                 .toBeLessThan(gameday.processAndPushPlay.calls.mostRecent().invocationOrder);
-            expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, jasmine.objectContaining({
+            expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, teamId, jasmine.objectContaining({
                 reply: jasmine.stringContaining('DET 3 - 4 CLE')
-            }), 12345, globalCache.values.game.lastReportedCompleteAtBatIndex, false);
+            }), 12345, tracker.game.lastReportedCompleteAtBatIndex, false);
         });
 
         it('should fall back to the cached live feed if the game feed never reaches Final', async () => {
@@ -662,7 +783,7 @@ describe('gameday', () => {
                 }
             };
 
-            globalCache.values.game.currentLiveFeed = staleLiveFeed;
+            tracker.game.currentLiveFeed = staleLiveFeed;
             mlbAPIUtil.liveFeed.and.returnValue(Promise.resolve(staleLiveFeed));
             liveFeed.init.and.callFake((feedData) => ({
                 awayAbbreviation: () => feedData.gameData.teams.away.abbreviation,
@@ -679,7 +800,7 @@ describe('gameday', () => {
                 return /** @type {any} */ (0);
             });
 
-            gameday.subscribe(mockBot, mockLiveGame);
+            gameday.subscribe(mockBot, teamId, mockLiveGame);
 
             const messageHandler = mockWebSocket.addEventListener.calls.all()
                 .find(call => call.args[0] === 'message').args[1];
@@ -696,14 +817,13 @@ describe('gameday', () => {
             expect(global.setTimeout.calls.count()).toBe(globals.FINAL_STATUS_POLL_ATTEMPTS - 1);
             expect(global.setTimeout).toHaveBeenCalledWith(jasmine.any(Function), globals.FINAL_STATUS_POLL_INTERVAL_MS);
             expect(gameday.reportPlays).not.toHaveBeenCalled();
-            expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, jasmine.objectContaining({
+            expect(gameday.processAndPushPlay).toHaveBeenCalledWith(mockBot, teamId, jasmine.objectContaining({
                 reply: jasmine.stringContaining('DET 3 - 3 CLE')
-            }), 12345, globalCache.values.game.lastReportedCompleteAtBatIndex, false);
-            expect(gameday.statusPoll).toHaveBeenCalledWith(mockBot);
+            }), 12345, tracker.game.lastReportedCompleteAtBatIndex, false);
         });
 
         it('should ignore duplicate messages with same timestamp and length', async () => {
-            gameday.subscribe(mockBot, mockLiveGame);
+            gameday.subscribe(mockBot, teamId, mockLiveGame);
 
             const messageHandler = mockWebSocket.addEventListener.calls.all()
                 .find(call => call.args[0] === 'message').args[1];
@@ -727,7 +847,7 @@ describe('gameday', () => {
         });
 
         it('should handle full_refresh events', async () => {
-            gameday.subscribe(mockBot, mockLiveGame);
+            gameday.subscribe(mockBot, teamId, mockLiveGame);
 
             const messageHandler = mockWebSocket.addEventListener.calls.all()
                 .find(call => call.args[0] === 'message').args[1];
@@ -745,13 +865,13 @@ describe('gameday', () => {
             await messageHandler(mockEvent);
 
             expect(mlbAPIUtil.wsLiveFeed).toHaveBeenCalledWith(12345, 'update-123');
-            expect(globalCache.values.game.currentLiveFeed).toEqual({
+            expect(tracker.game.currentLiveFeed).toEqual({
                 metaData: { timeStamp: '2024-01-01T12:00:00Z' }
             });
         });
 
         it('should handle normal update events', async () => {
-            gameday.subscribe(mockBot, mockLiveGame);
+            gameday.subscribe(mockBot, teamId, mockLiveGame);
 
             const messageHandler = mockWebSocket.addEventListener.calls.all()
                 .find(call => call.args[0] === 'message').args[1];
@@ -769,14 +889,14 @@ describe('gameday', () => {
             await messageHandler(mockEvent);
 
             expect(mlbAPIUtil.websocketQueryUpdateId).toHaveBeenCalled();
-            expect(globalCache.values.game.currentLiveFeed).toEqual({
+            expect(tracker.game.currentLiveFeed).toEqual({
                 metaData: { timeStamp: '2024-01-01T12:00:00Z' }
             });
         });
 
         it('should not process events after game is finished', async () => {
-            globalCache.values.game.finished = true;
-            gameday.subscribe(mockBot, mockLiveGame);
+            tracker.game.finished = true;
+            gameday.subscribe(mockBot, teamId, mockLiveGame);
 
             const messageHandler = mockWebSocket.addEventListener.calls.all()
                 .find(call => call.args[0] === 'message').args[1];
@@ -796,6 +916,72 @@ describe('gameday', () => {
             expect(mlbAPIUtil.websocketQueryUpdateId).not.toHaveBeenCalled();
             expect(mlbAPIUtil.wsLiveFeed).not.toHaveBeenCalled();
         });
+
+        it('should stop orphaned team sockets from processing later messages after reset', async () => {
+            globalCache.values.guildTeams = {
+                guild1: { guild_id: 'guild1', team_id: 121 }
+            };
+            globalCache.values.subscribedChannels = [
+                { guild_id: 'guild1', channel_id: 'channel-999', scoring_plays_only: false, delay: 0, advanced_stats: true }
+            ];
+            spyOn(currentPlayProcessor, 'process').and.returnValue({
+                reply: 'Should not send',
+                description: 'Should not send',
+                isScoringPlay: false,
+                isComplete: false,
+                isOut: false,
+                outs: 0,
+                homeScore: 0,
+                awayScore: 0,
+                isInPlay: false,
+                metricsAvailable: false,
+                isStartEvent: false
+            });
+
+            gameday.subscribe(mockBot, teamId, mockLiveGame);
+            const messageHandler = mockWebSocket.addEventListener.calls.all()
+                .find(call => call.args[0] === 'message').args[1];
+
+            globalCache.resetGameCache(teamId);
+
+            await messageHandler({
+                data: JSON.stringify({
+                    gameEvents: [],
+                    updateId: 'update-after-reset',
+                    timeStamp: '2024-01-01T12:03:00Z',
+                    gamePk: 12345,
+                    changeEvent: { type: 'normal' }
+                })
+            });
+
+            expect(mlbAPIUtil.websocketQueryUpdateId).not.toHaveBeenCalledWith(
+                12345,
+                'update-after-reset',
+                jasmine.anything()
+            );
+            expect(gameday.processAndPushPlay).not.toHaveBeenCalled();
+        });
+
+        it('should ignore stale full_refresh messages after tracker reset', async () => {
+            gameday.subscribe(mockBot, teamId, mockLiveGame);
+            const messageHandler = mockWebSocket.addEventListener.calls.all()
+                .find(call => call.args[0] === 'message').args[1];
+
+            globalCache.resetGameCache(teamId);
+
+            await messageHandler({
+                data: JSON.stringify({
+                    gameEvents: [],
+                    updateId: 'stale-full-refresh',
+                    timeStamp: '2024-01-01T12:03:00Z',
+                    gamePk: 12345,
+                    changeEvent: { type: 'full_refresh' }
+                })
+            });
+
+            expect(mlbAPIUtil.wsLiveFeed).not.toHaveBeenCalledWith(12345, 'stale-full-refresh');
+            expect(gameday.processAndPushPlay).not.toHaveBeenCalled();
+        });
     });
 
     describe('#processAndPushPlay', () => {
@@ -803,8 +989,13 @@ describe('gameday', () => {
         let mockPlay;
         let mockChannel;
         let mockMessage;
+        let tracker;
 
         beforeEach(() => {
+            globalCache.values.guildTeams = {
+                guild1: { guild_id: 'guild1', team_id: 114 },
+                guild2: { guild_id: 'guild2', team_id: 121 }
+            };
             mockMessage = {
                 id: 'message-123',
                 edit: jasmine.createSpy('edit').and.returnValue(Promise.resolve({ id: 'message-123' })),
@@ -836,15 +1027,17 @@ describe('gameday', () => {
                 isStartEvent: false
             };
 
-            globalCache.values.game.homeTeamEmoji = { name: 'angels_108', id: '1339072522619977770' };
-            globalCache.values.game.awayTeamEmoji = { name: 'brewers_158', id: '1339072560049950760' };
-            globalCache.values.game.reportedDescriptions = [];
-            globalCache.values.game.lastReportedCompleteAtBatIndex = null;
-            globalCache.values.game.homeTeamColor = '#BA0021';
-            globalCache.values.game.awayTeamColor = '#FFC52F';
-            globalCache.values.game.currentLiveFeed = require('./data/example-live-feeds/live-feed-2024');
+            globalCache.resetGameCache(114);
+            tracker = globalCache.ensureTracker(114);
+            tracker.game.homeTeamEmoji = { name: 'angels_108', id: '1339072522619977770' };
+            tracker.game.awayTeamEmoji = { name: 'brewers_158', id: '1339072560049950760' };
+            tracker.game.reportedDescriptions = [];
+            tracker.game.lastReportedCompleteAtBatIndex = null;
+            tracker.game.homeTeamColor = '#BA0021';
+            tracker.game.awayTeamColor = '#FFC52F';
+            tracker.game.currentLiveFeed = require('./data/example-live-feeds/live-feed-2024');
             globalCache.values.subscribedChannels = [
-                { channel_id: 'channel-123', scoring_plays_only: false, delay: 0 }
+                { guild_id: 'guild1', channel_id: 'channel-123', scoring_plays_only: false, delay: 0, advanced_stats: true }
             ];
 
             spyOn(liveFeed, 'init').and.returnValue({
@@ -860,23 +1053,23 @@ describe('gameday', () => {
         });
 
         it('should send a message to subscribed channels', async () => {
-            await gameday.processAndPushPlay(mockBot, mockPlay, 12345, 5);
+            await gameday.processAndPushPlay(mockBot, 114, mockPlay, 12345, 5);
 
             expect(mockBot.channels.fetch).toHaveBeenCalledWith('channel-123');
             expect(gameday.sendMessage).toHaveBeenCalledWith(mockChannel, jasmine.any(Object), jasmine.any(Object));
-            expect(globalCache.values.game.reportedDescriptions).toContain({
+            expect(tracker.game.reportedDescriptions).toContain({
                 description: 'Test play description',
                 atBatIndex: 5
             });
         });
 
         it('should not send duplicate plays', async () => {
-            globalCache.values.game.reportedDescriptions.push({
+            tracker.game.reportedDescriptions.push({
                 description: 'Test play description',
                 atBatIndex: 5
             });
 
-            await gameday.processAndPushPlay(mockBot, mockPlay, 12345, 5);
+            await gameday.processAndPushPlay(mockBot, 114, mockPlay, 12345, 5);
 
             expect(gameday.sendMessage).not.toHaveBeenCalled();
         });
@@ -884,59 +1077,59 @@ describe('gameday', () => {
         it('should update lastReportedCompleteAtBatIndex for complete plays', async () => {
             mockPlay.isComplete = true;
 
-            await gameday.processAndPushPlay(mockBot, mockPlay, 12345, 5);
+            await gameday.processAndPushPlay(mockBot, 114, mockPlay, 12345, 5);
 
-            expect(globalCache.values.game.lastReportedCompleteAtBatIndex).toBe(5);
+            expect(tracker.game.lastReportedCompleteAtBatIndex).toBe(5);
         });
 
         it('should not update lastReportedCompleteAtBatIndex for incomplete plays', async () => {
             mockPlay.isComplete = false;
 
-            await gameday.processAndPushPlay(mockBot, mockPlay, 12345, 5);
+            await gameday.processAndPushPlay(mockBot, 114, mockPlay, 12345, 5);
 
-            expect(globalCache.values.game.lastReportedCompleteAtBatIndex).toBe(null);
+            expect(tracker.game.lastReportedCompleteAtBatIndex).toBe(null);
         });
 
         it('should skip channels with scoring_plays_only preference for non-scoring plays', async () => {
             globalCache.values.subscribedChannels = [
-                { channel_id: 'channel-123', scoring_plays_only: true, delay: 0 }
+                { guild_id: 'guild1', channel_id: 'channel-123', scoring_plays_only: true, delay: 0, advanced_stats: true }
             ];
             mockPlay.isScoringPlay = false;
 
-            await gameday.processAndPushPlay(mockBot, mockPlay, 12345, 5);
+            await gameday.processAndPushPlay(mockBot, 114, mockPlay, 12345, 5);
 
             expect(gameday.sendMessage).not.toHaveBeenCalled();
         });
 
         it('should send to channels with scoring_plays_only preference for scoring plays', async () => {
             globalCache.values.subscribedChannels = [
-                { channel_id: 'channel-123', scoring_plays_only: true, delay: 0 }
+                { guild_id: 'guild1', channel_id: 'channel-123', scoring_plays_only: true, delay: 0, advanced_stats: true }
             ];
             mockPlay.isScoringPlay = true;
 
-            await gameday.processAndPushPlay(mockBot, mockPlay, 12345, 5);
+            await gameday.processAndPushPlay(mockBot, 114, mockPlay, 12345, 5);
 
             expect(gameday.sendMessage).toHaveBeenCalled();
         });
 
         it('should handle delayed messages', async () => {
             globalCache.values.subscribedChannels = [
-                { channel_id: 'channel-123', scoring_plays_only: false, delay: 5 }
+                { guild_id: 'guild1', channel_id: 'channel-123', scoring_plays_only: false, delay: 5, advanced_stats: true }
             ];
             spyOn(gameday, 'sendDelayedMessage').and.stub();
 
-            await gameday.processAndPushPlay(mockBot, mockPlay, 12345, 5);
+            await gameday.processAndPushPlay(mockBot, 114, mockPlay, 12345, 5);
 
             expect(gameday.sendMessage).not.toHaveBeenCalled();
         });
 
         it('should send start events immediately regardless of delay', async () => {
             globalCache.values.subscribedChannels = [
-                { channel_id: 'channel-123', scoring_plays_only: false, delay: 10 }
+                { guild_id: 'guild1', channel_id: 'channel-123', scoring_plays_only: false, delay: 10, advanced_stats: true }
             ];
             mockPlay.isStartEvent = true;
 
-            await gameday.processAndPushPlay(mockBot, mockPlay, 12345, 5);
+            await gameday.processAndPushPlay(mockBot, 114, mockPlay, 12345, 5);
 
             expect(gameday.sendMessage).toHaveBeenCalled();
         });
@@ -944,7 +1137,7 @@ describe('gameday', () => {
         it('should not send message if play has no reply', async () => {
             mockPlay.reply = '';
 
-            await gameday.processAndPushPlay(mockBot, mockPlay, 12345, 5);
+            await gameday.processAndPushPlay(mockBot, 114, mockPlay, 12345, 5);
 
             expect(gameday.sendMessage).not.toHaveBeenCalled();
         });
@@ -952,16 +1145,26 @@ describe('gameday', () => {
         it('should handle channel fetch errors gracefully', async () => {
             mockBot.channels.fetch.and.returnValue(Promise.reject(new Error('Channel not found')));
 
-            await gameday.processAndPushPlay(mockBot, mockPlay, 12345, 5);
+            await gameday.processAndPushPlay(mockBot, 114, mockPlay, 12345, 5);
 
-            expect(globalCache.values.game.reportedDescriptions).toContain({
+            expect(tracker.game.reportedDescriptions).toContain({
+                description: 'Test play description',
+                atBatIndex: 5
+            });
+        });
+
+        it('should skip delivery when the Discord client is unavailable', async () => {
+            await gameday.processAndPushPlay(undefined, 114, mockPlay, 12345, 5);
+
+            expect(gameday.sendMessage).not.toHaveBeenCalled();
+            expect(tracker.game.reportedDescriptions).toContain({
                 description: 'Test play description',
                 atBatIndex: 5
             });
         });
 
         it('should construct embed without title when includeTitle is false', async () => {
-            await gameday.processAndPushPlay(mockBot, mockPlay, 12345, 5, false);
+            await gameday.processAndPushPlay(mockBot, 114, mockPlay, 12345, 5, false);
 
             expect(gameday.sendMessage).toHaveBeenCalled();
             const embedArg = gameday.sendMessage.calls.mostRecent().args[1];
@@ -970,54 +1173,54 @@ describe('gameday', () => {
 
         it('should handle multiple subscribed channels', async () => {
             globalCache.values.subscribedChannels = [
-                { channel_id: 'channel-123', scoring_plays_only: false, delay: 0 },
-                { channel_id: 'channel-456', scoring_plays_only: false, delay: 0 }
+                { guild_id: 'guild1', channel_id: 'channel-123', scoring_plays_only: false, delay: 0, advanced_stats: true },
+                { guild_id: 'guild1', channel_id: 'channel-456', scoring_plays_only: false, delay: 0, advanced_stats: true }
             ];
 
-            await gameday.processAndPushPlay(mockBot, mockPlay, 12345, 5);
+            await gameday.processAndPushPlay(mockBot, 114, mockPlay, 12345, 5);
 
             expect(mockBot.channels.fetch).toHaveBeenCalledTimes(2);
             expect(gameday.sendMessage).toHaveBeenCalledTimes(2);
         });
 
         it('should allow duplicate descriptions from adjacent at-bats', async () => {
-            globalCache.values.game.reportedDescriptions.push({
+            tracker.game.reportedDescriptions.push({
                 description: 'Test play description',
                 atBatIndex: 3
             });
 
-            await gameday.processAndPushPlay(mockBot, mockPlay, 12345, 5);
+            await gameday.processAndPushPlay(mockBot, 114, mockPlay, 12345, 5);
 
             expect(gameday.sendMessage).toHaveBeenCalled();
         });
 
         it('should not send a rephrased review description that shares the same outcome as an already-reported one', async () => {
             const firstVersion = 'Yankees challenged (pitch result), call on the field was overturned: Steven Kwan called out on strikes';
-            globalCache.values.game.reportedDescriptions.push({ description: firstVersion, atBatIndex: 5 });
+            tracker.game.reportedDescriptions.push({ description: firstVersion, atBatIndex: 5 });
 
             mockPlay.description = 'Austin Wells challenged (pitch result), call on the field was overturned: Steven Kwan called out on strikes';
             mockPlay.reply = 'Austin Wells challenged (pitch result), call on the field was overturned: Steven Kwan called out on strikes';
 
-            await gameday.processAndPushPlay(mockBot, mockPlay, 12345, 5);
+            await gameday.processAndPushPlay(mockBot, 114, mockPlay, 12345, 5);
 
             expect(gameday.sendMessage).not.toHaveBeenCalled();
         });
 
         it('should send a review description with a truly different outcome', async () => {
             const previousDescription = 'Yankees challenged (pitch result), call on the field was overturned: Steven Kwan called out on strikes';
-            globalCache.values.game.reportedDescriptions.push({ description: previousDescription, atBatIndex: 5 });
+            tracker.game.reportedDescriptions.push({ description: previousDescription, atBatIndex: 5 });
 
             mockPlay.description = 'Yankees challenged (pitch result), call on the field was upheld: Steven Kwan called out on strikes';
             mockPlay.reply = mockPlay.description;
 
-            await gameday.processAndPushPlay(mockBot, mockPlay, 12345, 5);
+            await gameday.processAndPushPlay(mockBot, 114, mockPlay, 12345, 5);
 
             expect(gameday.sendMessage).toHaveBeenCalled();
         });
 
         it('should also deduplicate rephrased review descriptions in reportAnyMissedEvents', async () => {
             const firstVersion = 'Yankees challenged (pitch result), call on the field was overturned: Steven Kwan called out on strikes';
-            globalCache.values.game.reportedDescriptions.push({ description: firstVersion, atBatIndex: 5 });
+            tracker.game.reportedDescriptions.push({ description: firstVersion, atBatIndex: 5 });
 
             const atBat = {
                 playEvents: [{
@@ -1028,15 +1231,53 @@ describe('gameday', () => {
                 }]
             };
 
-            await gameday.reportAnyMissedEvents(atBat, mockBot, 12345, 5);
+            await gameday.reportAnyMissedEvents(atBat, mockBot, 114, 12345, 5);
 
             expect(gameday.sendMessage).not.toHaveBeenCalled();
+        });
+
+        it('should only send to channels whose guild follows the tracked team', async () => {
+            globalCache.values.subscribedChannels = [
+                { guild_id: 'guild1', channel_id: 'channel-123', scoring_plays_only: false, delay: 0, advanced_stats: true },
+                { guild_id: 'guild2', channel_id: 'channel-456', scoring_plays_only: false, delay: 0, advanced_stats: true }
+            ];
+
+            await gameday.processAndPushPlay(mockBot, 114, mockPlay, 12345, 5);
+
+            expect(mockBot.channels.fetch).toHaveBeenCalledTimes(1);
+            expect(mockBot.channels.fetch).toHaveBeenCalledWith('channel-123');
+        });
+
+        it('should re-check guild team before sending a delayed message', async () => {
+            const originalTeamId = process.env.TEAM_ID;
+            process.env.TEAM_ID = '114';
+            const channelSubscription = {
+                guild_id: 'guild1',
+                channel_id: 'channel-123',
+                scoring_plays_only: false,
+                delay: 5,
+                advanced_stats: true
+            };
+            const returnedChannel = {
+                send: jasmine.createSpy('send').and.resolveTo({ id: 'message-123' })
+            };
+            const message = { doneEditing: false };
+            jasmine.clock().install();
+
+            gameday.sendDelayedMessage(mockPlay, 12345, channelSubscription, returnedChannel, { data: { description: 'desc' } }, message, 114);
+            globalCache.values.guildTeams.guild1.team_id = 121;
+            jasmine.clock().tick(channelSubscription.delay * 1000);
+
+            expect(returnedChannel.send).not.toHaveBeenCalled();
+            jasmine.clock().uninstall();
+            process.env.TEAM_ID = originalTeamId;
         });
     });
 });
 
 describe('gamedayUtil', () => {
     describe('#constructPlayEmbed', () => {
+        let tracker;
         beforeAll(() => {
             globalCache.values.emojis = [
                 { name: 'red_sox_111', id: '1339069901545017446' },
@@ -1070,19 +1311,24 @@ describe('gamedayUtil', () => {
                 { name: 'yankees_147', id: '1339072748126863470' },
                 { name: 'orioles_110', id: '1339073056810864721' }
             ];
-            globalCache.values.game.currentLiveFeed = require('./data/example-live-feeds/live-feed-2024');
-            gamedayUtil.getTeamEmojis();
+            globalCache.resetGameCache(114);
+            tracker = globalCache.ensureTracker(114);
+            tracker.game.currentLiveFeed = require('./data/example-live-feeds/live-feed-2024');
+            gamedayUtil.getTeamEmojis(tracker.game);
         });
 
         it('should title the embed with no emojis for a scoring play', async () => {
-            const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
+            const feed = liveFeed.init(tracker.game.currentLiveFeed);
+            const processedPlay = currentPlayProcessor.process(
+                examplePlays.homeRun,
+                feed,
+                tracker.game,
+                { name: 'angels_108', id: '1339072522619977770' },
+                { name: 'brewers_158', id: '1339072560049950760' }
+            );
             const embed = gamedayUtil.constructPlayEmbed(
-                currentPlayProcessor.process(
-                    examplePlays.homeRun,
-                    feed,
-                    { name: 'angels_108', id: '1339072522619977770' },
-                    { name: 'brewers_158', id: '1339072560049950760' }
-                ),
+                tracker.game,
+                processedPlay,
                 feed,
                 true,
                 '#BA0021',
@@ -1095,14 +1341,17 @@ describe('gamedayUtil', () => {
         });
 
         it('should include the score and emojis in the title for non-scoring plays', async () => {
-            const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
+            const feed = liveFeed.init(tracker.game.currentLiveFeed);
+            const processedPlay = currentPlayProcessor.process(
+                examplePlays.steal,
+                feed,
+                tracker.game,
+                { name: 'angels_108', id: '1339072522619977770' },
+                { name: 'brewers_158', id: '1339072560049950760' }
+            );
             const embed = gamedayUtil.constructPlayEmbed(
-                currentPlayProcessor.process(
-                    examplePlays.steal,
-                    feed,
-                    { name: 'angels_108', id: '1339072522619977770' },
-                    { name: 'brewers_158', id: '1339072560049950760' }
-                ),
+                tracker.game,
+                processedPlay,
                 feed,
                 true,
                 '#BA0021',
@@ -1122,6 +1371,7 @@ describe('gamedayUtil', () => {
                 homeAbbreviation: () => 'DET'
             };
             const embed = gamedayUtil.constructPlayEmbed(
+                tracker.game,
                 {
                     reply: 'Third out recorded.',
                     isScoringPlay: false,

@@ -9,6 +9,139 @@ const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_
 
 module.exports = {
     /**
+      * @returns {number | null}
+      */
+    getConfiguredFallbackTeamId: () => {
+        const fallbackTeamId = parseInt(process.env.TEAM_ID);
+        return isNaN(fallbackTeamId) ? null : fallbackTeamId;
+    },
+
+    /**
+      * @param {string | null | undefined} guildId
+      * @returns {number | null}
+      */
+    getEffectiveTeamIdForGuild: (guildId) => {
+        const configuredTeamId = guildId ? globalCache.values.guildTeams[guildId]?.team_id : null;
+        if (configuredTeamId) {
+            return configuredTeamId;
+        }
+        return module.exports.getConfiguredFallbackTeamId();
+    },
+
+    /**
+     * @returns {number[]}
+     */
+    getTrackedTeamIds: () => {
+        const trackedTeamIds = new Set(Object.values(globalCache.values.guildTeams).map(guildTeam => guildTeam.team_id));
+        const fallbackTeamId = module.exports.getConfiguredFallbackTeamId();
+        if (fallbackTeamId) {
+            trackedTeamIds.add(fallbackTeamId);
+        }
+        return [...trackedTeamIds];
+    },
+
+    /**
+      * @returns {number[]}
+      */
+    getLiveReportingTeamIds: () => {
+        return [...new Set(globalCache.values.subscribedChannels
+            .map(channelSubscription => module.exports.getEffectiveTeamIdForGuild(channelSubscription.guild_id))
+            .filter(teamId => !!teamId)
+        )];
+    },
+
+    /**
+     * @param {GameCache} gameCache
+     * @param {ChannelSubscription} channelSubscription
+     * @returns {boolean}
+     */
+    shouldDeliverToChannel: (gameCache, channelSubscription) => {
+        return module.exports.getEffectiveTeamIdForGuild(channelSubscription.guild_id) === gameCache.teamId;
+    },
+
+    /**
+     * @param {GameTracker} tracker
+     * @param {Date} now
+     */
+    updateTrackerGames: (tracker, now) => {
+        if (!tracker.currentGames || tracker.currentGames.length === 0) {
+            tracker.nearestGames = [];
+            tracker.game.isDoubleHeader = false;
+            return;
+        }
+
+        tracker.currentGames.sort((a, b) => Math.abs(now - new Date(a.gameDate)) - Math.abs(now - new Date(b.gameDate)));
+        const nearestGames = tracker.currentGames.filter(game => game.officialDate === tracker.currentGames[0].officialDate);
+        tracker.nearestGames = nearestGames.filter(g => g.status.codedGameState !== globals.CODED_GAME_STATES.POSTPONED);
+        tracker.game.isDoubleHeader = tracker.nearestGames.length > 1;
+    },
+
+    /**
+     * @param {string} hexColor
+     * @returns {string}
+     */
+    hexToAnsi24Bit: (hexColor) => {
+        const hex = hexColor.replace('#', '');
+        const r = parseInt(hex.slice(0, 2), 16);
+        const g = parseInt(hex.slice(2, 4), 16);
+        const b = parseInt(hex.slice(4, 6), 16);
+        return `\x1b[38;2;${r};${g};${b}m`;
+    },
+
+    /**
+     * @param {number | undefined} teamId
+     * @returns {MlbTeam | undefined}
+     */
+    getTeamMetadata: (teamId) => {
+        return globals.TEAMS.find(team => team.id === teamId);
+    },
+
+    /**
+     * @param {{ id?: number, abbreviation?: string, name?: string } | undefined} team
+     * @returns {string}
+     */
+    getLogTeamLabel: (team) => {
+        return team?.abbreviation || '';
+    },
+
+    /**
+     * @param {ScheduleGame | undefined} game
+     * @returns {string}
+     */
+    getGameLogContext: (game) => {
+        const awayTeam = game?.teams?.away?.team;
+        const homeTeam = game?.teams?.home?.team;
+        const awayMetadata = module.exports.getTeamMetadata(awayTeam?.id);
+        const homeMetadata = module.exports.getTeamMetadata(homeTeam?.id);
+        const awayLabel = module.exports.getLogTeamLabel({
+            id: awayTeam?.id,
+            abbreviation: awayTeam?.abbreviation || awayMetadata?.abbreviation,
+            name: awayTeam?.name || awayMetadata?.name
+        });
+        const homeLabel = module.exports.getLogTeamLabel({
+            id: homeTeam?.id,
+            abbreviation: homeTeam?.abbreviation || homeMetadata?.abbreviation,
+            name: homeTeam?.name || homeMetadata?.name
+        });
+        if (!awayLabel || !homeLabel) {
+            return '';
+        }
+        const reset = '\x1b[0m';
+        const awayColor = module.exports.hexToAnsi24Bit(awayMetadata?.secondaryColor || awayMetadata?.primaryColor || '#FFFFFF');
+        const homeColor = module.exports.hexToAnsi24Bit(homeMetadata?.secondaryColor || homeMetadata?.primaryColor || '#FFFFFF');
+        return `[${awayColor}${awayLabel}${reset} vs. ${homeColor}${homeLabel}${reset}] `;
+    },
+
+    /**
+     * @param {ScheduleGame | undefined} game
+     * @param {string} message
+     * @returns {string}
+     */
+    withGameLogContext: (game, message) => {
+        return module.exports.getGameLogContext(game) + message;
+    },
+
+    /**
      * @param {string} halfInningFull
      * @returns {'TOP'|'BOT'}
      */
@@ -21,8 +154,8 @@ module.exports = {
      * @param {number} awayScore
      * @returns {boolean}
      */
-    didGameEnd: (homeScore, awayScore) => {
-        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
+    didGameEnd: (gameCache, homeScore, awayScore) => {
+        const feed = liveFeed.init(gameCache.currentLiveFeed);
         return feed.inning() >= 9
             && (
                 (homeScore > awayScore && feed.halfInning() === 'top')
@@ -30,34 +163,34 @@ module.exports = {
             );
     },
 
-    getConstrastingEmbedColors: () => {
-        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
-        globalCache.values.game.homeTeamColor = globals.TEAMS.find(
+    getConstrastingEmbedColors: (gameCache) => {
+        const feed = liveFeed.init(gameCache.currentLiveFeed);
+        gameCache.homeTeamColor = globals.TEAMS.find(
             team => team.id === feed.homeTeamId()
         ).primaryColor;
         const awayTeam = globals.TEAMS.find(
             team => team.id === feed.awayTeamId()
         );
         const colorContrastChecker = new ColorContrastChecker();
-        if (colorContrastChecker.isLevelCustom(globalCache.values.game.homeTeamColor, awayTeam.primaryColor, globals.TEAM_COLOR_CONTRAST_RATIO)) {
-            globalCache.values.game.awayTeamColor = awayTeam.primaryColor;
+        if (colorContrastChecker.isLevelCustom(gameCache.homeTeamColor, awayTeam.primaryColor, globals.TEAM_COLOR_CONTRAST_RATIO)) {
+            gameCache.awayTeamColor = awayTeam.primaryColor;
         } else {
-            globalCache.values.game.awayTeamColor = awayTeam.secondaryColor;
+            gameCache.awayTeamColor = awayTeam.secondaryColor;
         }
     },
 
-    getTeamEmojis: () => {
-        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
-        globalCache.values.game.homeTeamEmoji = globalCache.values.emojis.find(e => e.name.includes(feed.homeTeamId()));
-        globalCache.values.game.awayTeamEmoji = globalCache.values.emojis.find(e => e.name.includes(feed.awayTeamId()));
+    getTeamEmojis: (gameCache) => {
+        const feed = liveFeed.init(gameCache.currentLiveFeed);
+        gameCache.homeTeamEmoji = globalCache.values.emojis.find(e => e.name.includes(feed.homeTeamId()));
+        gameCache.awayTeamEmoji = globalCache.values.emojis.find(e => e.name.includes(feed.awayTeamId()));
     },
 
     /**
      * @param {ProcessedPlay} play
      * @returns {string}
      */
-    getPitchesStrikesForPitchersInHalfInning: (play) => {
-        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
+    getPitchesStrikesForPitchersInHalfInning: (gameCache, play) => {
+        const feed = liveFeed.init(gameCache.currentLiveFeed);
         const boxscore = feed.boxscore();
         const mergedPlayers = { ...boxscore.teams.away.players, ...boxscore.teams.home.players };
         // finds all unique pitcher ids in the matchups from plays in the current half inning and maps them to their boxscore player entries
@@ -72,8 +205,8 @@ module.exports = {
     },
 
     /** @returns {string} */
-    getDueUp: () => {
-        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
+    getDueUp: (gameCache) => {
+        const feed = liveFeed.init(gameCache.currentLiveFeed);
         const linescore = feed.linescore();
         const upIndex = linescore.offense.battingOrder > 9 ? linescore.offense.battingOrder % 9 : linescore.offense.battingOrder;
         const onDeckIndex = linescore.offense.battingOrder >= 9 ? (linescore.offense.battingOrder + 1) % 9 : linescore.offense.battingOrder + 1;
@@ -92,9 +225,9 @@ module.exports = {
      * @param {number} numberOfParks
      * @returns {Promise<string | null>}
      */
-    getXParks: async (gamePk, playId, numberOfParks) => {
-        const feed = liveFeed.init(globalCache.values.game.currentLiveFeed);
-        const isHome = feed.homeTeamId() === parseInt(process.env.TEAM_ID);
+    getXParks: async (gameCache, gamePk, playId, numberOfParks) => {
+        const feed = liveFeed.init(gameCache.currentLiveFeed);
+        const isHome = feed.homeTeamId() === gameCache.teamId;
         let reply = '';
         if (numberOfParks === 0 || numberOfParks === 30) {
             return reply;
@@ -167,10 +300,10 @@ module.exports = {
      * @param {string | undefined} description
      * @param {number} atBatIndex
      */
-    alreadyReported: (description, atBatIndex) => {
+    alreadyReported: (gameCache, description, atBatIndex) => {
         const reviewOutcome = module.exports.extractReviewOutcome(description);
         const normalizedDescription = module.exports.stripStealCount(description);
-        return globalCache.values.game.reportedDescriptions.find(reported => {
+        return gameCache.reportedDescriptions.find(reported => {
             const withinRange = reported.atBatIndex === atBatIndex || reported.atBatIndex === (atBatIndex - 1);
             if (!withinRange) return false;
             if (reported.description === description) return true;
@@ -238,12 +371,12 @@ module.exports = {
      * @param {DiscordEmoji | null} awayTeamEmoji
      * @returns {import('discord.js').EmbedBuilder}
      */
-    constructPlayEmbed: (play, feed, includeTitle, homeTeamColor, awayTeamColor, homeTeamEmoji, awayTeamEmoji) => {
+    constructPlayEmbed: (gameCache, play, feed, includeTitle, homeTeamColor, awayTeamColor, homeTeamEmoji, awayTeamEmoji) => {
         const halfInning = play.halfInning || feed.halfInning();
         const inning = play.inning || feed.inning();
         const embed = new EmbedBuilder()
-            .setDescription(play.reply + (play.isOut && play.outs === 3 && !(play.hasReview && play.reviewInProgress) && !module.exports.didGameEnd(play.homeScore, play.awayScore)
-                ? `${module.exports.getPitchesStrikesForPitchersInHalfInning(play)}${module.exports.getDueUp()}`
+            .setDescription(play.reply + (play.isOut && play.outs === 3 && !(play.hasReview && play.reviewInProgress) && !module.exports.didGameEnd(gameCache, play.homeScore, play.awayScore)
+                ? `${module.exports.getPitchesStrikesForPitchersInHalfInning(gameCache, play)}${module.exports.getDueUp(gameCache)}`
                 : ''))
             .setColor((halfInning === 'top' ? awayTeamColor : homeTeamColor));
         if (includeTitle) {
@@ -285,12 +418,12 @@ module.exports = {
       * @param {(liveFeed: LiveFeedResponse) => Promise<void>} [onUpdatedLiveFeed]
       * @returns {Promise<LiveFeedResponse | null>}
       */
-    waitForFinalLiveFeed: async (gamePk, onUpdatedLiveFeed = async () => {}) => {
-        let latestLiveFeed = globalCache.values.game.currentLiveFeed;
+    waitForFinalLiveFeed: async (gameCache, gamePk, onUpdatedLiveFeed = async () => {}) => {
+        let latestLiveFeed = gameCache.currentLiveFeed;
         let latestTimestamp = latestLiveFeed?.metaData?.timeStamp;
         for (let attempt = 0; attempt < globals.FINAL_STATUS_POLL_ATTEMPTS; attempt ++) {
             latestLiveFeed = await mlbAPIUtil.liveFeed(gamePk);
-            globalCache.values.game.currentLiveFeed = latestLiveFeed;
+            gameCache.currentLiveFeed = latestLiveFeed;
             const polledTimestamp = latestLiveFeed?.metaData?.timeStamp;
             if (polledTimestamp !== latestTimestamp) {
                 latestTimestamp = polledTimestamp;
@@ -305,5 +438,29 @@ module.exports = {
         }
         LOGGER.warn(`Timed out waiting for final live feed for gamePk ${gamePk}.`);
         return latestLiveFeed || null;
+    },
+
+    /**
+     * @param {number} teamId
+     * @param {any} timeoutHandle
+     */
+    registerXParksTimeout: (teamId, timeoutHandle) => {
+        if (!globalCache.values.xParksRetryTimeoutsByTeamId.has(teamId)) {
+            globalCache.values.xParksRetryTimeoutsByTeamId.set(teamId, new Set());
+        }
+        globalCache.values.xParksRetryTimeoutsByTeamId.get(teamId).add(timeoutHandle);
+    },
+
+    /**
+     * @param {number} teamId
+     * @param {any} timeoutHandle
+     */
+    unregisterXParksTimeout: (teamId, timeoutHandle) => {
+        const teamTimeouts = globalCache.values.xParksRetryTimeoutsByTeamId.get(teamId);
+        if (!teamTimeouts) return;
+        teamTimeouts.delete(timeoutHandle);
+        if (teamTimeouts.size === 0) {
+            globalCache.values.xParksRetryTimeoutsByTeamId.delete(teamId);
+        }
     }
 };

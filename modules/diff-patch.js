@@ -1,5 +1,4 @@
 // @ts-check
-const globalCache = require('./global-cache');
 const globals = require('../config/globals');
 const LOGGER = require('./logger')(process.env.LOG_LEVEL?.trim() || globals.LOG_LEVEL.INFO);
 
@@ -14,16 +13,17 @@ module.exports = {
     /**
      * Applies a diffPatch response to the live game feed in globalCache.
      * Supports RFC-6902 operations: add, replace, remove, copy, move.
+     * @param {LiveFeedResponse} currentLiveFeed
      * @param {DiffPatchResponse} patch
      */
-    hydrate: (patch) => {
+    hydrate: (currentLiveFeed, patch) => {
         try {
             patch.diff.forEach(difference => {
                 switch (difference.op) {
                     case 'add':
                     case 'replace':
                         setJSONValue(
-                            globalCache.values.game.currentLiveFeed,
+                            currentLiveFeed,
                             difference.path
                                 .replaceAll('/', '.')
                                 .split('.')
@@ -34,7 +34,7 @@ module.exports = {
                         break;
                     case 'remove':
                         setJSONValue(
-                            globalCache.values.game.currentLiveFeed,
+                            currentLiveFeed,
                             difference.path
                                 .replaceAll('/', '.')
                                 .split('.')
@@ -45,27 +45,27 @@ module.exports = {
                         break;
                     case 'copy':
                         setJSONValue(
-                            globalCache.values.game.currentLiveFeed,
+                            currentLiveFeed,
                             difference.path
                                 .replaceAll('/', '.')
                                 .split('.')
                                 .slice(1),
-                            eval('globalCache.values.game.currentLiveFeed' + toJsonPath(difference.from)),
+                            eval('currentLiveFeed' + toJsonPath(difference.from)),
                             difference.op
                         );
                         break;
                     case 'move':
                         setJSONValue(
-                            globalCache.values.game.currentLiveFeed,
+                            currentLiveFeed,
                             difference.path
                                 .replaceAll('/', '.')
                                 .split('.')
                                 .slice(1),
-                            eval('globalCache.values.game.currentLiveFeed' + toJsonPath(difference.from)),
+                            eval('currentLiveFeed' + toJsonPath(difference.from)),
                             'add'
                         );
                         setJSONValue(
-                            globalCache.values.game.currentLiveFeed,
+                            currentLiveFeed,
                             difference.from
                                 .replaceAll('/', '.')
                                 .split('.')

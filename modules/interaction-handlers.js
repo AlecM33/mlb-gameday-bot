@@ -5,14 +5,13 @@ const mlbAPIUtil = require('./MLB-API-util');
 const globals = require('../config/globals');
 const commandUtil = require('./command-util');
 const queries = require('../database/queries.js');
-const { constructPlayEmbed } = require('./gameday');
 const examplePlays = require('../spec/data/example-plays');
 const exampleLiveFeed = require('../spec/data/example-live-feeds/live-feed-2024');
 const liveFeed = require('./livefeed');
 const currentPlayProcessor = require('./current-play-processor');
+const gamedayUtil = require('./gameday-util');
 
 /** @typedef {import('discord.js').ChatInputCommandInteraction} SlashInteraction */
-
 module.exports = {
 
     /** @param {SlashInteraction} interaction */
@@ -25,8 +24,10 @@ module.exports = {
     startersHandler: async (interaction) => {
         console.info(`STARTERS command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
+        const teamId = commandUtil.getGuildTeamIdOrThrow(interaction.guildId);
         // as opposed to other commands, this one will look for the nearest game that is not finished (AKA in "Live" or "Preview" status).
-        const game = globalCache.values.currentGames.find(game => game.status.abstractGameState !== 'Final');
+        const currentGames = await mlbAPIUtil.currentGames(teamId);
+        const game = currentGames.find(game => game.status.abstractGameState !== 'Final');
         if (!game) {
             await interaction.followUp({
                 content: 'No game found that isn\'t Final. Is today/tomorrow an off day?',
@@ -87,19 +88,21 @@ module.exports = {
     scheduleHandler: async (interaction) => {
         console.info(`SCHEDULE command invoked by guild: ${interaction.guildId}`);
         await interaction.deferReply();
+        const teamId = commandUtil.getGuildTeamIdOrThrow(interaction.guildId);
         const startDate = globals.DATE ? new Date(globals.DATE) : new Date();
         const oneWeek = new Date(startDate);
         oneWeek.setDate(oneWeek.getDate() + 7);
         const nextWeek = await mlbAPIUtil.schedule(
             startDate.toISOString().split('T')[0],
-            oneWeek.toISOString().split('T')[0]
+            oneWeek.toISOString().split('T')[0],
+            teamId
         );
         let reply = '';
         nextWeek.dates.forEach((date) => {
             date.games.forEach((game) => {
                 const gameDate = new Date(game.gameDate);
                 const teams = game.teams;
-                const home = teams.home.team.id === parseInt(process.env.TEAM_ID);
+                const home = teams.home.team.id === teamId;
                 const emoji = globalCache.values.emojis
                     .find(v => v.name.includes(
                         (home ? teams.away.team.id : teams.home.team.id)
@@ -154,7 +157,7 @@ module.exports = {
             leagueId = DIVISION_MAP[chosenDivisionId].leagueId;
             divisionName = DIVISION_MAP[chosenDivisionId].name;
         } else {
-            const team = await mlbAPIUtil.team(process.env.TEAM_ID);
+            const team = await mlbAPIUtil.team(commandUtil.getGuildTeamIdOrThrow(interaction.guildId));
             divisionId = team.teams[0].division.id;
             leagueId = team.teams[0].league.id;
             divisionName = team.teams[0].division.name;
@@ -171,9 +174,17 @@ module.exports = {
     wildcardHandler: async (interaction) => {
         await interaction.deferReply();
         console.info(`WILDCARD command invoked by guild: ${interaction.guildId}`);
-        const team = await mlbAPIUtil.team(process.env.TEAM_ID);
-        const leagueId = team.teams[0].league.id;
-        const leagueName = team.teams[0].league.name;
+        let leagueId;
+        const chosenLeague = interaction.options.getString('league');
+        if (chosenLeague) {
+            leagueId = parseInt(chosenLeague);
+        } else {
+            const team = await mlbAPIUtil.team(commandUtil.getGuildTeamIdOrThrow(interaction.guildId));
+            leagueId = team.teams[0].league.id;
+        }
+        const leagueName = leagueId === globals.AMERICAN_LEAGUE
+            ? 'American League'
+            : 'National League';
         const leagueStandings = await mlbAPIUtil.wildcard();
         const wildcard = leagueStandings.records
             .find(record => record.standingsType === 'wildCard' && record.league === leagueId);
@@ -192,8 +203,11 @@ module.exports = {
         }
     },
 
-    /** @param {SlashInteraction} interaction */
-    subscribeGamedayHandler: async (interaction) => {
+    /**
+     * @param {SlashInteraction} interaction
+     * @param {import('discord.js').Client} [bot]
+     */
+    subscribeGamedayHandler: async (interaction, bot) => {
         console.info(`SUBSCRIBE GAMEDAY command invoked by guild: ${interaction.guildId}`);
         if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
             await interaction.reply({
@@ -203,6 +217,7 @@ module.exports = {
             return;
         }
         await interaction.deferReply();
+        commandUtil.getGuildTeamIdOrThrow(interaction.guildId);
         const scoringPlaysOnly = interaction.options.getBoolean('scoring_plays_only');
         const reportingDelay = interaction.options.getInteger('reporting_delay');
         const advancedStats = interaction.options.getBoolean('advanced_stats');
@@ -227,6 +242,10 @@ module.exports = {
                 }
             });
             globalCache.values.subscribedChannels = await queries.getAllSubscribedChannels();
+            if (bot) {
+                const gameday = require('./gameday');
+                await gameday.refreshStatus(bot);
+            }
         } else {
             throw new Error('Could not subscribe to the gameday feed.');
         }
@@ -254,14 +273,17 @@ module.exports = {
         }
         const play = interaction.options.getString('play');
         const feed = liveFeed.init(exampleLiveFeed);
+        const gameCache = globalCache.gameDefaults(114);
+        gameCache.currentGamePk = 999999;
         if (!interaction.replied) {
             await interaction.reply({
                 ephemeral: true,
-                embeds: [constructPlayEmbed((() => {
+                embeds: [gamedayUtil.constructPlayEmbed(gameCache, (() => {
                     if (play === 'Home Run') {
                         return currentPlayProcessor.process(
                             examplePlays.homeRun,
                             feed,
+                            gameCache,
                             globalCache.values.emojis.find(e => e.name.includes('angels')),
                             globalCache.values.emojis.find(e => e.name.includes('brewers'))
                         );
@@ -269,6 +291,7 @@ module.exports = {
                         return currentPlayProcessor.process(
                             examplePlays.steal,
                             feed,
+                            gameCache,
                             globalCache.values.emojis.find(e => e.name.includes('angels')),
                             globalCache.values.emojis.find(e => e.name.includes('brewers'))
                         );
@@ -276,6 +299,7 @@ module.exports = {
                         return currentPlayProcessor.process(
                             examplePlays.inProgressChallenge,
                             feed,
+                            gameCache,
                             globalCache.values.emojis.find(e => e.name.includes('angels')),
                             globalCache.values.emojis.find(e => e.name.includes('brewers'))
                         );
@@ -368,17 +392,65 @@ module.exports = {
         globalCache.values.subscribedChannels = await queries.getAllSubscribedChannels();
     },
 
+    /**
+     * @param {SlashInteraction} interaction
+     * @param {import('discord.js').Client} [bot]
+     */
+    setTeamHandler: async (interaction, bot) => {
+        console.info(`SET TEAM command invoked by guild: ${interaction.guildId}`);
+        if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
+            await interaction.reply({
+                ephemeral: true,
+                content: 'You do not have permission to configure this server\'s default team.'
+            });
+            return;
+        }
+
+        await interaction.deferReply();
+        const previousTeamId = gamedayUtil.getEffectiveTeamIdForGuild(interaction.guild.id);
+        const requestedTeam = interaction.options.getString('team');
+        const requestedTeamId = parseInt(requestedTeam);
+        const matchingTeam = globals.TEAMS.find((team) =>
+            team.id === requestedTeamId
+            || team.name.toLowerCase() === requestedTeam.toLowerCase()
+            || team.abbreviation.toLowerCase() === requestedTeam.toLowerCase()
+        );
+
+        if (!matchingTeam) {
+            await interaction.followUp({
+                content: 'That team was not recognized.',
+                ephemeral: true
+            });
+            return;
+        }
+
+        await queries.upsertGuildTeam(interaction.guild.id, matchingTeam.id);
+        globalCache.values.guildTeams = commandUtil.mapGuildTeams(await queries.getAllGuildTeams());
+        const hasSubscribedChannels = globalCache.values.subscribedChannels
+            .some(channel => channel.guild_id === interaction.guild.id);
+        if (previousTeamId && previousTeamId !== matchingTeam.id
+            && hasSubscribedChannels
+            && !commandUtil.isTeamTrackedByOtherSubscribedGuilds(interaction.guild.id, previousTeamId)) {
+            globalCache.resetGameCache(previousTeamId);
+        }
+        if (bot && hasSubscribedChannels) {
+            const gameday = require('./gameday');
+            await gameday.refreshStatus(bot);
+        }
+
+        await interaction.followUp({
+            content: `This server is now following the **${matchingTeam.name}** (${matchingTeam.abbreviation})!`,
+            ephemeral: false
+        });
+    },
+
     /** @param {SlashInteraction} interaction */
     linescoreHandler: async (interaction) => {
         console.info(`LINESCORE command invoked by guild: ${interaction.guildId}`);
-        if (!globalCache.values.game.isDoubleHeader) {
-            await interaction.deferReply();
-        }
+        await commandUtil.deferIfNeeded(interaction);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = globalCache.values.game.isDoubleHeader
-                ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId)) // the user's choice between the two games of the double-header.
-                : globalCache.values.nearestGames[0];
+            const game = await commandUtil.resolveTrackedGameOrThrow(interaction.guildId, toHandle);
             const statusCheck = await mlbAPIUtil.statusCheck(game.gamePk);
             if (statusCheck.gameData.status.abstractGameState === 'Preview') {
                 await commandUtil.giveFinalCommandResponse(toHandle, {
@@ -407,14 +479,10 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     boxScoreHandler: async (interaction) => {
         console.info(`BOXSCORE command invoked by guild: ${interaction.guildId}`);
-        if (!globalCache.values.game.isDoubleHeader) {
-            await interaction.deferReply();
-        }
+        await commandUtil.deferIfNeeded(interaction);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = globalCache.values.game.isDoubleHeader
-                ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId)) // the user's choice between the two games of the double-header.
-                : globalCache.values.nearestGames[0];
+            const game = await commandUtil.resolveTrackedGameOrThrow(interaction.guildId, toHandle);
             const statusCheck = await mlbAPIUtil.statusCheck(game.gamePk);
             if (statusCheck.gameData.status.abstractGameState === 'Preview') {
                 await commandUtil.giveFinalCommandResponse(toHandle, {
@@ -460,23 +528,27 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     lineupHandler: async (interaction) => {
         console.info(`LINEUP command invoked by guild: ${interaction.guildId}`);
-        if (!globalCache.values.game.isDoubleHeader) {
-            await interaction.deferReply();
-        }
+        await commandUtil.deferIfNeeded(interaction);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = globalCache.values.game.isDoubleHeader
-                ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId)) // the user's choice between the two games of the double-header.
-                : globalCache.values.nearestGames[0];
-            const gameLineups = (await mlbAPIUtil.lineup(game.gamePk));
+            const game = await commandUtil.resolveTrackedGameOrThrow(interaction.guildId, toHandle);
+            const gameLineups = (await mlbAPIUtil.lineup(game.gamePk, commandUtil.getGuildTeamIdOrThrow(interaction.guildId)));
             let updatedLineup;
             /* if a game is postponed and rescheduled, the lineups call returns two games with the same gamePk, one on the original date
                 and one on the re-scheduled date.
              */
             if (gameLineups.dates?.length > 1) {
                 updatedLineup = gameLineups.dates.find(date => date.games[0].rescheduledFrom)?.games[0];
-            } else {
+            } else if (gameLineups.dates?.length === 1) {
                 updatedLineup = gameLineups.dates[0].games[0];
+            }
+            if (!updatedLineup) {
+                await commandUtil.giveFinalCommandResponse(toHandle, {
+                    content: commandUtil.constructGameDisplayString(game) + ' - No lineup card has been submitted for this game yet.',
+                    ephemeral: false,
+                    components: []
+                });
+                return;
             }
             const lineupChoiceToHandle = await commandUtil.getHomeAwayChoice(
                 toHandle,
@@ -508,14 +580,10 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     highlightsHandler: async (interaction) => {
         console.info(`HIGHLIGHTS command invoked by guild: ${interaction.guildId}`);
-        if (!globalCache.values.game.isDoubleHeader) {
-            await interaction.deferReply();
-        }
+        await commandUtil.deferIfNeeded(interaction);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = globalCache.values.game.isDoubleHeader
-                ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId)) // the user's choice between the two games of the double-header.
-                : globalCache.values.nearestGames[0];
+            const game = await commandUtil.resolveTrackedGameOrThrow(interaction.guildId, toHandle);
             const statusCheck = await mlbAPIUtil.statusCheck(game.gamePk);
             if (statusCheck.gameData.status.abstractGameState === 'Preview') {
                 await commandUtil.giveFinalCommandResponse(toHandle, {
@@ -678,14 +746,10 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     scoringPlaysHandler: async (interaction) => {
         console.info(`SCORING PLAYS command invoked by guild: ${interaction.guildId}`);
-        if (!globalCache.values.game.isDoubleHeader) {
-            await interaction.deferReply();
-        }
+        await commandUtil.deferIfNeeded(interaction);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = globalCache.values.game.isDoubleHeader
-                ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId)) // the user's choice between the two games of the double-header.
-                : globalCache.values.nearestGames[0];
+            const game = await commandUtil.resolveTrackedGameOrThrow(interaction.guildId, toHandle);
             const liveFeed = await mlbAPIUtil.liveFeed(game.gamePk);
             const links = [];
             liveFeed.liveData.plays.scoringPlays.forEach((scoringPlayIndex) => {
@@ -736,14 +800,10 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     attendanceHandler: async (interaction) => {
         console.info(`ATTENDANCE command invoked by guild: ${interaction.guildId}`);
-        if (!globalCache.values.game.isDoubleHeader) {
-            await interaction.deferReply();
-        }
+        await commandUtil.deferIfNeeded(interaction);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = globalCache.values.game.isDoubleHeader
-                ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId)) // the user's choice between the two games of the double-header.
-                : globalCache.values.nearestGames[0];
+            const game = await commandUtil.resolveTrackedGameOrThrow(interaction.guildId, toHandle);
             const currentLiveFeed = await mlbAPIUtil.liveFeed(game.gamePk, [
                 'gameData', 'gameInfo', 'attendance', 'venue', 'name', 'fieldInfo', 'capacity'
             ]);
@@ -765,14 +825,10 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     weatherHandler: async (interaction) => {
         console.info(`WEATHER command invoked by guild: ${interaction.guildId}`);
-        if (!globalCache.values.game.isDoubleHeader) {
-            await interaction.deferReply();
-        }
+        await commandUtil.deferIfNeeded(interaction);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = globalCache.values.game.isDoubleHeader
-                ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId)) // the user's choice between the two games of the double-header.
-                : globalCache.values.nearestGames[0];
+            const game = await commandUtil.resolveTrackedGameOrThrow(interaction.guildId, toHandle);
             const currentLiveFeed = await mlbAPIUtil.liveFeed(game.gamePk, [
                 'gameData', 'gameInfo', 'weather', 'condition', 'temp', 'wind', 'venue', 'name'
             ]);
@@ -795,14 +851,10 @@ module.exports = {
     /** @param {SlashInteraction} interaction */
     bullpenHandler: async (interaction) => {
         console.info(`BULLPEN command invoked by guild: ${interaction.guildId}`);
-        if (!globalCache.values.game.isDoubleHeader) {
-            await interaction.deferReply();
-        }
+        await commandUtil.deferIfNeeded(interaction);
         const toHandle = await commandUtil.screenInteraction(interaction);
         if (toHandle) {
-            const game = globalCache.values.game.isDoubleHeader
-                ? globalCache.values.nearestGames.find(game => game.gamePk === parseInt(toHandle.customId))
-                : globalCache.values.nearestGames[0];
+            const game = await commandUtil.resolveTrackedGameOrThrow(interaction.guildId, toHandle);
 
             const content = await mlbAPIUtil.content(game.gamePk);
             const allItems = content?.highlights?.highlights?.items || [];
