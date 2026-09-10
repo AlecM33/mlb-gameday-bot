@@ -107,13 +107,10 @@
     </nav>
     <h2 id="set_team" class="command-header">/set_team</h2>
     <p>
-        Set the team the server will follow. A server must follow a single team - this is central to the bot's design. This team can be unique
-        for each server the bot is in. Once a team is set, several commands will be configured automatically for that team, such as /starters,
+        Set the team a server follows. A server can only follow one team at a time - this is central to the bot's design. This team can be changed at any time. 
+        Once a team is set, several commands will be configured automatically for that team, such as /starters,
         /lineup, /box_score, etc. Most importantly, once /subscribe-gameday is invoked from a channel in the server, the bot will automatically
-        detect whenever a game is live and report updates to any subscribed channels.
-
-        The team the server follows can be changed at any time, even during games. Any in-progress live reporting for the old team will be stopped,
-        and if the new team has a game in progress, updates will immediately start arriving for it.
+        detect whenever a game is live for that team and report updates to any subscribed channels.
     </p>
     <img class="bot-demo-img" alt="set team command" src="./images/screenshots/set_team.png"/>
     <h2 id="subscribe_gameday" class="command-header">/subscribe_gameday</h2>
