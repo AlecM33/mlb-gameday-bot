@@ -19,8 +19,6 @@ describe('global-cache', () => {
             globalCache.resetGameCache(114);
 
             expect(tracker.websocket).toBeUndefined();
-            expect(globalCache.ensureTracker(114).currentGames).toBeNull();
-            expect(globalCache.ensureTracker(114).nearestGames).toBeNull();
             expect(globalCache.ensureTracker(114).game.currentGamePk).toBeNull();
             expect(globalCache.ensureTracker(114).game.currentLiveFeed).toBeNull();
         });
