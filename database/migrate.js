@@ -5,7 +5,7 @@ const pool = require('./db');
 const migrations = [
     // v3.4.0
     'ALTER TABLE gameday_subscribe_channels ADD COLUMN IF NOT EXISTS advanced_stats BOOLEAN NOT NULL DEFAULT TRUE;',
-    // v3.5.0
+    // v4.0.0
     'CREATE TABLE IF NOT EXISTS guild_teams (guild_id character varying(64) PRIMARY KEY, team_id integer NOT NULL);'
 ];
 
