@@ -59,8 +59,6 @@ function resetGameCache (teamId) {
         tracker.websocket.close();
         delete tracker.websocket;
     }
-    tracker.currentGames = null;
-    tracker.nearestGames = null;
     tracker.game = gameDefaults(teamId);
 }
 

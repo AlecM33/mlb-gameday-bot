@@ -5,7 +5,6 @@ const mlbAPIUtil = require('./MLB-API-util');
 const globals = require('../config/globals');
 const commandUtil = require('./command-util');
 const queries = require('../database/queries.js');
-const { constructPlayEmbed } = require('./gameday');
 const examplePlays = require('../spec/data/example-plays');
 const exampleLiveFeed = require('../spec/data/example-live-feeds/live-feed-2024');
 const liveFeed = require('./livefeed');
@@ -175,9 +174,17 @@ module.exports = {
     wildcardHandler: async (interaction) => {
         await interaction.deferReply();
         console.info(`WILDCARD command invoked by guild: ${interaction.guildId}`);
-        const team = await mlbAPIUtil.team(commandUtil.getGuildTeamIdOrThrow(interaction.guildId));
-        const leagueId = team.teams[0].league.id;
-        const leagueName = team.teams[0].league.name;
+        let leagueId;
+        const chosenLeague = interaction.options.getString('league');
+        if (chosenLeague) {
+            leagueId = parseInt(chosenLeague);
+        } else {
+            const team = await mlbAPIUtil.team(commandUtil.getGuildTeamIdOrThrow(interaction.guildId));
+            leagueId = team.teams[0].league.id;
+        }
+        const leagueName = leagueId === globals.AMERICAN_LEAGUE
+            ? 'American League'
+            : 'National League';
         const leagueStandings = await mlbAPIUtil.wildcard();
         const wildcard = leagueStandings.records
             .find(record => record.standingsType === 'wildCard' && record.league === leagueId);
@@ -271,7 +278,7 @@ module.exports = {
         if (!interaction.replied) {
             await interaction.reply({
                 ephemeral: true,
-                embeds: [constructPlayEmbed((() => {
+                embeds: [gamedayUtil.constructPlayEmbed(gameCache, (() => {
                     if (play === 'Home Run') {
                         return currentPlayProcessor.process(
                             examplePlays.homeRun,

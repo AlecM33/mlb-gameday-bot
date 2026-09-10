@@ -777,9 +777,11 @@ module.exports = {
      * @param {object} options
      */
     giveFinalCommandResponse: async (toHandle, options) => {
-        await toHandle.update
-            ? toHandle.update(options)
-            : toHandle.followUp(options);
+        if (typeof toHandle.update === 'function') {
+            await toHandle.update(options);
+        } else {
+            await toHandle.followUp(options);
+        }
     },
 
     /**

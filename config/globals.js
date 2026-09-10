@@ -152,6 +152,8 @@ module.exports = {
         IN_PROGRESS: 'I',
         WARMUP: 'PW'
     },
+    AMERICAN_LEAGUE: 103,
+    NATIONAL_LEAGUE: 104,
     TEAMS: [
         {
             id: 133,
